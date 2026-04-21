@@ -1646,7 +1646,7 @@ function renderTimeline() {
             <span>${post.author}</span>
           </div>
         </div>
-        <p class="post-text">${post.text}</p>
+        <p class="post-text"></p>
         <div class="post-actions">
           <button class="post-btn like-btn" type="button" data-post-id="${post.id}">
             ${post.likedByMe ? '🩷 liked' : '♡ like'} (${post.likesCount || 0})
@@ -1659,6 +1659,8 @@ function renderTimeline() {
         <div class="reaction-layer"></div>
       </div>
     `;
+
+    postEl.querySelector('.post-text').textContent = post.text;
 
     const postBody = postEl.querySelector('.post-body');
 
@@ -2758,7 +2760,7 @@ function renderCommentsList(postId) {
       return `
         <div class="comment-reply" data-comment-id="${reply.id}">
           <div class="comment-name">${reply.nickname || 'memory'}</div>
-          <div class="comment-text">${reply.text}</div>
+          <div class="comment-text" data-comment-text-id="${reply.id}"></div>
 
           <div class="comment-actions">
             <button class="comment-like-btn" type="button" data-comment-id="${reply.id}">
@@ -2777,7 +2779,7 @@ function renderCommentsList(postId) {
     return `
       <div class="comment-item" data-comment-id="${comment.id}">
         <div class="comment-name">${comment.nickname || 'memory'}</div>
-        <div class="comment-text">${comment.text}</div>
+        <div class="comment-text" data-comment-text-id="${comment.id}"></div>
 
         <div class="comment-actions">
           <button class="comment-like-btn" type="button" data-comment-id="${comment.id}">
@@ -2798,6 +2800,24 @@ function renderCommentsList(postId) {
       </div>
     `;
   }).join('');
+
+  post.comments.forEach((comment) => {
+    const commentTextEl = commentsList.querySelector(
+      `[data-comment-text-id="${comment.id}"]`
+    );
+    if (commentTextEl) {
+      commentTextEl.textContent = comment.text;
+    }
+
+    (comment.replies || []).forEach((reply) => {
+      const replyTextEl = commentsList.querySelector(
+        `[data-comment-text-id="${reply.id}"]`
+      );
+      if (replyTextEl) {
+        replyTextEl.textContent = reply.text;
+      }
+    });
+  });
 
   document.querySelectorAll('.reply-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
