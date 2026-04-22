@@ -141,7 +141,8 @@ const STICKER_PICKER_GROUPS = [
         <div style="font-size:0.94rem;line-height:1.5;">drink some water, take a breath, and remember you are loved ♡</div>
         <a
           class="soft-btn"
-          href="./toto%20%26%20dodo%20anniversary/second_page.html?loadFromSupabase=true"
+          href="https://ytrbsxknhlsfqkqphlms.supabase.co/storage/v1/object/public/anniversary/index.html"
+          target="_blank"
           style="justify-self:start;text-decoration:none;display:inline-flex;align-items:center;"
         >
           open website
