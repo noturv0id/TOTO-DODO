@@ -167,13 +167,14 @@ const STICKER_PICKER_GROUPS = [
     side: 'right',
     x: 0,
     y: 455,
-    content: `<div class="sticker-grid" id="stickerGrid"></div><div style="margin-top:12px;"><button class="soft-btn" id="openStickerPopup">+ add sticker</button></div>`,
+    content: `<div class="sticker-widget-body"><div class="sticker-grid" id="stickerGrid"></div><div class="sticker-widget-footer"><button class="soft-btn" id="openStickerPopup">+ add sticker</button></div></div>`,
   },
 ];
 
       let posts = [];
       let personalStickers = [];
       let placedStickers = [];
+      let notifications = [];
       let activeSticker = null;
       let dragWidget = null;
        let currentCommentsPostId = null;
@@ -197,6 +198,12 @@ const STICKER_PICKER_GROUPS = [
       const saveStickerBtn = document.getElementById('saveStickerBtn');
       const closeStickerPopup = document.getElementById('closeStickerPopup');
        const newEntryBtn = document.getElementById('newEntryBtn');
+      const notificationsMenu = document.getElementById('notificationsMenu');
+      const notificationsBtn = document.getElementById('notificationsBtn');
+      const notificationsBadge = document.getElementById('notificationsBadge');
+      const notificationsPanel = document.getElementById('notificationsPanel');
+      const notificationsList = document.getElementById('notificationsList');
+      const markAllReadBtn = document.getElementById('markAllReadBtn');
        const themeToggle = document.getElementById('themeToggle');
        const entryPopup = document.getElementById('entryPopup');
        const entryPopupTitle = entryPopup?.querySelector('.popup-title');
@@ -284,16 +291,10 @@ const STICKER_PICKER_GROUPS = [
 
       function getUrlsFromPostText(postTextEl) {
         const urls = new Set();
-        const urlPattern = /https?:\/\/[^\s<>"')]+/gi;
 
         postTextEl.querySelectorAll('a[href]').forEach((link) => {
           urls.add(link.href);
         });
-
-        const text = postTextEl.textContent || '';
-        for (const match of text.matchAll(urlPattern)) {
-          urls.add(match[0]);
-        }
 
         return [...urls];
       }
@@ -661,6 +662,9 @@ function renderWidgets() {
     const isNoteWidget =
       normalizedId === 'note' || normalizedTitle.includes('little note');
 
+    const isStickerWidget =
+      normalizedId.includes('stickers') || normalizedTitle.includes('stickers');
+
     const hasHistory =
       normalizedId === 'song' ||
       isNoteWidget;
@@ -679,6 +683,9 @@ function renderWidgets() {
 
     const el = document.createElement('div');
     el.className = 'widget';
+    if (isStickerWidget) {
+      el.classList.add('sticker-widget');
+    }
     el.style.left = widget.x + 'px';
     el.style.top = widget.y + 'px';
 
@@ -1670,6 +1677,7 @@ if (stickerTabs) {
       const authPopup = document.getElementById('authPopup');
       const emailInput = document.getElementById('emailInput');
       const passwordInput = document.getElementById('passwordInput');
+      const passwordToggleBtn = document.getElementById('passwordToggleBtn');
       const signupBtn = document.getElementById('signupBtn');
       const loginBtn = document.getElementById('loginBtn');
       const profileBtn = document.getElementById('profileBtn');
@@ -1848,6 +1856,254 @@ function setCurrentUser(user) {
   currentUser = user || null;
 }
 
+function getNotificationsSeenStorageKey() {
+  const userId = currentProfile?.id || currentUser?.id;
+  return userId ? `notificationsSeenAt:${userId}` : '';
+}
+
+function getNotificationsSeenAt() {
+  const key = getNotificationsSeenStorageKey();
+  if (!key) return '';
+
+  try {
+    return localStorage.getItem(key) || '';
+  } catch {
+    return '';
+  }
+}
+
+function setNotificationsSeenAt(value) {
+  const key = getNotificationsSeenStorageKey();
+  if (!key) return;
+
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function formatNotificationRelativeTime(dateString) {
+  const timestamp = new Date(dateString).getTime();
+  if (!timestamp) return '';
+
+  const diffMs = Date.now() - timestamp;
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return formatEntryDate(dateString);
+}
+
+function getNotificationTypeLabel(type) {
+  if (type === 'reply') return 'reply';
+  if (type === 'comment') return 'comment';
+  if (type === 'post_like') return 'like';
+  if (type === 'comment_like') return 'comment like';
+  if (type === 'sticker') return 'sticker';
+  return 'update';
+}
+
+function closeNotificationsPanel() {
+  if (!notificationsPanel || !notificationsBtn) return;
+  notificationsPanel.hidden = true;
+  notificationsBtn.setAttribute('aria-expanded', 'false');
+}
+
+function markNotificationsRead() {
+  if (!notifications.length) {
+    renderNotifications();
+    return;
+  }
+
+  const latestCreatedAt = notifications[0]?.created_at || new Date().toISOString();
+  setNotificationsSeenAt(latestCreatedAt);
+  renderNotifications();
+}
+
+function openNotificationsPanel() {
+  if (!notificationsPanel || !notificationsBtn) return;
+  notificationsPanel.hidden = false;
+  notificationsBtn.setAttribute('aria-expanded', 'true');
+  markNotificationsRead();
+}
+
+function focusPost(postId, options = {}) {
+  const { openComments = false } = options;
+  const target = document.querySelector(`[data-post-id="${postId}"]`);
+
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('post-highlight');
+    window.setTimeout(() => target.classList.remove('post-highlight'), 1400);
+  }
+
+  if (openComments) {
+    openCommentsPopup(postId);
+  }
+}
+
+function renderNotifications() {
+  if (!notificationsList || !notificationsBtn || !notificationsBadge) return;
+
+  const seenAt = getNotificationsSeenAt();
+  const seenTimestamp = seenAt ? new Date(seenAt).getTime() : 0;
+  const unreadCount = notifications.filter((item) => {
+    const createdAt = new Date(item.created_at).getTime();
+    return createdAt > seenTimestamp;
+  }).length;
+
+  notificationsBadge.hidden = unreadCount === 0;
+  notificationsBadge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+
+  if (!notifications.length) {
+    notificationsList.innerHTML = `<div class="notification-empty">no little updates yet ♡</div>`;
+    return;
+  }
+
+  notificationsList.innerHTML = notifications
+    .map((item) => {
+      const createdAt = new Date(item.created_at).getTime();
+      const isUnread = createdAt > seenTimestamp;
+
+      return `
+        <button
+          class="notification-item${isUnread ? ' is-unread' : ''}"
+          type="button"
+          data-notification-post-id="${item.postId || ''}"
+          data-notification-open-comments="${item.openComments ? 'true' : 'false'}"
+        >
+          <div class="notification-topline">
+            <span class="notification-type">${getNotificationTypeLabel(item.type)}</span>
+            <span class="notification-time">${formatNotificationRelativeTime(item.created_at)}</span>
+          </div>
+          <div class="notification-message">${item.message}</div>
+        </button>
+      `;
+    })
+    .join('');
+
+  notificationsList.querySelectorAll('.notification-item').forEach((button) => {
+    button.addEventListener('click', () => {
+      const postId = button.dataset.notificationPostId;
+      const openComments = button.dataset.notificationOpenComments === 'true';
+
+      closeNotificationsPanel();
+
+      if (postId) {
+        focusPost(postId, { openComments });
+      }
+    });
+  });
+}
+
+function buildNotifications({ postsData = [], commentsData = [], likesData = [], stickersData = [], profilesData = [] }) {
+  if (!currentProfile?.id) {
+    notifications = [];
+    renderNotifications();
+    return;
+  }
+
+  const myUserId = currentProfile.id;
+  const postById = new Map(postsData.map((post) => [post.id, post]));
+  const commentById = new Map(commentsData.map((comment) => [comment.id, comment]));
+  const profileById = new Map(profilesData.map((profile) => [profile.id, profile]));
+  const ownPostIds = new Set(postsData.filter((post) => post.user_id === myUserId).map((post) => post.id));
+  const ownCommentIds = new Set(commentsData.filter((comment) => comment.user_id === myUserId).map((comment) => comment.id));
+  const nextNotifications = [];
+
+  commentsData.forEach((comment) => {
+    if (!comment.created_at || comment.user_id === myUserId) return;
+
+    const actorProfile = profileById.get(comment.user_id);
+    const actorName = comment.profiles?.nickname || comment.profiles?.username || actorProfile?.nickname || actorProfile?.username || 'someone';
+    const parentComment = comment.parent_comment_id ? commentById.get(comment.parent_comment_id) : null;
+    const post = postById.get(comment.post_id);
+
+    if (parentComment?.user_id === myUserId) {
+      nextNotifications.push({
+        id: `reply:${comment.id}`,
+        type: 'reply',
+        created_at: comment.created_at,
+        postId: comment.post_id,
+        openComments: true,
+        message: `${actorName} replied to your comment`
+      });
+      return;
+    }
+
+    if (post?.user_id === myUserId) {
+      nextNotifications.push({
+        id: `comment:${comment.id}`,
+        type: 'comment',
+        created_at: comment.created_at,
+        postId: comment.post_id,
+        openComments: true,
+        message: `${actorName} commented on your entry`
+      });
+    }
+  });
+
+  likesData.forEach((like) => {
+    if (!like.created_at || like.user_id === myUserId) return;
+
+    const actorProfile = profileById.get(like.user_id);
+    const actorName = actorProfile?.nickname || actorProfile?.username || 'someone';
+
+    if (like.post_id && ownPostIds.has(like.post_id)) {
+      nextNotifications.push({
+        id: `post-like:${like.id}`,
+        type: 'post_like',
+        created_at: like.created_at,
+        postId: like.post_id,
+        openComments: false,
+        message: `${actorName} liked your entry`
+      });
+      return;
+    }
+
+    if (like.comment_id && ownCommentIds.has(like.comment_id)) {
+      const comment = commentById.get(like.comment_id);
+      nextNotifications.push({
+        id: `comment-like:${like.id}`,
+        type: 'comment_like',
+        created_at: like.created_at,
+        postId: comment?.post_id || '',
+        openComments: Boolean(comment?.post_id),
+        message: `${actorName} liked your comment`
+      });
+    }
+  });
+
+  stickersData.forEach((sticker) => {
+    if (!sticker.created_at || sticker.user_id === myUserId || !ownPostIds.has(sticker.post_id)) return;
+
+    const actorProfile = profileById.get(sticker.user_id);
+    const actorName = actorProfile?.nickname || actorProfile?.username || 'someone';
+    nextNotifications.push({
+      id: `sticker:${sticker.id}`,
+      type: 'sticker',
+      created_at: sticker.created_at,
+      postId: sticker.post_id,
+      openComments: false,
+      message: `${actorName} added ${sticker.emoji} to your entry`
+    });
+  });
+
+  notifications = nextNotifications.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  renderNotifications();
+}
+
 let popupPointerStartedInsideCard = false;
 
 document.querySelectorAll('.popup-card').forEach((card) => {
@@ -1887,6 +2143,7 @@ async function getCurrentUser() {
 async function refreshUserData(options = {}) {
   const { includeWidgets = false } = options;
   renderTimelineSkeleton();
+  renderNotifications();
   if (includeWidgets) {
     renderWidgetSkeletons();
   }
@@ -2153,6 +2410,15 @@ async function loginUser() {
   authPopup.classList.remove('open');
 }
 
+function setPasswordVisibility(isVisible) {
+  if (!passwordInput || !passwordToggleBtn) return;
+
+  passwordInput.type = isVisible ? 'text' : 'password';
+  passwordToggleBtn.innerHTML = `<span class="password-toggle-icon" aria-hidden="true">${isVisible ? '◌' : '◉'}</span>`;
+  passwordToggleBtn.setAttribute('aria-label', isVisible ? 'hide password' : 'show password');
+  passwordToggleBtn.setAttribute('aria-pressed', String(isVisible));
+}
+
 async function saveProfile() {
 
   const nickname = nicknameInput.value.trim();
@@ -2235,7 +2501,8 @@ async function loadPosts() {
     { data: postsData, error: postsError },
     { data: commentsData, error: commentsError },
     { data: stickersData, error: stickersError },
-    likesResult
+    likesResult,
+    { data: profilesData, error: profilesError }
   ] = await Promise.all([
     supabaseClient
       .from('posts')
@@ -2268,10 +2535,13 @@ async function loadPosts() {
       .order('created_at', { ascending: true }),
     supabaseClient
       .from('post_stickers')
-      .select('id, post_id, user_id, emoji, x, y'),
+      .select('id, post_id, user_id, emoji, x, y, created_at'),
     supabaseClient
       .from('likes')
-      .select('id, post_id, comment_id, user_id')
+      .select('id, post_id, comment_id, user_id, created_at'),
+    supabaseClient
+      .from('profiles')
+      .select('id, nickname, username')
   ]);
 
   if (postsError) {
@@ -2292,6 +2562,12 @@ async function loadPosts() {
     return;
   }
 
+  if (profilesError) {
+    console.error(profilesError);
+    showMessage(profilesError.message);
+    return;
+  }
+
   let { data: likesData, error: likesError } = likesResult;
 
   if (likesError) {
@@ -2299,7 +2575,7 @@ async function loadPosts() {
 
     const fallbackLikes = await supabaseClient
       .from('likes')
-      .select('id, post_id, user_id');
+      .select('id, post_id, user_id, created_at');
 
     likesData = fallbackLikes.data;
     likesError = fallbackLikes.error;
@@ -2392,6 +2668,14 @@ async function loadPosts() {
     x: row.x,
     y: row.y
   }));
+
+  buildNotifications({
+    postsData: postsData || [],
+    commentsData: commentsData || [],
+    likesData: likesData || [],
+    stickersData: stickersData || [],
+    profilesData: profilesData || []
+  });
 
   renderTimeline();
 }
@@ -2786,6 +3070,9 @@ renderStickerGrid();
 
 placedStickers = [];
 renderPlacedStickers();
+  notifications = [];
+  closeNotificationsPanel();
+  renderNotifications();
 
   showMessage('logged out ♡');
 }
@@ -2805,18 +3092,63 @@ async function checkSession() {
     authPopup.classList.add('open');
     posts = [];
     personalStickers = [];
+    notifications = [];
+    closeNotificationsPanel();
     renderTimeline();
+    renderNotifications();
     renderWidgets();
   }
 }
 
 if (signupBtn) signupBtn.addEventListener('click', signUpUser);
 if (loginBtn) loginBtn.addEventListener('click', loginUser);
+if (notificationsBtn) {
+  notificationsBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (!notificationsPanel) return;
+
+    if (notificationsPanel.hidden) {
+      openNotificationsPanel();
+    } else {
+      closeNotificationsPanel();
+    }
+  });
+}
+if (markAllReadBtn) {
+  markAllReadBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    markNotificationsRead();
+  });
+}
+if (passwordToggleBtn) {
+  passwordToggleBtn.addEventListener('click', () => {
+    setPasswordVisibility(passwordInput?.type === 'password');
+  });
+}
+if (emailInput) {
+  emailInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    loginUser();
+  });
+}
+if (passwordInput) {
+  passwordInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    loginUser();
+  });
+}
 if (saveProfileBtn) saveProfileBtn.addEventListener('click', saveProfile);
 if (logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 if (saveEntryBtn) saveEntryBtn.addEventListener('click', saveEntry);
 if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+document.addEventListener('click', (event) => {
+  if (!notificationsMenu?.contains(event.target)) {
+    closeNotificationsPanel();
+  }
+});
 document.addEventListener('click', (event) => {
   const link = event.target.closest?.('a[href]');
 

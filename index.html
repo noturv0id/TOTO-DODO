@@ -38,6 +38,26 @@
           <div class="quote-pill">⊹₊˚‧︵‿₊୨forever and always୧₊‿︵‧˚₊⊹</div>
 
           <div class="toolbar-actions">
+            <div class="notifications-menu" id="notificationsMenu">
+              <button
+                class="notifications-btn"
+                type="button"
+                id="notificationsBtn"
+                aria-label="open inbox"
+                aria-expanded="false"
+              >
+                <span class="notifications-btn-icon" aria-hidden="true">✉</span>
+                <span class="notifications-btn-label">inbox</span>
+                <span class="notifications-badge" id="notificationsBadge" hidden>0</span>
+              </button>
+              <div class="notifications-panel" id="notificationsPanel" hidden>
+                <div class="notifications-panel-header">
+                  <h3 class="notifications-title">inbox ♡</h3>
+                  <button class="notifications-mark-btn" id="markAllReadBtn" type="button">mark all read</button>
+                </div>
+                <div class="notifications-list" id="notificationsList"></div>
+              </div>
+            </div>
             <button
               class="theme-toggle"
               type="button"
@@ -191,7 +211,18 @@
             <input class="popup-input" id="emailInput" type="email" />
       
             <label class="popup-label" style="margin-top: 12px;">password</label>
-            <input class="popup-input" id="passwordInput" type="password" />
+            <div class="password-input-wrap">
+              <input class="popup-input" id="passwordInput" type="password" />
+              <button
+                class="password-toggle-btn"
+                id="passwordToggleBtn"
+                type="button"
+                aria-label="show password"
+                aria-pressed="false"
+              >
+                <span class="password-toggle-icon" aria-hidden="true">◉</span>
+              </button>
+            </div>
       
             <div class="popup-actions">
               <button class="soft-btn" id="loginBtn">login</button>
