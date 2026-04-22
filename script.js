@@ -554,15 +554,23 @@ if (normalizedId === 'wishlist' || normalizedTitle.includes('wishlist')) {
   }
 
   const html = items.map((item) => `
-    <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid rgba(241,221,232,0.7);">
-      <span style="font-size:0.95rem;flex-shrink:0;">${item.done ? '☑' : '☐'}</span>
-      <span style="font-size:0.92rem;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;${item.done ? 'text-decoration: line-through; opacity: 0.65;' : ''}">
+    <div class="widget-wishlist-row">
+      <button
+        class="widget-wish-toggle"
+        type="button"
+        data-widget-wish-id="${item.id}"
+        aria-pressed="${item.done ? 'true' : 'false'}"
+        aria-label="${item.done ? 'mark wishlist item incomplete' : 'mark wishlist item complete'}"
+      >
+        ${item.done ? '☑' : '☐'}
+      </button>
+      <span class="widget-wish-text${item.done ? ' is-done' : ''}">
         ${item.text}
       </span>
     </div>
   `).join('');
 
-  return `<div style="display:grid;gap:2px;">${html}</div>`;
+  return `<div class="widget-wishlist-list">${html}</div>`;
 }
 
   if (normalizedId === 'love') {
@@ -727,6 +735,26 @@ function renderWidgets() {
         event.preventDefault();
         event.stopPropagation();
         openWidgetHistory(widget.id);
+      });
+    }
+
+    if (isWishlistWidget) {
+      el.querySelectorAll('.widget-wish-toggle').forEach((btn) => {
+        btn.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        btn.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        btn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          await toggleWidgetWishlistItem(widget.id, btn.dataset.widgetWishId);
+        });
       });
     }
 
@@ -950,12 +978,12 @@ function openWidgetEditor(widgetId) {
     saveWidgetBtn.style.display = 'none';
 
     const itemsHtml = items.map((item) => `
-      <div style="border:1px solid var(--border);border-radius:16px;padding:12px;background:rgba(255,250,253,0.92);display:flex;align-items:center;justify-content:space-between;gap:10px;">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-          <button class="toggle-wish-btn" type="button" data-wish-id="${item.id}" style="border:none;background:none;font-size:1rem;cursor:pointer;">
+      <div class="wishlist-item-row">
+        <div class="wishlist-item-main">
+          <button class="toggle-wish-btn" type="button" data-wish-id="${item.id}">
             ${item.done ? '☑' : '☐'}
           </button>
-          <div style="${item.done ? 'text-decoration: line-through; opacity: 0.65;' : ''}">${item.text}</div>
+          <div class="wishlist-item-text${item.done ? ' is-done' : ''}">${item.text}</div>
         </div>
         <button class="delete-wish-btn" type="button" data-wish-id="${item.id}">delete</button>
       </div>
@@ -1109,6 +1137,27 @@ async function saveWidgetToSupabase(widget) {
   }
 
   recordWidgetHistory(widget);
+}
+
+async function toggleWidgetWishlistItem(widgetId, wishId) {
+  const normalizedWidgetId = String(widgetId || '').toLowerCase().trim();
+  const widget = widgets.find((item) => {
+    const itemId = String(item.id || '').toLowerCase().trim();
+    const itemTitle = String(item.title || '').toLowerCase();
+
+    if (itemId === normalizedWidgetId) return true;
+    if (normalizedWidgetId === 'wishlist' && itemTitle.includes('wishlist')) return true;
+    return false;
+  });
+
+  if (!widget?.data?.items?.length) return;
+
+  widget.data.items = widget.data.items.map((item) =>
+    item.id === wishId ? { ...item, done: !item.done } : item
+  );
+
+  await saveWidgetToSupabase(widget);
+  renderWidgets();
 }
 
 function formatEntryDate(dateString) {

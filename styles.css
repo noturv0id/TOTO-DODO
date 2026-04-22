@@ -615,8 +615,19 @@
         background: #6d425b;
       }
 
+      html[data-theme='dark'] .wishlist-item-row {
+        background: rgba(41, 28, 47, 0.94);
+        border-color: var(--border-2);
+      }
+
+      html[data-theme='dark'] .toggle-wish-btn,
+      html[data-theme='dark'] .wishlist-item-text {
+        color: var(--text);
+      }
+
       html[data-theme='dark'] .widget-edit-btn,
-      html[data-theme='dark'] .widget-history-btn {
+      html[data-theme='dark'] .widget-history-btn,
+      html[data-theme='dark'] .widget-wish-toggle {
         color: var(--text-soft);
       }
 
@@ -746,6 +757,44 @@
 
       .widget-content {
         padding: 16px;
+      }
+
+      .widget-wishlist-list {
+        display: grid;
+        gap: 2px;
+      }
+
+      .widget-wishlist-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(241, 221, 232, 0.7);
+      }
+
+      .widget-wish-toggle {
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font-size: 0.95rem;
+        line-height: 1;
+        flex-shrink: 0;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .widget-wish-text {
+        font-size: 0.92rem;
+        line-height: 1.4;
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        color: var(--text);
+      }
+
+      .widget-wish-text.is-done {
+        text-decoration: line-through;
+        opacity: 0.65;
       }
 
       .widget.sticker-widget {
@@ -1203,6 +1252,46 @@
       .delete-wish-btn:hover {
         transform: translateY(-1px);
         opacity: 0.85;
+      }
+
+      .wishlist-item-row {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px;
+        background: rgba(255, 250, 253, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .wishlist-item-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .toggle-wish-btn {
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 0;
+        flex: 0 0 auto;
+      }
+
+      .wishlist-item-text {
+        color: var(--text);
+        min-width: 0;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+
+      .wishlist-item-text.is-done {
+        text-decoration: line-through;
+        opacity: 0.65;
       }
 
       .post-btn:hover {
