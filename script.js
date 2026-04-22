@@ -6,7 +6,7 @@ const supabaseClient = supabase.createClient(
   SUPABASE_ANON_KEY
 );
 const ANNIVERSARY_WRAPPER_URL =
-  'https://noturv0id.github.io/our-memories/anniversary-wrapper.html';
+  'https://noturv0id.github.io/our-memories/anniversary-wrapper.html?v=20260422-3';
 const STICKER_MIME_TYPE = 'application/x-our-memories-sticker';
 let hasRenderedEmojiPicker = false;
 const STICKER_PICKER_GROUPS = [
