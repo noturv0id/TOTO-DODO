@@ -443,12 +443,32 @@ if (normalizedId === 'wishlist' || normalizedTitle.includes('wishlist')) {
 }
 
 function normalizeAnniversaryLinks(html) {
-  return String(html || '')
-    .replace(/href=(["'])\.\/toto%20%26%20dodo%20anniversary\/index\.html\1/gi, `href=$1${ANNIVERSARY_WRAPPER_URL}$1`)
-    .replace(/href=(["'])\.\/toto\s*&amp;\s*dodo\s*anniversary\/index\.html\1/gi, `href=$1${ANNIVERSARY_WRAPPER_URL}$1`)
-    .replace(/href=(["'])\.\/toto\s*&\s*dodo\s*anniversary\/index\.html\1/gi, `href=$1${ANNIVERSARY_WRAPPER_URL}$1`)
-    .replace(/href=(["'])https:\/\/noturv0id\.github\.io\/our-memories\/toto%20%26%20dodo%20anniversary\/index\.html\1/gi, `href=$1${ANNIVERSARY_WRAPPER_URL}$1`)
-    .replace(/href=(["'])https:\/\/notur0id\.github\.io\/our-memories\/toto%20%26%20dodo%20anniversary\/index\.html\1/gi, `href=$1${ANNIVERSARY_WRAPPER_URL}$1`);
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  upgradeLegacyAnniversaryLinks(template.content);
+  return template.innerHTML;
+}
+
+function isLegacyAnniversaryUrl(url) {
+  const decodedUrl = decodeURIComponent(String(url || '')).toLowerCase();
+  return (
+    decodedUrl.includes('toto') &&
+    decodedUrl.includes('dodo') &&
+    decodedUrl.includes('anniversary') &&
+    decodedUrl.includes('index.html')
+  );
+}
+
+function upgradeLegacyAnniversaryLinks(root = document) {
+  root.querySelectorAll?.('a[href]').forEach((link) => {
+    if (!isLegacyAnniversaryUrl(link.getAttribute('href')) && !isLegacyAnniversaryUrl(link.href)) {
+      return;
+    }
+
+    link.href = ANNIVERSARY_WRAPPER_URL;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  });
 }
 
 async function loadWidgets() {
@@ -535,6 +555,7 @@ function renderWidgets() {
       </div>
       <div class="widget-content">${getWidgetContent(widget)}</div>
     `;
+    upgradeLegacyAnniversaryLinks(el);
 
     const bar = el.querySelector('.widget-bar');
     const editBtn = el.querySelector('.widget-edit-btn');
@@ -2520,6 +2541,16 @@ if (saveProfileBtn) saveProfileBtn.addEventListener('click', saveProfile);
 if (logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 if (saveEntryBtn) saveEntryBtn.addEventListener('click', saveEntry);
 if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
+document.addEventListener('click', (event) => {
+  const link = event.target.closest?.('a[href]');
+
+  if (!link || !isLegacyAnniversaryUrl(link.href)) {
+    return;
+  }
+
+  event.preventDefault();
+  window.open(ANNIVERSARY_WRAPPER_URL, '_blank', 'noopener,noreferrer');
+}, true);
 
 initEntryEditor();
 renderDecor();
