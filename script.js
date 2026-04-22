@@ -66,8 +66,16 @@ const STICKER_PICKER_GROUPS = [
         { icon: '✦', top: '90%', right: '24%', size: '20px', delay: '1.9s' },
         { icon: '♡', top: '18%', left: '48%', size: '18px', delay: '1.3s' },
         { icon: '✦', top: '64%', left: '52%', size: '18px', delay: '2.1s' },
-        { icon: '☁', top: '8%', left: '72%', size: '26px', delay: '0.5s' },
+       { icon: '☁', top: '8%', left: '72%', size: '26px', delay: '0.5s' },
       ];
+      const sparkleDecor = Array.from({ length: 70 }, (_, index) => ({
+        icon: '✦',
+        top: `${(index * 37) % 96 + 1}%`,
+        left: `${(index * 53) % 96 + 1}%`,
+        size: `${30 + (index % 4)}px`,
+        delay: `${(index % 14) * 0.32}s`,
+        duration: `${3.4 + (index % 6) * 0.45}s`
+      }));
 
       let widgets = [
   {
@@ -176,6 +184,7 @@ const STICKER_PICKER_GROUPS = [
        let commentLikesEnabled = true;
        let currentUser = null;
        let entryQuill = null;
+       const pendingPostLikeIds = new Set();
 
        const floatingDecorEl = document.getElementById('floatingDecor');
        const leftZone = document.getElementById('leftZone');
@@ -188,6 +197,7 @@ const STICKER_PICKER_GROUPS = [
       const saveStickerBtn = document.getElementById('saveStickerBtn');
       const closeStickerPopup = document.getElementById('closeStickerPopup');
        const newEntryBtn = document.getElementById('newEntryBtn');
+       const themeToggle = document.getElementById('themeToggle');
        const entryPopup = document.getElementById('entryPopup');
        const entryPopupTitle = entryPopup?.querySelector('.popup-title');
        const entryPopupLabel = entryPopup?.querySelector('.popup-label');
@@ -206,6 +216,36 @@ const STICKER_PICKER_GROUPS = [
       const widgetPopupTitle = document.getElementById('widgetPopupTitle');
        const widgetEditorFields = document.getElementById('widgetEditorFields');
        const saveWidgetBtn = document.getElementById('saveWidgetBtn');
+       const clearWidgetHistoryBtn = document.getElementById('clearWidgetHistoryBtn');
+
+       function setTheme(theme) {
+         const nextTheme = theme === 'dark' ? 'dark' : 'light';
+         document.documentElement.dataset.theme = nextTheme;
+
+         if (themeToggle) {
+           const isDark = nextTheme === 'dark';
+           themeToggle.classList.toggle('active', isDark);
+           themeToggle.setAttribute('aria-pressed', String(isDark));
+           themeToggle.setAttribute(
+             'aria-label',
+             isDark ? 'switch to light mode' : 'switch to dark mode'
+           );
+           const label = themeToggle.querySelector('.theme-toggle-label');
+           if (label) label.textContent = isDark ? 'light' : 'dark';
+         }
+       }
+
+       function toggleTheme() {
+         const currentTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+         const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+         setTheme(nextTheme);
+
+         try {
+           localStorage.setItem('ourMemoriesTheme', nextTheme);
+         } catch (error) {
+           console.error(error);
+         }
+       }
 
        function escapeHtml(value) {
          return String(value || '')
@@ -236,13 +276,103 @@ const STICKER_PICKER_GROUPS = [
          return sanitizePostHtml(escapeHtml(text).replaceAll('\n', '<br>'));
        }
 
-       function getPostDisplayHtml(content) {
-         const value = String(content || '');
-         if (!value) return '';
-         return looksLikeHtml(value) ? sanitizePostHtml(value) : toSafeHtmlFromPlainText(value);
-       }
+      function getPostDisplayHtml(content) {
+        const value = String(content || '');
+        if (!value) return '';
+        return looksLikeHtml(value) ? sanitizePostHtml(value) : toSafeHtmlFromPlainText(value);
+      }
 
-       function htmlToPlainText(html) {
+      function getUrlsFromPostText(postTextEl) {
+        const urls = new Set();
+        const urlPattern = /https?:\/\/[^\s<>"')]+/gi;
+
+        postTextEl.querySelectorAll('a[href]').forEach((link) => {
+          urls.add(link.href);
+        });
+
+        const text = postTextEl.textContent || '';
+        for (const match of text.matchAll(urlPattern)) {
+          urls.add(match[0]);
+        }
+
+        return [...urls];
+      }
+
+      function getYouTubeVideoId(url) {
+        try {
+          const parsedUrl = new URL(url);
+          const host = parsedUrl.hostname.replace(/^www\./, '');
+
+          if (host === 'youtu.be') {
+            return parsedUrl.pathname.split('/').filter(Boolean)[0] || '';
+          }
+
+          if (!['youtube.com', 'm.youtube.com', 'music.youtube.com'].includes(host)) {
+            return '';
+          }
+
+          if (parsedUrl.pathname === '/watch') {
+            return parsedUrl.searchParams.get('v') || '';
+          }
+
+          const parts = parsedUrl.pathname.split('/').filter(Boolean);
+          if (['embed', 'shorts', 'live'].includes(parts[0])) {
+            return parts[1] || '';
+          }
+        } catch {
+          return '';
+        }
+
+        return '';
+      }
+
+      function createYouTubePreview(videoId, sourceUrl) {
+        const preview = document.createElement('a');
+        preview.className = 'link-preview youtube-preview';
+        preview.href = sourceUrl;
+        preview.target = '_blank';
+        preview.rel = 'noopener noreferrer';
+
+        const thumbnail = document.createElement('img');
+        thumbnail.className = 'youtube-preview-thumb';
+        thumbnail.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        thumbnail.alt = 'YouTube video preview';
+        thumbnail.loading = 'lazy';
+
+        const play = document.createElement('span');
+        play.className = 'youtube-preview-play';
+        play.textContent = '▶';
+
+        const label = document.createElement('span');
+        label.className = 'youtube-preview-label';
+        label.textContent = 'Watch on YouTube';
+
+        preview.append(thumbnail, play, label);
+        return preview;
+      }
+
+      function renderLinkPreviews(postTextEl, previewContainer) {
+        if (!previewContainer) return;
+
+        previewContainer.innerHTML = '';
+        const seenVideos = new Set();
+        const previews = getUrlsFromPostText(postTextEl)
+          .map((url) => ({
+            url,
+            videoId: getYouTubeVideoId(url)
+          }))
+          .filter((item) => item.videoId && !seenVideos.has(item.videoId))
+          .slice(0, 3);
+
+        previews.forEach((item) => {
+          seenVideos.add(item.videoId);
+          previewContainer.appendChild(createYouTubePreview(item.videoId, item.url));
+        });
+
+        previewContainer.hidden = previews.length === 0;
+      }
+
+      function htmlToPlainText(html) {
          const container = document.createElement('div');
          container.innerHTML = sanitizePostHtml(html);
          return (container.textContent || '').replace(/\u00a0/g, ' ');
@@ -261,21 +391,18 @@ const STICKER_PICKER_GROUPS = [
 
          entryQuill = new window.Quill(entryEditor, {
            theme: 'snow',
-           placeholder: 'write something ♡',
-           modules: {
-             toolbar: [
-               [{ font: [] }],
-               [{ size: ['small', false, 'large', 'huge'] }],
-               ['bold', 'italic', 'underline', 'strike'],
-               [{ color: [] }, { background: [] }],
-               [{ script: 'sub' }, { script: 'super' }],
-               [{ header: 1 }, { header: 2 }, 'blockquote', 'code-block'],
-               [{ list: 'ordered' }, { list: 'bullet' }],
-               [{ indent: '-1' }, { indent: '+1' }],
-               [{ direction: 'rtl' }, { align: [] }],
-               ['link'],
-               ['clean']
-             ]
+          placeholder: 'write something ♡',
+          modules: {
+            toolbar: [
+              [{ font: [] }],
+              [{ header: [false, 2, 3] }],
+              ['bold', 'italic', 'underline'],
+              [{ color: [] }, { background: [] }],
+              [{ list: 'ordered' }, { list: 'bullet' }],
+              ['blockquote'],
+              ['link'],
+              ['clean']
+            ]
            }
          });
        }
@@ -312,8 +439,8 @@ const STICKER_PICKER_GROUPS = [
 
        function renderDecor() {
          floatingDecorEl.innerHTML = '';
-         floatingDecor.forEach((item) => {
-           const node = document.createElement('div');
+       floatingDecor.forEach((item) => {
+         const node = document.createElement('div');
           node.className = 'decor';
           node.textContent = item.icon;
           node.style.top = item.top;
@@ -321,6 +448,18 @@ const STICKER_PICKER_GROUPS = [
           if (item.right) node.style.right = item.right;
           node.style.fontSize = item.size;
           node.style.animationDelay = item.delay;
+          floatingDecorEl.appendChild(node);
+        });
+
+        sparkleDecor.forEach((item) => {
+          const node = document.createElement('div');
+          node.className = 'decor sparkle-decor';
+          node.textContent = item.icon;
+          node.style.top = item.top;
+          node.style.left = item.left;
+          node.style.fontSize = item.size;
+          node.style.animationDelay = item.delay;
+          node.style.animationDuration = item.duration;
           floatingDecorEl.appendChild(node);
         });
       }
@@ -612,9 +751,37 @@ function renderWidgets() {
   renderStickerGrid();
 }
 
+function renderWidgetSkeletons() {
+  const skeletons = [
+    { side: 'left', x: 0, y: 12, lines: 3 },
+    { side: 'left', x: 0, y: 225, lines: 2 },
+    { side: 'right', x: 12, y: 46, lines: 2 },
+    { side: 'right', x: 4, y: 258, lines: 3 }
+  ];
+
+  leftZone.innerHTML = '';
+  rightZone.innerHTML = '';
+
+  skeletons.forEach((item) => {
+    const node = document.createElement('div');
+    node.className = 'widget widget-skeleton';
+    node.style.left = `${item.x}px`;
+    node.style.top = `${item.y}px`;
+    node.innerHTML = `
+      <div class="skeleton-block skeleton-header"></div>
+      <div class="skeleton-widget-body">
+        ${Array.from({ length: item.lines }).map(() => '<span class="skeleton-line"></span>').join('')}
+      </div>
+    `;
+
+    (item.side === 'left' ? leftZone : rightZone).appendChild(node);
+  });
+}
+
 function openWidgetEditor(widgetId) {
   dragWidget = null;
   pendingWidgetDrag = null;
+  if (clearWidgetHistoryBtn) clearWidgetHistoryBtn.style.display = 'none';
 
   const normalizedId = String(widgetId || '').toLowerCase().trim();
 
@@ -855,6 +1022,11 @@ async function saveWidgetChanges() {
 
   if (!widget) return;
 
+  const beforeSaveState = JSON.stringify({
+    title: widget.title || '',
+    data: widget.data || null
+  });
+
   if (editingWidgetId === 'song') {
     widget.title = document.getElementById('widgetFieldWidgetTitle').value.trim() || 'currently listening to ₊˚⊹ᰔ ';
     widget.data.title = document.getElementById('widgetFieldTitle').value.trim();
@@ -864,6 +1036,16 @@ async function saveWidgetChanges() {
     if (!widget.data) widget.data = {};
     widget.data.text = document.getElementById('widgetFieldText').value.trim();
   } else {
+    return;
+  }
+
+  const afterSaveState = JSON.stringify({
+    title: widget.title || '',
+    data: widget.data || null
+  });
+
+  if (beforeSaveState === afterSaveState) {
+    showMessage('no changes to save ♡');
     return;
   }
 
@@ -896,7 +1078,7 @@ async function saveWidgetToSupabase(widget) {
   recordWidgetHistory(widget);
 }
 
-  function formatEntryDate(dateString) {
+function formatEntryDate(dateString) {
   const date = new Date(dateString);
   return date.toLocaleString([], {
     month: 'long',
@@ -905,6 +1087,22 @@ async function saveWidgetToSupabase(widget) {
     hour: 'numeric',
     minute: '2-digit'
   });
+}
+
+function getPostLikeLabel(post) {
+  return `${post.likedByMe ? '🩷 liked' : '♡ like'} (${post.likesCount || 0})`;
+}
+
+function syncPostLikeButton(postId) {
+  const post = posts.find((item) => item.id === postId);
+  const btn = document.querySelector(`.like-btn[data-post-id="${postId}"]`);
+
+  if (!post || !btn) return;
+
+  btn.textContent = getPostLikeLabel(post);
+  btn.classList.toggle('liked', Boolean(post.likedByMe));
+  btn.classList.toggle('is-pending', pendingPostLikeIds.has(postId));
+  btn.setAttribute('aria-pressed', String(Boolean(post.likedByMe)));
 }
 
 function renderTimeline() {
@@ -946,9 +1144,15 @@ function renderTimeline() {
           </div>
        </div>
         <div class="post-text ql-editor"></div>
+        <div class="link-preview-list" hidden></div>
         <div class="post-actions">
-          <button class="post-btn like-btn" type="button" data-post-id="${post.id}">
-            ${post.likedByMe ? '🩷 liked' : '♡ like'} (${post.likesCount || 0})
+          <button
+            class="post-btn like-btn${post.likedByMe ? ' liked' : ''}${pendingPostLikeIds.has(post.id) ? ' is-pending' : ''}"
+            type="button"
+            data-post-id="${post.id}"
+            aria-pressed="${post.likedByMe ? 'true' : 'false'}"
+          >
+            ${getPostLikeLabel(post)}
           </button>
           <button class="post-btn comments-btn" type="button" data-post-id="${post.id}">
             comments (${post.comments?.length || 0})
@@ -964,8 +1168,9 @@ function renderTimeline() {
     postTextEl.innerHTML = getPostDisplayHtml(post.text);
     postTextEl.querySelectorAll('a').forEach((link) => {
       link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+        link.rel = 'noopener noreferrer';
     });
+    renderLinkPreviews(postTextEl, postEl.querySelector('.link-preview-list'));
 
     const postBody = postEl.querySelector('.post-body');
 
@@ -1034,6 +1239,35 @@ function renderTimeline() {
   });
 
   renderPlacedStickers();
+}
+
+function renderTimelineSkeleton() {
+  timelineEl.innerHTML = Array.from({ length: 3 }).map(() => `
+    <article class="post post-skeleton">
+      <div class="post-header">
+        <span class="skeleton-line skeleton-line-short"></span>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="skeleton-avatar"></span>
+          <div class="post-author-text skeleton-author-lines">
+            <span class="skeleton-line skeleton-line-name"></span>
+            <span class="skeleton-line skeleton-line-tiny"></span>
+          </div>
+        </div>
+        <div class="skeleton-paragraph">
+          <span class="skeleton-line"></span>
+          <span class="skeleton-line"></span>
+          <span class="skeleton-line skeleton-line-wide"></span>
+          <span class="skeleton-line skeleton-line-medium"></span>
+        </div>
+        <div class="post-actions">
+          <span class="skeleton-button"></span>
+          <span class="skeleton-button"></span>
+        </div>
+      </div>
+    </article>
+  `).join('');
 }
 
 function getDropBodyFromTarget(target) {
@@ -1398,12 +1632,14 @@ if (stickerTabs) {
       closeWidgetPopup.addEventListener('click', () => {
         widgetPopup.classList.remove('open');
         saveWidgetBtn.style.display = 'inline-flex';
+        if (clearWidgetHistoryBtn) clearWidgetHistoryBtn.style.display = 'none';
       });
 
       widgetPopup.addEventListener('click', (event) => {
         if (event.target === widgetPopup && !popupPointerStartedInsideCard) {
           widgetPopup.classList.remove('open');
           saveWidgetBtn.style.display = 'inline-flex';
+          if (clearWidgetHistoryBtn) clearWidgetHistoryBtn.style.display = 'none';
         }
       });
 
@@ -1416,6 +1652,20 @@ if (stickerTabs) {
       });
 
       saveWidgetBtn.addEventListener('click', saveWidgetChanges);
+      if (clearWidgetHistoryBtn) {
+        clearWidgetHistoryBtn.addEventListener('click', () => {
+          const widgetId = clearWidgetHistoryBtn.dataset.clearWidgetHistoryId;
+          const widget = widgets.find((item) => item.id === widgetId);
+          if (!widget) return;
+
+          const shouldClear = window.confirm(`Clear history for ${widget.title}?`);
+          if (!shouldClear) return;
+
+          clearWidgetHistory(widget.id);
+          openWidgetHistory(widget.id);
+          showMessage('history cleared ♡');
+        });
+      }
 
       const authPopup = document.getElementById('authPopup');
       const emailInput = document.getElementById('emailInput');
@@ -1537,6 +1787,14 @@ function recordWidgetHistory(widget) {
   }
 }
 
+function clearWidgetHistory(widgetId) {
+  try {
+    localStorage.removeItem(`widgetHistory:${widgetId}`);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function openWidgetHistory(widgetId) {
   const widget = widgets.find((item) => item.id === widgetId);
   if (!widget) return;
@@ -1544,6 +1802,10 @@ function openWidgetHistory(widgetId) {
   const historyEntries = getWidgetHistoryEntries(widget.id);
   widgetPopupTitle.textContent = `${widget.title} history`;
   saveWidgetBtn.style.display = 'none';
+  if (clearWidgetHistoryBtn) {
+    clearWidgetHistoryBtn.style.display = historyEntries.length ? 'inline-flex' : 'none';
+    clearWidgetHistoryBtn.dataset.clearWidgetHistoryId = widget.id;
+  }
 
   widgetEditorFields.innerHTML = historyEntries.length
     ? `
@@ -1624,6 +1886,11 @@ async function getCurrentUser() {
 
 async function refreshUserData(options = {}) {
   const { includeWidgets = false } = options;
+  renderTimelineSkeleton();
+  if (includeWidgets) {
+    renderWidgetSkeletons();
+  }
+
   const tasks = [loadPosts(), loadUserStickers()];
 
   if (includeWidgets) {
@@ -2215,6 +2482,8 @@ async function deleteEntry(postId) {
 }
 
 async function toggleLike(postId) {
+  if (pendingPostLikeIds.has(postId)) return;
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -2225,34 +2494,40 @@ async function toggleLike(postId) {
   const post = posts.find((item) => item.id === postId);
   if (!post) return;
 
-  if (post.likedByMe) {
-    const { error } = await supabaseClient
-      .from('likes')
-      .delete()
-      .eq('post_id', postId)
-      .eq('user_id', user.id);
+  const wasLiked = Boolean(post.likedByMe);
+  const previousCount = post.likesCount || 0;
 
-    if (error) {
-      console.error(error);
-      showMessage(error.message);
-      return;
-    }
-  } else {
-    const { error } = await supabaseClient
-      .from('likes')
-      .insert({
-        post_id: postId,
-        user_id: user.id
-      });
+  pendingPostLikeIds.add(postId);
+  post.likedByMe = !wasLiked;
+  post.likesCount = Math.max(0, previousCount + (wasLiked ? -1 : 1));
+  syncPostLikeButton(postId);
 
-    if (error) {
-      console.error(error);
-      showMessage(error.message);
-      return;
-    }
+  try {
+    const result = wasLiked
+      ? await supabaseClient
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id)
+      : await supabaseClient
+          .from('likes')
+          .insert({
+            post_id: postId,
+            user_id: user.id
+          });
+
+    if (result.error) throw result.error;
+
+    loadPosts();
+  } catch (error) {
+    console.error(error);
+    post.likedByMe = wasLiked;
+    post.likesCount = previousCount;
+    showMessage(error.message);
+  } finally {
+    pendingPostLikeIds.delete(postId);
+    syncPostLikeButton(postId);
   }
-
-  await loadPosts();
 }
 
 async function toggleCommentLike(commentId) {
@@ -2541,6 +2816,7 @@ if (saveProfileBtn) saveProfileBtn.addEventListener('click', saveProfile);
 if (logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 if (saveEntryBtn) saveEntryBtn.addEventListener('click', saveEntry);
 if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
+if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 document.addEventListener('click', (event) => {
   const link = event.target.closest?.('a[href]');
 
@@ -2549,9 +2825,10 @@ document.addEventListener('click', (event) => {
   }
 
   event.preventDefault();
-  window.open(ANNIVERSARY_WRAPPER_URL, '_blank', 'noopener,noreferrer');
-}, true);
+        window.open(ANNIVERSARY_WRAPPER_URL, '_blank', 'noopener,noreferrer');
+      }, true);
 
+setTheme(document.documentElement.dataset.theme);
 initEntryEditor();
 renderDecor();
 renderTimeline();
