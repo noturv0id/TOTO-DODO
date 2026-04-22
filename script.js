@@ -141,7 +141,7 @@ const STICKER_PICKER_GROUPS = [
         <div style="font-size:0.94rem;line-height:1.5;">drink some water, take a breath, and remember you are loved ♡</div>
         <a
           class="soft-btn"
-          href="./toto%20%26%20dodo%20anniversary/index.html"
+          href="./toto%20%26%20dodo%20anniversary/second_page.html?loadFromSupabase=true"
           style="justify-self:start;text-decoration:none;display:inline-flex;align-items:center;"
         >
           open website
@@ -742,8 +742,8 @@ async function saveWidgetToSupabase(widget) {
       id: widget.id,
       title: widget.title,
       side: widget.side,
-      x: widget.x,
-      y: widget.y,
+      x: Math.round(widget.x),
+      y: Math.round(widget.y),
       data: widget.data || null,
       content: widget.content || null,
       updated_at: new Date().toISOString()
