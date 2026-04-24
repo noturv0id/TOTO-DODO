@@ -8,7 +8,37 @@ const supabaseClient = supabase.createClient(
 const ANNIVERSARY_WRAPPER_URL =
   'https://noturv0id.github.io/our-memories/anniversary-wrapper.html?v=20260422-3';
 const STICKER_MIME_TYPE = 'application/x-our-memories-sticker';
+// Add your GIPHY API key here to enable public GIF search in the sticker popup.
+const GIPHY_API_KEY = '34udc7WiSDjXKrRbb9UgwcD2piNXT3uO';
+const GIPHY_CLIENT_KEY = 'our_memories_sticker_box';
+const GIPHY_SEARCH_ENDPOINT = 'https://api.giphy.com/v1/gifs/search';
+const OPEN_METEO_FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
+const WEATHER_WIDGET_LOCATIONS = [
+  { label: 'Hateen, Kuwait', latitude: 29.28233, longitude: 48.02874 },
+  { label: 'Dammam, Saudi Arabia', latitude: 26.43442, longitude: 50.10326 }
+];
+const RECENT_GIF_STORAGE_KEY = 'recentGifStickers';
+const PLACED_GIF_SIZE_STORAGE_KEY = 'placedGifStickerSizes';
+const DEFAULT_GIF_STICKER_SIZE = 72;
+const MIN_GIF_STICKER_SIZE = 44;
+const MAX_GIF_STICKER_SIZE = 160;
 let hasRenderedEmojiPicker = false;
+let hasRenderedGifPicker = false;
+let selectedGifStickerUrl = '';
+let gifSearchResults = [];
+let gifSearchQuery = '';
+let gifSearchLoading = false;
+let activeStickerSize = null;
+const STICKER_GIF_LIBRARY = [
+  { label: 'heart bear', url: 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif' },
+  { label: 'cute cat', url: 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif' },
+  { label: 'pink hearts', url: 'https://media.giphy.com/media/l4FGpP4lxGGgK5CBW/giphy.gif' },
+  { label: 'happy dance', url: 'https://media.giphy.com/media/ICOgUNjpvO0PC/giphy.gif' },
+  { label: 'love letter', url: 'https://media.giphy.com/media/26BRv0ThflsHCqDrG/giphy.gif' },
+  { label: 'sparkly hug', url: 'https://media.giphy.com/media/5GoVLqeAOo6PK/giphy.gif' },
+  { label: 'blushing heart', url: 'https://media.giphy.com/media/LYJLrM8VkBmyCKOd1O/giphy.gif' },
+  { label: 'sleepy bunny', url: 'https://media.giphy.com/media/9Y5BbDSkSTiY8/giphy.gif' }
+];
 const STICKER_PICKER_GROUPS = [
   {
     label: 'hearts + symbols',
@@ -129,6 +159,30 @@ const STICKER_PICKER_GROUPS = [
   }
 },
 
+{
+  id: 'weather',
+  title: '˚₊‧꒰ა current weather ໒꒱ ‧₊˚',
+  side: 'left',
+  x: 8,
+  y: 620,
+  data: {
+    locations: [],
+    status: 'idle'
+  }
+},
+
+{
+  id: 'miss-you',
+  title: '˚₊‧ i miss you counter ‧₊˚',
+  side: 'right',
+  x: 8,
+  y: 610,
+  data: {
+    countsByUser: {},
+    lastResetDate: ''
+  }
+},
+
   {
   id: 'love',
   title: '｡ ₊°༺ together for ༻°₊ ｡',
@@ -174,9 +228,11 @@ const STICKER_PICKER_GROUPS = [
       let posts = [];
       let personalStickers = [];
       let placedStickers = [];
-      let notifications = [];
-      let activeSticker = null;
-      let dragWidget = null;
+let notifications = [];
+let activeSticker = null;
+let dragWidget = null;
+let draggingPlacedSticker = null;
+let knownProfiles = [];
        let currentCommentsPostId = null;
        let replyingToCommentId = null;
        let editingWidgetId = null;
@@ -195,10 +251,14 @@ const STICKER_PICKER_GROUPS = [
       const stickerTabs = document.getElementById('stickerTabs');
       const stickerInput = document.getElementById('stickerInput');
       const emojiPickerGrid = document.getElementById('emojiPickerGrid');
+      const gifPickerGrid = document.getElementById('gifPickerGrid');
+      const gifSearchInput = document.getElementById('gifSearchInput');
+      const gifSearchBtn = document.getElementById('gifSearchBtn');
+      const gifSearchStatus = document.getElementById('gifSearchStatus');
       const saveStickerBtn = document.getElementById('saveStickerBtn');
       const closeStickerPopup = document.getElementById('closeStickerPopup');
-       const newEntryBtn = document.getElementById('newEntryBtn');
       const appToolbar = document.getElementById('appToolbar');
+      const newEntryBtn = document.getElementById('newEntryBtn');
       const notificationsMenu = document.getElementById('notificationsMenu');
       const notificationsBtn = document.getElementById('notificationsBtn');
       const notificationsBadge = document.getElementById('notificationsBadge');
@@ -226,6 +286,7 @@ const STICKER_PICKER_GROUPS = [
        const widgetEditorFields = document.getElementById('widgetEditorFields');
        const saveWidgetBtn = document.getElementById('saveWidgetBtn');
        const clearWidgetHistoryBtn = document.getElementById('clearWidgetHistoryBtn');
+      let lastScrollY = window.scrollY || 0;
 
        function setTheme(theme) {
          const nextTheme = theme === 'dark' ? 'dark' : 'light';
@@ -244,17 +305,148 @@ const STICKER_PICKER_GROUPS = [
          }
        }
 
-       function toggleTheme() {
-         const currentTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
-         const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
-         setTheme(nextTheme);
+      function toggleTheme() {
+        const currentTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(nextTheme);
 
          try {
            localStorage.setItem('ourMemoriesTheme', nextTheme);
          } catch (error) {
-           console.error(error);
-         }
-       }
+         console.error(error);
+        }
+      }
+
+      function updateFloatingEntryButtonVisibility() {
+        if (!newEntryBtn) return;
+
+        const currentScrollY = window.scrollY || 0;
+        const scrollDelta = currentScrollY - lastScrollY;
+        const shouldHide =
+          currentScrollY > 140 &&
+          scrollDelta > 8 &&
+          !entryPopup?.classList.contains('open');
+
+        if (shouldHide) {
+          newEntryBtn.classList.add('is-hidden');
+        } else if (scrollDelta < -8 || currentScrollY <= 80 || entryPopup?.classList.contains('open')) {
+          newEntryBtn.classList.remove('is-hidden');
+        }
+
+        lastScrollY = currentScrollY;
+      }
+
+      function isGifSticker(value) {
+        const normalizedValue = String(value || '').trim().toLowerCase();
+        return normalizedValue.startsWith('http') && normalizedValue.includes('.gif');
+      }
+
+      function createStickerVisual(value, options = {}) {
+        const { forGrid = false, size = DEFAULT_GIF_STICKER_SIZE } = options;
+
+        if (isGifSticker(value)) {
+          const media = document.createElement('img');
+          media.className = forGrid ? 'sticker-pill-media' : 'reaction-sticker-media';
+          media.src = value;
+          media.alt = 'gif sticker';
+          media.loading = 'lazy';
+          if (!forGrid) {
+            media.style.width = `${size}px`;
+            media.style.height = `${size}px`;
+          }
+          return media;
+        }
+
+        const text = document.createElement('span');
+        text.className = 'reaction-sticker-emoji';
+        text.textContent = value;
+        return text;
+      }
+
+      function setGifSearchStatus(message) {
+        if (gifSearchStatus) {
+          gifSearchStatus.textContent = message;
+        }
+      }
+
+      function escapeQueryParam(value) {
+        return encodeURIComponent(String(value || '').trim());
+      }
+
+      function getGiphyStickerUrl(gifObject) {
+        return (
+          gifObject?.images?.fixed_height?.url ||
+          gifObject?.images?.downsized?.url ||
+          gifObject?.images?.original?.url ||
+          ''
+        );
+      }
+
+      function getRecentGifStickers() {
+        try {
+          const raw = localStorage.getItem(RECENT_GIF_STORAGE_KEY);
+          const parsed = JSON.parse(raw || '[]');
+          return Array.isArray(parsed) ? parsed.filter((item) => item?.url) : [];
+        } catch (error) {
+          console.error(error);
+          return [];
+        }
+      }
+
+      function saveRecentGifSticker(gifItem) {
+        if (!gifItem?.url) return;
+
+        try {
+          const nextItems = [
+            gifItem,
+            ...getRecentGifStickers().filter((item) => item.url !== gifItem.url)
+          ].slice(0, 6);
+          localStorage.setItem(RECENT_GIF_STORAGE_KEY, JSON.stringify(nextItems));
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function getPlacedGifSizeMap() {
+        try {
+          const raw = localStorage.getItem(PLACED_GIF_SIZE_STORAGE_KEY);
+          const parsed = JSON.parse(raw || '{}');
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+          console.error(error);
+          return {};
+        }
+      }
+
+      function getPlacedGifSize(stickerId) {
+        const sizeMap = getPlacedGifSizeMap();
+        const size = Number(sizeMap?.[stickerId]);
+        return Number.isFinite(size) ? size : DEFAULT_GIF_STICKER_SIZE;
+      }
+
+      function savePlacedGifSize(stickerId, size) {
+        if (!stickerId) return;
+
+        try {
+          const sizeMap = getPlacedGifSizeMap();
+          sizeMap[stickerId] = Math.max(MIN_GIF_STICKER_SIZE, Math.min(MAX_GIF_STICKER_SIZE, Math.round(size)));
+          localStorage.setItem(PLACED_GIF_SIZE_STORAGE_KEY, JSON.stringify(sizeMap));
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function clearPlacedGifSize(stickerId) {
+        if (!stickerId) return;
+
+        try {
+          const sizeMap = getPlacedGifSizeMap();
+          delete sizeMap[stickerId];
+          localStorage.setItem(PLACED_GIF_SIZE_STORAGE_KEY, JSON.stringify(sizeMap));
+        } catch (error) {
+          console.error(error);
+        }
+      }
 
        function escapeHtml(value) {
          return String(value || '')
@@ -476,11 +668,219 @@ const STICKER_PICKER_GROUPS = [
     .sort((a, b) => a.order - b.order);
 }
 
-function getNextWishlistOrder(items = []) {
+      function getNextWishlistOrder(items = []) {
   return items.reduce((maxOrder, item, index) => {
     const itemOrder = Number.isFinite(item?.order) ? item.order : index;
     return Math.max(maxOrder, itemOrder);
   }, -1) + 1;
+}
+
+function ensureWidgetStackOrder() {
+  widgets.forEach((widget, index) => {
+    if (!Number.isFinite(widget?.zIndex)) {
+      widget.zIndex = index + 1;
+    }
+  });
+}
+
+function bringWidgetToFront(widget) {
+  ensureWidgetStackOrder();
+  const topZIndex = widgets.reduce((maxZIndex, item) => {
+    const itemZIndex = Number.isFinite(item?.zIndex) ? item.zIndex : 0;
+    return Math.max(maxZIndex, itemZIndex);
+  }, 0);
+
+  widget.zIndex = topZIndex + 1;
+}
+
+function getWeatherDescription(weatherCode, isDay) {
+  const weatherMap = {
+    0: isDay ? 'clear sky' : 'clear night',
+    1: isDay ? 'mostly sunny' : 'mostly clear',
+    2: 'partly cloudy',
+    3: 'overcast',
+    45: 'foggy',
+    48: 'rime fog',
+    51: 'light drizzle',
+    53: 'drizzle',
+    55: 'heavy drizzle',
+    56: 'freezing drizzle',
+    57: 'heavy freezing drizzle',
+    61: 'light rain',
+    63: 'rain',
+    65: 'heavy rain',
+    66: 'freezing rain',
+    67: 'heavy freezing rain',
+    71: 'light snow',
+    73: 'snow',
+    75: 'heavy snow',
+    77: 'snow grains',
+    80: 'rain showers',
+    81: 'heavy showers',
+    82: 'violent showers',
+    85: 'snow showers',
+    86: 'heavy snow showers',
+    95: 'thunderstorm',
+    96: 'storm with hail',
+    99: 'heavy hail storm'
+  };
+
+  return weatherMap[weatherCode] || 'weather update';
+}
+
+function getWeatherWidget() {
+  return widgets.find((widget) => String(widget.id || '').toLowerCase().trim() === 'weather');
+}
+
+function getMissYouWidget() {
+  return widgets.find((widget) => String(widget.id || '').toLowerCase().trim() === 'miss-you');
+}
+
+function getTodayDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeMissYouWidget(widget) {
+  if (!widget) return false;
+
+  const todayKey = getTodayDateKey();
+  if (!widget.data) {
+    widget.data = { countsByUser: {}, lastResetDate: todayKey };
+    return true;
+  }
+
+  let changed = false;
+
+  if (!widget.data.countsByUser || typeof widget.data.countsByUser !== 'object') {
+    const migratedCounts = {};
+    const legacyCount = Number.isFinite(widget.data.count) ? widget.data.count : 0;
+    const currentUserId = currentProfile?.id || currentUser?.id || '';
+
+    if (legacyCount > 0 && currentUserId) {
+      migratedCounts[currentUserId] = legacyCount;
+    }
+
+    widget.data.countsByUser = migratedCounts;
+    changed = true;
+  }
+
+  if (widget.data.lastResetDate !== todayKey) {
+    widget.data.countsByUser = {};
+    widget.data.lastResetDate = todayKey;
+    changed = true;
+  }
+
+  Object.keys(widget.data.countsByUser).forEach((userId) => {
+    const count = widget.data.countsByUser[userId];
+    if (!Number.isFinite(count) || count < 0) {
+      widget.data.countsByUser[userId] = 0;
+      changed = true;
+    }
+  });
+
+  if ('count' in widget.data) {
+    delete widget.data.count;
+    changed = true;
+  }
+
+  return changed;
+}
+
+function getProfileDisplayName(profile, fallback) {
+  if (!profile || typeof profile !== 'object') return fallback;
+  const name = String(profile.nickname || profile.username || '').trim();
+  return name || fallback;
+}
+
+function getMissYouCounterLabels() {
+  const activeUserId = currentProfile?.id || currentUser?.id || '';
+  const myLabel = getProfileDisplayName(currentProfile, 'mine');
+  const otherProfile = knownProfiles.find((profile) => profile?.id && profile.id !== activeUserId);
+  const herLabel = getProfileDisplayName(otherProfile, 'hers');
+
+  return {
+    myLabel: escapeHtml(myLabel),
+    herLabel: escapeHtml(herLabel)
+  };
+}
+
+async function incrementMissYouWidget() {
+  const widget = getMissYouWidget();
+  if (!widget) return;
+
+  const activeUserId = currentProfile?.id || currentUser?.id;
+  if (!activeUserId) return;
+
+  normalizeMissYouWidget(widget);
+  widget.data.countsByUser[activeUserId] = (widget.data.countsByUser[activeUserId] || 0) + 1;
+  widget.data.lastResetDate = getTodayDateKey();
+
+  renderWidgets();
+  await saveWidgetToSupabase(widget, {
+    recordHistory: false,
+    suppressErrorMessage: true
+  });
+}
+
+async function refreshWeatherWidget(options = {}) {
+  const { render = true } = options;
+  const widget = getWeatherWidget();
+  if (!widget) return;
+
+  try {
+    const locationWeather = await Promise.all(
+      WEATHER_WIDGET_LOCATIONS.map(async (location) => {
+        const response = await fetch(
+          `${OPEN_METEO_FORECAST_ENDPOINT}?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&timezone=auto`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Weather request failed with ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const currentWeather = payload?.current;
+
+        if (!currentWeather) {
+          throw new Error('Weather data is unavailable right now.');
+        }
+
+        return {
+          label: location.label,
+          temperature: currentWeather.temperature_2m,
+          apparentTemperature: currentWeather.apparent_temperature,
+          weatherCode: currentWeather.weather_code,
+          windSpeed: currentWeather.wind_speed_10m,
+          isDay: Boolean(currentWeather.is_day)
+        };
+      })
+    );
+
+    widget.data = {
+      ...(widget.data || {}),
+      locations: locationWeather,
+      fetchedAt: new Date().toISOString(),
+      status: 'ready',
+      error: ''
+    };
+
+    await saveWidgetToSupabase(widget, { recordHistory: false });
+  } catch (error) {
+    console.error(error);
+    widget.data = {
+      ...(widget.data || {}),
+      status: 'error',
+      error: 'weather unavailable'
+    };
+  }
+
+  if (render) {
+    renderWidgets();
+  }
 }
 
       function getWidgetContent(widget) {
@@ -564,12 +964,13 @@ if (isNoteWidget) {
 
 if (normalizedId === 'wishlist' || normalizedTitle.includes('wishlist')) {
   const items = getWishlistItemsInDisplayOrder(widget.data?.items || []);
+  const visibleItems = items.filter((item) => !item.done);
 
-  if (!items.length) {
+  if (!visibleItems.length) {
     return `<div style="font-size:0.92rem;opacity:0.75;">nothing on the wishlist yet ⋆˙⟡</div>`;
   }
 
-  const html = items.map((item) => `
+  const html = visibleItems.map((item) => `
     <div class="widget-wishlist-row">
       <button
         class="widget-wish-toggle"
@@ -587,6 +988,86 @@ if (normalizedId === 'wishlist' || normalizedTitle.includes('wishlist')) {
   `).join('');
 
   return `<div class="widget-wishlist-list">${html}</div>`;
+}
+
+if (normalizedId === 'weather' || normalizedTitle.includes('current weather')) {
+  const weatherData = widget.data || {};
+
+  if (weatherData.status === 'error') {
+    return `
+      <div style="display:grid;gap:10px;">
+        <div style="font-size:0.92rem;opacity:0.8;">weather unavailable right now ♡</div>
+        <button class="soft-btn widget-weather-refresh" type="button" data-weather-widget-id="${widget.id}">refresh</button>
+      </div>
+    `;
+  }
+
+  if (weatherData.status !== 'ready') {
+    return `
+      <div style="display:grid;gap:10px;">
+        <div style="font-size:0.92rem;opacity:0.8;">loading Kuwait and Dammam ♡</div>
+        <button class="soft-btn widget-weather-refresh" type="button" data-weather-widget-id="${widget.id}">refresh</button>
+      </div>
+    `;
+  }
+
+  const updatedTime = weatherData.fetchedAt
+    ? new Date(weatherData.fetchedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : '';
+  const locationHtml = (weatherData.locations || []).map((location) => {
+    const conditionLabel = getWeatherDescription(location.weatherCode, location.isDay);
+
+    return `
+    <div style="padding:8px 0;border-bottom:1px solid rgba(241,221,232,0.7);">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:nowrap;">
+        <div style="font-size:0.96rem;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${location.label}</div>
+        <div style="font-size:1.2rem;font-weight:700;line-height:1;flex:0 0 auto;">${Math.round(location.temperature)}°</div>
+      </div>
+      <div style="margin-top:4px;font-size:0.86rem;font-weight:700;opacity:0.88;">now: ${conditionLabel}</div>
+      <div style="margin-top:4px;font-size:0.8rem;opacity:0.72;">feels like ${Math.round(location.apparentTemperature)}° • wind ${Math.round(location.windSpeed)} km/h</div>
+    </div>
+  `;
+  }).join('');
+
+  return `
+    <div style="display:grid;gap:10px;">
+      ${updatedTime ? `<div style="font-size:0.8rem;opacity:0.68;">updated ${updatedTime}</div>` : ''}
+      <div style="display:grid;gap:2px;">${locationHtml}</div>
+      <button class="soft-btn widget-weather-refresh" type="button" data-weather-widget-id="${widget.id}">refresh</button>
+    </div>
+  `;
+}
+
+if (normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter')) {
+  normalizeMissYouWidget(widget);
+  const activeUserId = currentProfile?.id || currentUser?.id || '';
+  const countsByUser = widget.data?.countsByUser || {};
+  const myCount = activeUserId ? (countsByUser[activeUserId] || 0) : 0;
+  const { myLabel, herLabel } = getMissYouCounterLabels();
+  const herCount = Object.entries(countsByUser).reduce((total, [userId, count]) => {
+    if (userId === activeUserId) return total;
+    return total + (Number.isFinite(count) ? count : 0);
+  }, 0);
+  const isMineClickable = Boolean(activeUserId);
+
+  return `
+    <div style="display:grid;gap:12px;">
+      <div style="font-size:0.84rem;opacity:0.76;">daily count resets at midnight ♡</div>
+      <div style="display:grid;gap:8px;padding-top:4px;border-top:1px solid rgba(241,221,232,0.7);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-size:0.92rem;font-weight:700;">${herLabel}</div>
+          <div style="font-size:1.55rem;font-weight:700;line-height:1;">${herCount}</div>
+        </div>
+      </div>
+      <div style="display:grid;gap:10px;padding-top:4px;border-top:1px solid rgba(241,221,232,0.7);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-size:0.92rem;font-weight:700;">${myLabel}</div>
+          <div style="font-size:1.55rem;font-weight:700;line-height:1;">${myCount}</div>
+        </div>
+        <button class="soft-btn widget-miss-you-btn" type="button" data-miss-you-widget-id="${widget.id}" ${isMineClickable ? '' : 'disabled'}>i miss you</button>
+      </div>
+    </div>
+  `;
 }
 
   if (normalizedId === 'love') {
@@ -650,7 +1131,7 @@ async function loadWidgets(options = {}) {
   }
 
   if (data && data.length) {
-    const widgetsNeedingWishlistNormalization = [];
+    const widgetsNeedingNormalization = [];
 
     widgets = widgets.map((defaultWidget) => {
       const savedWidget = data.find((row) => row.id === defaultWidget.id);
@@ -673,6 +1154,8 @@ async function loadWidgets(options = {}) {
       const normalizedTitle = String(mergedWidget.title || '').toLowerCase();
       const isWishlistWidget =
         normalizedId === 'wishlist' || normalizedTitle.includes('wishlist');
+      const isMissYouWidget =
+        normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter');
 
       if (isWishlistWidget && Array.isArray(mergedWidget.data?.items)) {
         const normalizedItems = getWishlistItemsInDisplayOrder(mergedWidget.data.items).map((item, index) => ({
@@ -690,15 +1173,41 @@ async function loadWidgets(options = {}) {
             ...mergedWidget.data,
             items: normalizedItems
           };
-          widgetsNeedingWishlistNormalization.push(mergedWidget);
+          widgetsNeedingNormalization.push(mergedWidget);
+        }
+      }
+
+      if (isMissYouWidget) {
+        const missYouChanged = normalizeMissYouWidget(mergedWidget);
+        const shouldMoveMissYouWidget =
+          mergedWidget.side === 'left' ||
+          (
+            Number.isFinite(mergedWidget.x) &&
+            Number.isFinite(mergedWidget.y) &&
+            mergedWidget.x === 12 &&
+            mergedWidget.y === 770
+          );
+
+        if (shouldMoveMissYouWidget) {
+          mergedWidget.side = 'right';
+          mergedWidget.x = 8;
+          mergedWidget.y = 610;
+        }
+
+        if (missYouChanged || shouldMoveMissYouWidget) {
+          widgetsNeedingNormalization.push(mergedWidget);
         }
       }
 
       return mergedWidget;
     });
 
-    for (const widget of widgetsNeedingWishlistNormalization) {
-      await saveWidgetToSupabase(widget);
+    const uniqueWidgetsNeedingNormalization = widgetsNeedingNormalization.filter(
+      (widget, index, array) => array.findIndex((item) => item.id === widget.id) === index
+    );
+
+    for (const widget of uniqueWidgetsNeedingNormalization) {
+      await saveWidgetToSupabase(widget, { recordHistory: false });
     }
   }
 
@@ -711,7 +1220,11 @@ function renderWidgets() {
   leftZone.innerHTML = '';
   rightZone.innerHTML = '';
 
-  widgets.forEach((widget) => {
+  ensureWidgetStackOrder();
+
+  [...widgets]
+    .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
+    .forEach((widget) => {
     const normalizedId = String(widget.id || '').toLowerCase().trim();
     const normalizedTitle = String(widget.title || '').toLowerCase();
 
@@ -750,6 +1263,7 @@ function renderWidgets() {
     }
     el.style.left = widget.x + 'px';
     el.style.top = widget.y + 'px';
+    el.style.zIndex = String(widget.zIndex || 1);
 
     el.innerHTML = `
       <div class="widget-bar" data-widget-id="${widget.id}">
@@ -803,6 +1317,47 @@ function renderWidgets() {
           event.preventDefault();
           event.stopPropagation();
           await toggleWidgetWishlistItem(widget.id, btn.dataset.widgetWishId);
+        });
+      });
+    }
+
+    if (normalizedId === 'weather') {
+      el.querySelectorAll('.widget-weather-refresh').forEach((btn) => {
+        btn.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        btn.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        btn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          await refreshWeatherWidget();
+        });
+      });
+    }
+
+    if (normalizedId === 'miss-you') {
+      el.querySelectorAll('.widget-miss-you-btn').forEach((btn) => {
+        btn.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        btn.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+
+        btn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (btn.hasAttribute('disabled')) return;
+          await incrementMissYouWidget();
         });
       });
     }
@@ -1072,7 +1627,7 @@ function openWidgetEditor(widgetId) {
           id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
           text,
           done: false,
-          order: (getWishlistItemsInDisplayOrder(widget.data.items)[0]?.order ?? 0) - 1
+          order: getNextWishlistOrder(widget.data.items)
         });
 
         await saveWidgetToSupabase(widget);
@@ -1099,10 +1654,9 @@ function openWidgetEditor(widgetId) {
       btn.addEventListener('click', async () => {
         const wishId = btn.dataset.wishId;
 
-        // Toggle done state; if item becomes done, remove it so it disappears from the list
         widget.data.items = (widget.data.items || []).map((item) =>
           item.id === wishId ? { ...item, done: !item.done } : item
-        ).filter((item) => !item.done);
+        );
 
         await saveWidgetToSupabase(widget);
         renderWidgets();
@@ -1167,7 +1721,8 @@ async function saveWidgetChanges() {
   showMessage('widget updated ♡');
 }
 
-async function saveWidgetToSupabase(widget) {
+async function saveWidgetToSupabase(widget, options = {}) {
+  const { recordHistory = true, suppressErrorMessage = false } = options;
   const { error } = await supabaseClient
     .from('widgets')
     .upsert({
@@ -1183,11 +1738,15 @@ async function saveWidgetToSupabase(widget) {
 
   if (error) {
     console.error(error);
-    showMessage(error.message);
+    if (!suppressErrorMessage) {
+      showMessage(error.message);
+    }
     return;
   }
 
-  recordWidgetHistory(widget);
+  if (recordHistory) {
+    recordWidgetHistory(widget);
+  }
 }
 
 async function toggleWidgetWishlistItem(widgetId, wishId) {
@@ -1207,7 +1766,7 @@ async function toggleWidgetWishlistItem(widgetId, wishId) {
     ...item,
     order: Number.isFinite(item?.order) ? item.order : index,
     done: item.id === wishId ? !item.done : item.done
-  })).filter((item) => !item.done);
+  }));
 
   await saveWidgetToSupabase(widget);
   renderWidgets();
@@ -1422,6 +1981,7 @@ function switchStickerTab(nextTab) {
 
   const typePanel = document.getElementById('stickerTypePanel');
   const pickPanel = document.getElementById('stickerPickPanel');
+  const gifPanel = document.getElementById('stickerGifPanel');
 
   if (typePanel) {
     typePanel.classList.toggle('active', nextTab === 'type');
@@ -1431,8 +1991,27 @@ function switchStickerTab(nextTab) {
     pickPanel.classList.toggle('active', nextTab === 'pick');
   }
 
+  if (gifPanel) {
+    gifPanel.classList.toggle('active', nextTab === 'gif');
+  }
+
+  if (saveStickerBtn) {
+    saveStickerBtn.style.display = nextTab === 'type' ? 'inline-flex' : 'none';
+  }
+
   if (nextTab === 'type') {
     stickerInput.focus();
+  }
+
+  if (nextTab === 'gif') {
+    if (!gifSearchQuery && !gifSearchResults.length) {
+      setGifSearchStatus(
+        GIPHY_API_KEY
+          ? 'search public gifs or pick one below ♡'
+          : 'add your GIPHY API key in script.js to enable public search'
+      );
+    }
+    renderGifPicker();
   }
 }
 
@@ -1457,11 +2036,35 @@ function renderEmojiPicker() {
       const button = document.createElement('button');
       button.className = 'emoji-picker-btn';
       button.type = 'button';
+      button.draggable = true;
       button.textContent = emojiValue;
       button.setAttribute('aria-label', `choose ${emojiValue}`);
       button.addEventListener('click', () => {
         stickerInput.value = emojiValue;
         switchStickerTab('type');
+      });
+      button.addEventListener('dragstart', (event) => {
+        activeSticker = emojiValue;
+        activeStickerSize = null;
+        requestAnimationFrame(() => {
+          stickerPopup.classList.remove('open');
+        });
+        document.body.classList.add('sticker-dragging');
+
+        if (event.dataTransfer) {
+          event.dataTransfer.setData(STICKER_MIME_TYPE, emojiValue);
+          event.dataTransfer.setData('text/plain', emojiValue);
+          event.dataTransfer.effectAllowed = 'copy';
+          event.dataTransfer.dropEffect = 'copy';
+        }
+      });
+      button.addEventListener('dragend', () => {
+        activeSticker = null;
+        activeStickerSize = null;
+        document.body.classList.remove('sticker-dragging');
+        document
+          .querySelectorAll('.post-body.sticker-drop-ready')
+          .forEach((node) => node.classList.remove('sticker-drop-ready'));
       });
       sectionGrid.appendChild(button);
     });
@@ -1471,6 +2074,145 @@ function renderEmojiPicker() {
   });
 
   hasRenderedEmojiPicker = true;
+}
+
+function renderGifPicker() {
+  if (!gifPickerGrid) return;
+  gifPickerGrid.innerHTML = '';
+  const gifItems = gifSearchResults.length
+    ? gifSearchResults
+    : [
+        ...getRecentGifStickers(),
+        ...STICKER_GIF_LIBRARY.filter(
+          (gifItem) => !getRecentGifStickers().some((recentItem) => recentItem.url === gifItem.url)
+        )
+      ];
+
+  if (!gifSearchResults.length) {
+    setGifSearchStatus(
+      getRecentGifStickers().length
+        ? 'recently used gifs ♡'
+        : GIPHY_API_KEY
+          ? 'search public gifs or pick one below ♡'
+          : 'add your GIPHY API key in script.js to enable public search'
+    );
+  }
+
+  gifItems.forEach((gifItem) => {
+    const button = document.createElement('button');
+    button.className = 'gif-picker-card';
+    button.type = 'button';
+    button.dataset.gifUrl = gifItem.url;
+    button.draggable = true;
+    button.setAttribute('aria-label', `choose ${gifItem.label} gif`);
+
+    const image = document.createElement('img');
+    image.src = gifItem.url;
+    image.alt = gifItem.label;
+    image.loading = 'lazy';
+
+    const label = document.createElement('span');
+    label.textContent = gifItem.label;
+
+    button.append(image, label);
+    button.addEventListener('click', () => {
+      selectedGifStickerUrl = gifItem.url;
+      gifPickerGrid.querySelectorAll('.gif-picker-card').forEach((card) => {
+        card.classList.toggle('active', card === button);
+      });
+    });
+
+    button.addEventListener('dragstart', (event) => {
+      activeSticker = gifItem.url;
+      activeStickerSize = DEFAULT_GIF_STICKER_SIZE;
+      selectedGifStickerUrl = gifItem.url;
+      requestAnimationFrame(() => {
+        stickerPopup.classList.remove('open');
+      });
+      document.body.classList.add('sticker-dragging');
+
+      if (event.dataTransfer) {
+        event.dataTransfer.setData(STICKER_MIME_TYPE, gifItem.url);
+        event.dataTransfer.setData('text/plain', gifItem.url);
+        event.dataTransfer.effectAllowed = 'copy';
+        event.dataTransfer.dropEffect = 'copy';
+      }
+    });
+
+    button.addEventListener('dragend', () => {
+      activeSticker = null;
+      activeStickerSize = null;
+      document.body.classList.remove('sticker-dragging');
+      document
+        .querySelectorAll('.post-body.sticker-drop-ready')
+        .forEach((node) => node.classList.remove('sticker-drop-ready'));
+    });
+
+    gifPickerGrid.appendChild(button);
+  });
+
+  hasRenderedGifPicker = true;
+}
+
+async function searchPublicGifs() {
+  if (!gifSearchInput) return;
+
+  const query = gifSearchInput.value.trim();
+  gifSearchQuery = query;
+
+  if (!query) {
+    gifSearchResults = [];
+    setGifSearchStatus('search public gifs or pick one below ♡');
+    renderGifPicker();
+    return;
+  }
+
+  if (!GIPHY_API_KEY) {
+    gifSearchResults = [];
+    setGifSearchStatus('add your GIPHY API key in script.js to enable public search');
+    renderGifPicker();
+    return;
+  }
+
+  gifSearchLoading = true;
+  setGifSearchStatus(`searching for "${query}"...`);
+
+  try {
+    const response = await fetch(
+      `${GIPHY_SEARCH_ENDPOINT}?api_key=${encodeURIComponent(GIPHY_API_KEY)}&q=${escapeQueryParam(query)}&limit=12&rating=g&bundle=messaging_non_clips`,
+      {
+        headers: {
+          'X-Requested-With': GIPHY_CLIENT_KEY
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`GIF search failed with ${response.status}`);
+    }
+
+    const payload = await response.json();
+    gifSearchResults = (payload?.data || [])
+      .map((gifItem) => ({
+        label: gifItem?.title || query,
+        url: getGiphyStickerUrl(gifItem)
+      }))
+      .filter((gifItem) => gifItem.url);
+
+    if (gifSearchResults.length) {
+      setGifSearchStatus(`showing public gifs for "${query}"`);
+    } else {
+      setGifSearchStatus(`no public gifs found for "${query}"`);
+    }
+    renderGifPicker();
+  } catch (error) {
+    console.error(error);
+    gifSearchResults = [];
+    setGifSearchStatus('could not load public gifs right now');
+    renderGifPicker();
+  } finally {
+    gifSearchLoading = false;
+  }
 }
 
       function renderStickerGrid() {
@@ -1486,11 +2228,15 @@ function renderEmojiPicker() {
           pill.className = 'sticker-pill';
           pill.type = 'button';
           pill.draggable = true;
-          pill.textContent = sticker.emoji;
+          if (isGifSticker(sticker.emoji)) {
+            pill.classList.add('has-media');
+          }
+          pill.appendChild(createStickerVisual(sticker.emoji, { forGrid: true }));
           pill.title = 'drag onto a diary entry';
 
           pill.addEventListener('dragstart', (event) => {
             activeSticker = sticker.emoji;
+            activeStickerSize = isGifSticker(sticker.emoji) ? DEFAULT_GIF_STICKER_SIZE : null;
             document.body.classList.add('sticker-dragging');
 
             if (event.dataTransfer) {
@@ -1503,6 +2249,7 @@ function renderEmojiPicker() {
 
           pill.addEventListener('dragend', () => {
             activeSticker = null;
+            activeStickerSize = null;
             document.body.classList.remove('sticker-dragging');
             document
               .querySelectorAll('.post-body.sticker-drop-ready')
@@ -1527,6 +2274,7 @@ function renderEmojiPicker() {
           openBtn.onclick = () => {
             stickerPopup.classList.add('open');
             renderEmojiPicker();
+            renderGifPicker();
             switchStickerTab('type');
             stickerInput.focus();
           };
@@ -1589,10 +2337,38 @@ function renderEmojiPicker() {
           return;
         }
 
+        if (isGifSticker(droppedSticker)) {
+          const gifItem =
+            gifSearchResults.find((item) => item.url === droppedSticker) ||
+            STICKER_GIF_LIBRARY.find((item) => item.url === droppedSticker) ||
+            getRecentGifStickers().find((item) => item.url === droppedSticker) ||
+            { label: 'gif sticker', url: droppedSticker };
+          saveRecentGifSticker(gifItem);
+        }
+
         activeSticker = null;
         document.body.classList.remove('sticker-dragging');
         showMessage('sticker placed ♡');
         await loadPlacedStickers();
+
+        if (isGifSticker(droppedSticker)) {
+          const insertedSticker = [...placedStickers]
+            .reverse()
+            .find((item) =>
+              item.postId === postId &&
+              item.userId === user.id &&
+              item.sticker === droppedSticker &&
+              item.x === x &&
+              item.y === y
+            );
+
+          if (insertedSticker) {
+            savePlacedGifSize(insertedSticker.id, activeStickerSize || DEFAULT_GIF_STICKER_SIZE);
+            renderPlacedStickers();
+          }
+        }
+
+        activeStickerSize = null;
       }
 
 function renderPlacedStickers() {
@@ -1603,27 +2379,88 @@ function renderPlacedStickers() {
   placedStickers.forEach((item) => {
     const layer = document.querySelector(`[data-post-id="${item.postId}"] .reaction-layer`);
     if (!layer) return;
+    const isGif = isGifSticker(item.sticker);
+    const gifSize = isGif ? getPlacedGifSize(item.id) : DEFAULT_GIF_STICKER_SIZE;
 
     const el = document.createElement('div');
     el.className = 'reaction-sticker';
     el.style.left = `${item.x}px`;
     el.style.top = `${item.y}px`;
 
-    const emoji = document.createElement('span');
-    emoji.className = 'reaction-sticker-emoji';
-    emoji.textContent = item.sticker;
-    el.appendChild(emoji);
+    const stickerVisual = createStickerVisual(item.sticker, { size: gifSize });
+    el.appendChild(stickerVisual);
 
     if (currentProfile?.id === item.userId) {
-      const undoBtn = document.createElement('button');
-      undoBtn.className = 'sticker-undo-btn';
-      undoBtn.type = 'button';
-      undoBtn.textContent = 'undo';
-      undoBtn.addEventListener('click', async (event) => {
+      stickerVisual.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
         event.stopPropagation();
-        await deletePlacedSticker(item.id);
+
+        const layerRect = layer.getBoundingClientRect();
+        draggingPlacedSticker = {
+          stickerId: item.id,
+          sticker: item,
+          element: el,
+          layer,
+          layerRect,
+          pointerId: event.pointerId
+        };
+
+        el.classList.add('is-dragging');
+        stickerVisual.setPointerCapture?.(event.pointerId);
       });
-      el.appendChild(undoBtn);
+
+      if (isGif) {
+        const controlRow = document.createElement('div');
+        controlRow.className = 'sticker-control-row';
+
+        const resizeControls = document.createElement('div');
+        resizeControls.className = 'sticker-size-controls';
+
+        const shrinkBtn = document.createElement('button');
+        shrinkBtn.className = 'sticker-size-btn';
+        shrinkBtn.type = 'button';
+        shrinkBtn.textContent = '-';
+        shrinkBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          savePlacedGifSize(item.id, gifSize - 12);
+          renderPlacedStickers();
+        });
+
+        const growBtn = document.createElement('button');
+        growBtn.className = 'sticker-size-btn';
+        growBtn.type = 'button';
+        growBtn.textContent = '+';
+        growBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          savePlacedGifSize(item.id, gifSize + 12);
+          renderPlacedStickers();
+        });
+
+        resizeControls.append(shrinkBtn, growBtn);
+        controlRow.appendChild(resizeControls);
+
+        const undoBtn = document.createElement('button');
+        undoBtn.className = 'sticker-undo-btn';
+        undoBtn.type = 'button';
+        undoBtn.textContent = 'undo';
+        undoBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await deletePlacedSticker(item.id);
+        });
+        controlRow.appendChild(undoBtn);
+        el.appendChild(controlRow);
+      } else {
+        const undoBtn = document.createElement('button');
+        undoBtn.className = 'sticker-undo-btn';
+        undoBtn.type = 'button';
+        undoBtn.textContent = 'undo';
+        undoBtn.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          await deletePlacedSticker(item.id);
+        });
+        el.appendChild(undoBtn);
+      }
     }
 
     layer.appendChild(el);
@@ -1632,6 +2469,8 @@ function renderPlacedStickers() {
 
 function startWidgetDrag(event, widget, element) {
   const zone = widget.side === 'left' ? leftZone : rightZone;
+  bringWidgetToFront(widget);
+  element.style.zIndex = String(widget.zIndex);
 
   pendingWidgetDrag = {
     widget,
@@ -1646,6 +2485,25 @@ function startWidgetDrag(event, widget, element) {
 }
 
 window.addEventListener('pointermove', (event) => {
+  if (draggingPlacedSticker) {
+    const { element, layerRect, stickerId, sticker } = draggingPlacedSticker;
+    const isGif = isGifSticker(sticker.sticker);
+    const stickerSize = isGif ? getPlacedGifSize(stickerId) : 32;
+    const stickerRadius = Math.max(16, stickerSize / 2);
+    const nextX = Math.round(
+      Math.max(stickerRadius, Math.min(layerRect.width - stickerRadius, event.clientX - layerRect.left))
+    );
+    const nextY = Math.round(
+      Math.max(stickerRadius, Math.min(layerRect.height - stickerRadius, event.clientY - layerRect.top))
+    );
+
+    draggingPlacedSticker.nextX = nextX;
+    draggingPlacedSticker.nextY = nextY;
+    element.style.left = `${nextX}px`;
+    element.style.top = `${nextY}px`;
+    return;
+  }
+
   if (!dragWidget && pendingWidgetDrag) {
     const dx = event.clientX - pendingWidgetDrag.startX;
     const dy = event.clientY - pendingWidgetDrag.startY;
@@ -1674,6 +2532,37 @@ window.addEventListener('pointermove', (event) => {
 });
 
 window.addEventListener('pointerup', async () => {
+  if (draggingPlacedSticker) {
+    const finishedStickerDrag = draggingPlacedSticker;
+    draggingPlacedSticker = null;
+
+    finishedStickerDrag.element.classList.remove('is-dragging');
+
+    if (
+      Number.isFinite(finishedStickerDrag.nextX) &&
+      Number.isFinite(finishedStickerDrag.nextY) &&
+      (
+        finishedStickerDrag.nextX !== finishedStickerDrag.sticker.x ||
+        finishedStickerDrag.nextY !== finishedStickerDrag.sticker.y
+      )
+    ) {
+      const didSave = await updatePlacedStickerPosition(
+        finishedStickerDrag.stickerId,
+        finishedStickerDrag.nextX,
+        finishedStickerDrag.nextY
+      );
+
+      if (didSave) {
+        finishedStickerDrag.sticker.x = finishedStickerDrag.nextX;
+        finishedStickerDrag.sticker.y = finishedStickerDrag.nextY;
+      } else {
+        renderPlacedStickers();
+      }
+    }
+
+    return;
+  }
+
   const finishedDrag = dragWidget;
 
   if (dragWidget?.element) {
@@ -1690,7 +2579,12 @@ window.addEventListener('pointerup', async () => {
   }
 });
 saveStickerBtn.addEventListener('click', async () => {
-  const value = stickerInput.value.trim();
+  const activeStickerTab =
+    document.querySelector('.sticker-tab.active')?.dataset.stickerTab || 'type';
+  const value =
+    activeStickerTab === 'gif'
+      ? selectedGifStickerUrl
+      : stickerInput.value.trim();
   if (!value) return;
 
   const user = await getCurrentUser();
@@ -1713,7 +2607,21 @@ saveStickerBtn.addEventListener('click', async () => {
     return;
   }
 
+  if (isGifSticker(value)) {
+    const gifItem =
+      gifSearchResults.find((item) => item.url === value) ||
+      STICKER_GIF_LIBRARY.find((item) => item.url === value) ||
+      { label: 'gif sticker', url: value };
+    saveRecentGifSticker(gifItem);
+  }
+
   stickerInput.value = '';
+  selectedGifStickerUrl = '';
+  if (gifPickerGrid) {
+    gifPickerGrid.querySelectorAll('.gif-picker-card').forEach((card) => {
+      card.classList.remove('active');
+    });
+  }
   stickerPopup.classList.remove('open');
   await loadUserStickers();
   showMessage('sticker saved ♡');
@@ -1727,21 +2635,38 @@ if (stickerTabs) {
   });
 }
 
+if (gifSearchBtn) {
+  gifSearchBtn.addEventListener('click', searchPublicGifs);
+}
+
+if (gifSearchInput) {
+  gifSearchInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    searchPublicGifs();
+  });
+}
+
       closeStickerPopup.addEventListener('click', () => {
+        selectedGifStickerUrl = '';
         stickerPopup.classList.remove('open');
       });
 
       stickerPopup.addEventListener('click', (event) => {
         if (event.target === stickerPopup && !popupPointerStartedInsideCard) {
+          selectedGifStickerUrl = '';
           stickerPopup.classList.remove('open');
         }
       });
 
-      newEntryBtn.addEventListener('click', () => {
-        resetEntryPopup();
-        entryPopup.classList.add('open');
-        focusEntryComposerToEnd();
-      });
+      if (newEntryBtn) {
+        newEntryBtn.addEventListener('click', () => {
+          resetEntryPopup();
+          entryPopup.classList.add('open');
+          newEntryBtn.classList.remove('is-hidden');
+          focusEntryComposerToEnd();
+        });
+      }
 
       closeEntryPopup.addEventListener('click', () => {
         resetEntryPopup();
@@ -2002,6 +2927,12 @@ function setToolbarAuthState(state) {
 
 function setAppBootingState(isBooting) {
   document.body.classList.toggle('app-booting', isBooting);
+}
+
+function renderSignedOutShell() {
+  renderTimelineSkeleton();
+  renderWidgetSkeletons();
+  renderNotifications();
 }
 
 function getNotificationsSeenStorageKey() {
@@ -2306,7 +3237,9 @@ function buildNotifications({
       created_at: sticker.created_at,
       postId: sticker.post_id,
       openComments: false,
-      message: `${actorName} added ${sticker.emoji} to your entry`
+      message: isGifSticker(sticker.emoji)
+        ? `${actorName} added a gif sticker to your entry`
+        : `${actorName} added ${sticker.emoji} to your entry`
     });
   });
 
@@ -2373,6 +3306,9 @@ async function refreshUserData(options = {}) {
   }
 
   await Promise.all(tasks);
+  if (includeWidgets) {
+    await refreshWeatherWidget({ render: false });
+  }
   renderTimeline();
   renderStickerGrid();
   renderNotifications();
@@ -2447,6 +3383,10 @@ async function loadProfile(user) {
   currentProfile = data;
 
   if (currentProfile) {
+    const hasCurrentProfile = knownProfiles.some((profile) => profile?.id === currentProfile.id);
+    knownProfiles = hasCurrentProfile
+      ? knownProfiles.map((profile) => (profile?.id === currentProfile.id ? currentProfile : profile))
+      : [currentProfile, ...knownProfiles];
     nicknameInput.value = currentProfile.nickname || '';
   }
 
@@ -2570,8 +3510,27 @@ async function deletePlacedSticker(stickerId) {
     return;
   }
 
+  clearPlacedGifSize(stickerId);
   await loadPlacedStickers();
   showMessage('sticker removed ♡');
+}
+
+async function updatePlacedStickerPosition(stickerId, x, y) {
+  const { error } = await supabaseClient
+    .from('post_stickers')
+    .update({
+      x: Math.round(x),
+      y: Math.round(y)
+    })
+    .eq('id', stickerId);
+
+  if (error) {
+    console.error(error);
+    showMessage(error.message);
+    return false;
+  }
+
+  return true;
 }
 
 async function signUpUser() {
@@ -2801,6 +3760,8 @@ async function loadPosts(options = {}) {
     showMessage(profilesError.message);
     return;
   }
+
+  knownProfiles = profilesData || [];
 
   let { data: likesData, error: likesError } = likesResult;
 
@@ -3293,6 +4254,7 @@ async function logoutUser() {
   }
 
   currentProfile = null;
+  knownProfiles = [];
   setCurrentUser(null);
   profilePopup.classList.remove('open');
   authPopup.classList.add('open');
@@ -3303,13 +4265,13 @@ async function logoutUser() {
   pfpInput.value = '';
 
   personalStickers = [];
-renderStickerGrid();
+  renderStickerGrid();
 
-placedStickers = [];
-renderPlacedStickers();
+  placedStickers = [];
+  renderPlacedStickers();
   notifications = [];
   closeNotificationsPanel();
-  renderNotifications();
+  renderSignedOutShell();
 
   showMessage('logged out ♡');
 }
@@ -3327,15 +4289,15 @@ async function checkSession() {
     await refreshUserData({ includeWidgets: true });
     setCurrentUser(session.user);
   } else {
+    knownProfiles = [];
     setCurrentUser(null);
     authPopup.classList.add('open');
     posts = [];
     personalStickers = [];
+    placedStickers = [];
     notifications = [];
     closeNotificationsPanel();
-    renderTimeline();
-    renderNotifications();
-    renderWidgets();
+    renderSignedOutShell();
   }
 }
 
@@ -3389,6 +4351,8 @@ if (logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 if (saveEntryBtn) saveEntryBtn.addEventListener('click', saveEntry);
 if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+window.addEventListener('scroll', updateFloatingEntryButtonVisibility, { passive: true });
+updateFloatingEntryButtonVisibility();
 document.addEventListener('click', (event) => {
   if (!notificationsMenu?.contains(event.target)) {
     closeNotificationsPanel();
