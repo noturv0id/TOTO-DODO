@@ -202,17 +202,52 @@ const STICKER_PICKER_GROUPS = [
     y: 352,
     content: `
       <div style="display:grid;gap:12px;">
-        <div style="font-size:0.94rem;line-height:1.5;">drink some water, take a breath, and remember you are loved ♡</div>
-        <a
-          class="soft-btn"
-          href="${ANNIVERSARY_WRAPPER_URL}"
-          target="_blank"
-          style="justify-self:start;text-decoration:none;display:inline-flex;align-items:center;"
-        >
-          open website
-        </a>
+        <div style="font-size:0.94rem;line-height:1.5;">remember you are loved</div>
+         <a
+           class="soft-btn widget-miss-you-btn"
+           href="${ANNIVERSARY_WRAPPER_URL}"
+           target="_blank"
+           style="justify-self:center;text-decoration:none;display:inline-flex;align-items:center;"
+         >
+           open website
+         </a>
       </div>
     `,
+  },
+
+  {
+    id: 'photo-pin',
+    title: '✦ pinned photo ♡',
+    side: 'left',
+    x: 12,
+    y: 760,
+      data: {
+        image: '',
+        text: '',
+        textColor: '#ffffff',
+        textSize: 22,
+        textX: 50,
+        textY: 86,
+        rotate: 0
+      }
+  },
+
+  // Duplicate of pinned photo widget on the right side
+  {
+    id: 'photo-pin-right',
+    title: '✦ pinned photo ♡ (copy)',
+    side: 'right',
+    x: 12,
+    y: 760,
+    data: {
+      image: '',
+      text: '',
+      textColor: '#ffffff',
+      textSize: 22,
+      textX: 50,
+      textY: 86,
+      rotate: 0
+    }
   },
 
   {
@@ -221,7 +256,7 @@ const STICKER_PICKER_GROUPS = [
     side: 'right',
     x: 0,
     y: 455,
-    content: `<div class="sticker-widget-body"><div class="sticker-grid" id="stickerGrid"></div><div class="sticker-widget-footer"><button class="soft-btn" id="openStickerPopup">+ add sticker</button></div></div>`,
+    content: `<div class="sticker-widget-body"><div class="sticker-grid" id="stickerGrid"></div><div class="sticker-widget-footer"><button class="soft-btn widget-miss-you-btn" id="openStickerPopup">+ add sticker</button></div></div>`,
   },
 ];
 
@@ -233,6 +268,11 @@ let activeSticker = null;
 let dragWidget = null;
 let draggingPlacedSticker = null;
 let knownProfiles = [];
+const visibleGifStickerControlTimers = new Map();
+const minimizedWidgetIds = new Set();
+let allWidgetsMinimized = false;
+let missYouSaveInFlight = false;
+let missYouSaveQueued = false;
        let currentCommentsPostId = null;
        let replyingToCommentId = null;
        let editingWidgetId = null;
@@ -254,10 +294,11 @@ let knownProfiles = [];
       const gifPickerGrid = document.getElementById('gifPickerGrid');
       const gifSearchInput = document.getElementById('gifSearchInput');
       const gifSearchBtn = document.getElementById('gifSearchBtn');
-      const gifSearchStatus = document.getElementById('gifSearchStatus');
-      const saveStickerBtn = document.getElementById('saveStickerBtn');
-      const closeStickerPopup = document.getElementById('closeStickerPopup');
-      const appToolbar = document.getElementById('appToolbar');
+       const gifSearchStatus = document.getElementById('gifSearchStatus');
+       const saveStickerBtn = document.getElementById('saveStickerBtn');
+       const closeStickerPopup = document.getElementById('closeStickerPopup');
+      const toggleWidgetsBtn = document.getElementById('toggleWidgetsBtn');
+       const appToolbar = document.getElementById('appToolbar');
       const newEntryBtn = document.getElementById('newEntryBtn');
       const notificationsMenu = document.getElementById('notificationsMenu');
       const notificationsBtn = document.getElementById('notificationsBtn');
@@ -350,6 +391,7 @@ let knownProfiles = [];
           media.src = value;
           media.alt = 'gif sticker';
           media.loading = 'lazy';
+          media.draggable = false;
           if (!forGrid) {
             media.style.width = `${size}px`;
             media.style.height = `${size}px`;
@@ -476,6 +518,37 @@ let knownProfiles = [];
        function toSafeHtmlFromPlainText(text) {
          return sanitizePostHtml(escapeHtml(text).replaceAll('\n', '<br>'));
        }
+
+      function compressImageFile(file, options = {}) {
+        const { maxSize = 900, quality = 0.82 } = options;
+
+        return new Promise((resolve, reject) => {
+          if (!file) {
+            resolve('');
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onerror = () => reject(reader.error || new Error('could not read image'));
+          reader.onload = () => {
+            const image = new Image();
+            image.onerror = () => reject(new Error('could not load image'));
+            image.onload = () => {
+              const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+              const width = Math.max(1, Math.round(image.width * scale));
+              const height = Math.max(1, Math.round(image.height * scale));
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const context = canvas.getContext('2d');
+              context.drawImage(image, 0, 0, width, height);
+              resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            image.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
 
       function getPostDisplayHtml(content) {
         const value = String(content || '');
@@ -820,10 +893,31 @@ async function incrementMissYouWidget() {
   widget.data.lastResetDate = getTodayDateKey();
 
   renderWidgets();
-  await saveWidgetToSupabase(widget, {
-    recordHistory: false,
-    suppressErrorMessage: true
-  });
+  queueMissYouWidgetSave();
+}
+
+async function queueMissYouWidgetSave() {
+  if (missYouSaveInFlight) {
+    missYouSaveQueued = true;
+    return;
+  }
+
+  missYouSaveInFlight = true;
+
+  try {
+    do {
+      missYouSaveQueued = false;
+      const widget = getMissYouWidget();
+      if (!widget) return;
+
+      await saveWidgetToSupabase(widget, {
+        recordHistory: false,
+        suppressErrorMessage: true
+      });
+    } while (missYouSaveQueued);
+  } finally {
+    missYouSaveInFlight = false;
+  }
 }
 
 async function refreshWeatherWidget(options = {}) {
@@ -997,7 +1091,6 @@ if (normalizedId === 'weather' || normalizedTitle.includes('current weather')) {
     return `
       <div style="display:grid;gap:10px;">
         <div style="font-size:0.92rem;opacity:0.8;">weather unavailable right now ♡</div>
-        <button class="soft-btn widget-weather-refresh" type="button" data-weather-widget-id="${widget.id}">refresh</button>
       </div>
     `;
   }
@@ -1006,7 +1099,6 @@ if (normalizedId === 'weather' || normalizedTitle.includes('current weather')) {
     return `
       <div style="display:grid;gap:10px;">
         <div style="font-size:0.92rem;opacity:0.8;">loading Kuwait and Dammam ♡</div>
-        <button class="soft-btn widget-weather-refresh" type="button" data-weather-widget-id="${widget.id}">refresh</button>
       </div>
     `;
   }
@@ -1033,7 +1125,6 @@ if (normalizedId === 'weather' || normalizedTitle.includes('current weather')) {
     <div style="display:grid;gap:10px;">
       ${updatedTime ? `<div style="font-size:0.8rem;opacity:0.68;">updated ${updatedTime}</div>` : ''}
       <div style="display:grid;gap:2px;">${locationHtml}</div>
-      <button class="soft-btn widget-weather-refresh" type="button" data-weather-widget-id="${widget.id}">refresh</button>
     </div>
   `;
 }
@@ -1065,6 +1156,36 @@ if (normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter'))
           <div style="font-size:1.55rem;font-weight:700;line-height:1;">${myCount}</div>
         </div>
         <button class="soft-btn widget-miss-you-btn" type="button" data-miss-you-widget-id="${widget.id}" ${isMineClickable ? '' : 'disabled'}>i miss you</button>
+      </div>
+    </div>
+  `;
+}
+
+if (normalizedId === 'photo-pin' || normalizedTitle.includes('pinned photo')) {
+  const photoData = widget.data || {};
+  const overlayText = escapeHtml(photoData.text || '');
+  const textColor = escapeHtml(photoData.textColor || '#ffffff');
+  const textSize = Math.max(12, Math.min(46, Number(photoData.textSize) || 22));
+  const textXValue = Number(photoData.textX);
+  const textYValue = Number(photoData.textY);
+  const textX = Math.max(0, Math.min(100, Number.isFinite(textXValue) ? textXValue : 50));
+  const textY = Math.max(0, Math.min(100, Number.isFinite(textYValue) ? textYValue : 86));
+  const rotate = Number(photoData.rotate) || 0;
+  const imageStyle = `transform:rotate(${rotate}deg);`;
+
+  if (!photoData.image) {
+    return `
+      <button class="soft-btn widget-photo-empty widget-miss-you-btn" type="button" data-photo-widget-id="${widget.id}">
+        + pin photo
+      </button>
+    `;
+  }
+
+  return `
+    <div class="widget-photo-card">
+      <div class="widget-photo-frame">
+        <img class="widget-photo-image" src="${photoData.image}" alt="pinned photo" style="${imageStyle}" />
+        ${overlayText ? `<div class="widget-photo-text" style="left:${textX}%;top:${textY}%;color:${textColor};--photo-text-size:${textSize};">${overlayText}</div>` : ''}
       </div>
     </div>
   `;
@@ -1122,7 +1243,8 @@ async function loadWidgets(options = {}) {
   const { render = true } = options;
   const { data, error } = await supabaseClient
     .from('widgets')
-    .select('*');
+    .select('*')
+    .order('updated_at', { ascending: false });
 
   if (error) {
     console.error(error);
@@ -1132,9 +1254,16 @@ async function loadWidgets(options = {}) {
 
   if (data && data.length) {
     const widgetsNeedingNormalization = [];
+    const latestSavedWidgets = new Map();
+
+    data.forEach((row) => {
+      if (!latestSavedWidgets.has(row.id)) {
+        latestSavedWidgets.set(row.id, row);
+      }
+    });
 
     widgets = widgets.map((defaultWidget) => {
-      const savedWidget = data.find((row) => row.id === defaultWidget.id);
+      const savedWidget = latestSavedWidgets.get(defaultWidget.id);
 
       if (!savedWidget) {
         return defaultWidget;
@@ -1221,6 +1350,7 @@ function renderWidgets() {
   rightZone.innerHTML = '';
 
   ensureWidgetStackOrder();
+  syncToggleWidgetsButton();
 
   [...widgets]
     .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))
@@ -1239,6 +1369,8 @@ function renderWidgets() {
 
     const isStickerWidget =
       normalizedId.includes('stickers') || normalizedTitle.includes('stickers');
+    const isPhotoWidget =
+      normalizedId === 'photo-pin' || normalizedTitle.includes('pinned photo');
 
     const hasHistory =
       normalizedId === 'song' ||
@@ -1248,18 +1380,26 @@ function renderWidgets() {
       ['song', 'memories', 'love'].includes(normalizedId) ||
       isNoteWidget ||
       isDatesWidget ||
-      isWishlistWidget;
+      isWishlistWidget ||
+      isPhotoWidget;
 
     const editTargetId =
       isDatesWidget ? 'dates' :
       isWishlistWidget ? 'wishlist' :
+      isPhotoWidget ? 'photo-pin' :
       isNoteWidget ? 'note' :
       normalizedId;
+    const isMinimized = allWidgetsMinimized || minimizedWidgetIds.has(widget.id);
 
     const el = document.createElement('div');
     el.className = 'widget';
+    el.classList.toggle('is-minimized', isMinimized);
+    el.dataset.widgetId = widget.id;
     if (isStickerWidget) {
       el.classList.add('sticker-widget');
+    }
+    if (isPhotoWidget) {
+      el.classList.add('photo-widget');
     }
     el.style.left = widget.x + 'px';
     el.style.top = widget.y + 'px';
@@ -1269,6 +1409,15 @@ function renderWidgets() {
       <div class="widget-bar" data-widget-id="${widget.id}">
         <span>${widget.title}</span>
         <div class="widget-bar-actions">
+          <button
+            class="widget-minimize-btn"
+            type="button"
+            data-widget-minimize-id="${widget.id}"
+            aria-label="${isMinimized ? 'restore widget' : 'minimize widget'}"
+            aria-pressed="${isMinimized ? 'true' : 'false'}"
+          >
+            ${isMinimized ? '+' : '–'}
+          </button>
           ${hasHistory ? `<button class="widget-history-btn" type="button" data-widget-history-id="${widget.id}">🕘</button>` : ''}
           <button class="widget-edit-btn" type="button" data-widget-id="${widget.id}">
             ${isEditable ? '✎' : '✦'}
@@ -1282,6 +1431,22 @@ function renderWidgets() {
     const bar = el.querySelector('.widget-bar');
     const editBtn = el.querySelector('.widget-edit-btn');
     const historyBtn = el.querySelector('.widget-history-btn');
+    const minimizeBtn = el.querySelector('.widget-minimize-btn');
+
+    if (minimizeBtn) {
+      ['mousedown', 'pointerdown'].forEach((eventName) => {
+        minimizeBtn.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+      });
+
+      minimizeBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleWidgetMinimized(widget.id);
+      });
+    }
 
     if (historyBtn) {
       historyBtn.addEventListener('mousedown', (event) => {
@@ -1321,22 +1486,20 @@ function renderWidgets() {
       });
     }
 
-    if (normalizedId === 'weather') {
-      el.querySelectorAll('.widget-weather-refresh').forEach((btn) => {
-        btn.addEventListener('mousedown', (event) => {
-          event.preventDefault();
-          event.stopPropagation();
+    if (isPhotoWidget) {
+      el.querySelectorAll('.widget-photo-empty').forEach((btn) => {
+        ['mousedown', 'pointerdown'].forEach((eventName) => {
+          btn.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          });
         });
 
-        btn.addEventListener('pointerdown', (event) => {
+        btn.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-        });
-
-        btn.addEventListener('click', async (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          await refreshWeatherWidget();
+          const targetId = btn.dataset.photoWidgetId || btn.getAttribute('data-photo-widget-id') || widget.id;
+          openWidgetEditor(targetId);
         });
       });
     }
@@ -1357,7 +1520,7 @@ function renderWidgets() {
           event.preventDefault();
           event.stopPropagation();
           if (btn.hasAttribute('disabled')) return;
-          await incrementMissYouWidget();
+          incrementMissYouWidget();
         });
       });
     }
@@ -1381,7 +1544,7 @@ function renderWidgets() {
     }
 
     bar.addEventListener('pointerdown', (event) => {
-      if (event.target.closest('.widget-edit-btn')) return;
+      if (event.target.closest('button')) return;
       startWidgetDrag(event, widget, el);
     });
 
@@ -1393,6 +1556,53 @@ function renderWidgets() {
   });
 
   renderStickerGrid();
+}
+
+function syncToggleWidgetsButton() {
+  if (!toggleWidgetsBtn) return;
+
+  toggleWidgetsBtn.textContent = allWidgetsMinimized ? 'show all' : 'hide all';
+  toggleWidgetsBtn.setAttribute('aria-pressed', String(allWidgetsMinimized));
+  toggleWidgetsBtn.setAttribute(
+    'aria-label',
+    allWidgetsMinimized ? 'restore all widgets' : 'minimize all widgets'
+  );
+}
+
+function toggleWidgetMinimized(widgetId) {
+  if (allWidgetsMinimized) {
+    allWidgetsMinimized = false;
+    minimizedWidgetIds.clear();
+    widgets.forEach((widget) => {
+      if (widget.id !== widgetId) {
+        minimizedWidgetIds.add(widget.id);
+      }
+    });
+    renderWidgets();
+    return;
+  }
+
+  if (minimizedWidgetIds.has(widgetId)) {
+    minimizedWidgetIds.delete(widgetId);
+  } else {
+    minimizedWidgetIds.add(widgetId);
+  }
+
+  if (minimizedWidgetIds.size < widgets.length) {
+    allWidgetsMinimized = false;
+  }
+
+  renderWidgets();
+}
+
+function toggleAllWidgetsMinimized() {
+  allWidgetsMinimized = !allWidgetsMinimized;
+
+  if (allWidgetsMinimized) {
+    minimizedWidgetIds.clear();
+  }
+
+  renderWidgets();
 }
 
 function renderWidgetSkeletons() {
@@ -1458,6 +1668,7 @@ function openWidgetEditor(widgetId) {
     if (normalizedId === 'dates' && itemTitle.includes('important dates')) return true;
     if (normalizedId === 'wishlist' && itemTitle.includes('wishlist')) return true;
     if (normalizedId === 'note' && itemTitle.includes('little note')) return true;
+    if (normalizedId === 'photo-pin' && itemTitle.includes('pinned photo')) return true;
 
     return false;
   });
@@ -1664,6 +1875,184 @@ function openWidgetEditor(widgetId) {
         showMessage('wishlist updated ♡');
       });
     });
+  } else if (normalizedId === 'photo-pin') {
+    if (!widget.data) {
+      widget.data = {};
+    }
+
+    widgetPopupTitle.textContent = 'pinned photo ♡';
+    saveWidgetBtn.style.display = 'none';
+
+    const photoData = {
+      image: widget.data.image || '',
+      text: widget.data.text || '',
+      textColor: widget.data.textColor || '#ffffff',
+      textSize: Number(widget.data.textSize) || 22,
+      textX: Number.isFinite(Number(widget.data.textX)) ? Number(widget.data.textX) : 50,
+      textY: Number.isFinite(Number(widget.data.textY)) ? Number(widget.data.textY) : 86,
+      rotate: Number(widget.data.rotate) || 0
+    };
+
+    widgetEditorFields.innerHTML = `
+      <div class="photo-editor-fields">
+        <label class="popup-label">photo</label>
+        <input class="popup-input" id="photoWidgetInput" type="file" accept="image/*" />
+        <input id="photoWidgetImageData" type="hidden" value="${escapeHtml(photoData.image)}" />
+
+        <input id="photoWidgetRotate" type="hidden" value="${photoData.rotate}" />
+        <input id="photoWidgetTextX" type="hidden" value="${photoData.textX}" />
+        <input id="photoWidgetTextY" type="hidden" value="${photoData.textY}" />
+
+        <label class="popup-label">text</label>
+        <input class="popup-input" id="photoWidgetText" type="text" maxlength="60" value="${escapeHtml(photoData.text)}" />
+
+        <div class="photo-editor-toolbar">
+          <label class="photo-editor-control">
+            <span aria-label="text color" title="text color">🎨</span>
+            <input id="photoTextColor" type="color" value="${escapeHtml(photoData.textColor)}" />
+          </label>
+          <label class="photo-editor-control">
+            <span aria-label="text size" title="text size">T</span>
+            <input id="photoTextSize" type="number" min="12" max="46" value="${photoData.textSize}" />
+          </label>
+          <button class="soft-btn photo-editor-tool-btn photo-editor-icon-btn" id="centerPhotoTextXBtn" type="button" title="center text horizontally" aria-label="center text horizontally">↔</button>
+          <button class="soft-btn photo-editor-tool-btn" id="rotatePhotoBtn" type="button">rotate</button>
+          <button class="soft-btn photo-editor-tool-btn" id="clearPhotoBtn" type="button">clear</button>
+          <button class="soft-btn photo-editor-tool-btn" id="savePhotoWidgetBtn" type="button">save</button>
+        </div>
+
+        <div class="photo-editor-preview${photoData.image ? ' has-image' : ''}" id="photoEditorPreview">
+          ${photoData.image ? `
+            <img id="photoEditorPreviewImage" src="${photoData.image}" alt="photo preview" />
+            <div class="photo-editor-preview-text" id="photoEditorPreviewText"></div>
+          ` : '<span>no photo pinned yet</span>'}
+        </div>
+
+      </div>
+    `;
+
+    const photoInput = document.getElementById('photoWidgetInput');
+    const photoImageData = document.getElementById('photoWidgetImageData');
+    const photoRotateInput = document.getElementById('photoWidgetRotate');
+    const photoTextXInput = document.getElementById('photoWidgetTextX');
+    const photoTextYInput = document.getElementById('photoWidgetTextY');
+    const preview = document.getElementById('photoEditorPreview');
+    const textInput = document.getElementById('photoWidgetText');
+    const textColorInput = document.getElementById('photoTextColor');
+    const textSizeInput = document.getElementById('photoTextSize');
+    const centerPhotoTextXBtn = document.getElementById('centerPhotoTextXBtn');
+    const rotateBtn = document.getElementById('rotatePhotoBtn');
+    const clearPhotoBtn = document.getElementById('clearPhotoBtn');
+    const savePhotoWidgetBtn = document.getElementById('savePhotoWidgetBtn');
+    let photoRotation = photoData.rotate;
+    let textX = Math.max(0, Math.min(100, photoData.textX));
+    let textY = Math.max(0, Math.min(100, photoData.textY));
+
+    const updatePhotoPreview = () => {
+      const image = document.getElementById('photoEditorPreviewImage');
+      const text = document.getElementById('photoEditorPreviewText');
+      if (image) {
+        image.style.transform = `rotate(${photoRotation}deg)`;
+      }
+      if (text) {
+        text.textContent = textInput?.value || '';
+        text.style.left = `${textX}%`;
+        text.style.top = `${textY}%`;
+        text.style.color = textColorInput?.value || '#ffffff';
+        text.style.setProperty('--photo-text-size', String(Math.max(12, Math.min(46, Number(textSizeInput?.value) || 22))));
+      }
+      if (photoRotateInput) {
+        photoRotateInput.value = String(photoRotation);
+      }
+      if (photoTextXInput) {
+        photoTextXInput.value = String(textX);
+      }
+      if (photoTextYInput) {
+        photoTextYInput.value = String(textY);
+      }
+    };
+
+    const movePhotoTextToPointer = (event) => {
+      const rect = preview.getBoundingClientRect();
+      textX = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+      textY = Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100));
+      updatePhotoPreview();
+    };
+
+    const wirePhotoTextDrag = () => {
+      const text = document.getElementById('photoEditorPreviewText');
+      if (!text) return;
+
+      text.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        text.setPointerCapture?.(event.pointerId);
+        text.classList.add('is-dragging');
+        movePhotoTextToPointer(event);
+      });
+
+      text.addEventListener('pointermove', (event) => {
+        if (!text.classList.contains('is-dragging')) return;
+        event.preventDefault();
+        movePhotoTextToPointer(event);
+      });
+
+      text.addEventListener('pointerup', (event) => {
+        text.classList.remove('is-dragging');
+        text.releasePointerCapture?.(event.pointerId);
+      });
+    };
+
+    if (photoData.image) {
+      wirePhotoTextDrag();
+      updatePhotoPreview();
+    }
+
+    [textInput, textColorInput, textSizeInput].forEach((input) => {
+      input?.addEventListener('input', updatePhotoPreview);
+    });
+
+    photoInput?.addEventListener('change', async () => {
+      const file = photoInput.files?.[0];
+      if (!file) return;
+
+      try {
+        const imageData = await compressImageFile(file);
+        photoImageData.value = imageData;
+        preview.classList.add('has-image');
+        preview.innerHTML = `
+          <img id="photoEditorPreviewImage" src="${imageData}" alt="photo preview" />
+          <div class="photo-editor-preview-text" id="photoEditorPreviewText"></div>
+        `;
+        wirePhotoTextDrag();
+        updatePhotoPreview();
+      } catch (error) {
+        console.error(error);
+        showMessage('could not load photo ♡');
+      }
+    });
+
+    rotateBtn?.addEventListener('click', () => {
+      photoRotation = (photoRotation + 90) % 360;
+      updatePhotoPreview();
+    });
+
+    centerPhotoTextXBtn?.addEventListener('click', () => {
+      textX = 50;
+      updatePhotoPreview();
+    });
+
+    clearPhotoBtn?.addEventListener('click', () => {
+      photoImageData.value = '';
+      photoRotation = 0;
+      textX = 50;
+      textY = 86;
+      preview.classList.remove('has-image');
+      preview.innerHTML = '<span>no photo pinned yet</span>';
+      updatePhotoPreview();
+    });
+
+    savePhotoWidgetBtn?.addEventListener('click', saveWidgetChanges);
   } else {
     widgetPopupTitle.textContent = `edit ${widget.title}`;
     widgetEditorFields.innerHTML = `<div class="small-note">this widget is not editable yet ♡</div>`;
@@ -1682,6 +2071,7 @@ async function saveWidgetChanges() {
     if (editingWidgetId === 'dates' && itemTitle.includes('important dates')) return true;
     if (editingWidgetId === 'wishlist' && itemTitle.includes('wishlist')) return true;
     if (editingWidgetId === 'note' && itemTitle.includes('little note')) return true;
+    if (editingWidgetId === 'photo-pin' && itemTitle.includes('pinned photo')) return true;
 
     return false;
   });
@@ -1701,6 +2091,18 @@ async function saveWidgetChanges() {
   } else if (editingWidgetId === 'note') {
     if (!widget.data) widget.data = {};
     widget.data.text = document.getElementById('widgetFieldText').value.trim();
+  } else if (String(widget.title || '').toLowerCase().includes('pinned photo') || String(editingWidgetId || '').toLowerCase().startsWith('photo-pin')) {
+    if (!widget.data) widget.data = {};
+    widget.data.image = document.getElementById('photoWidgetImageData')?.value || '';
+    delete widget.data.caption;
+    widget.data.text = document.getElementById('photoWidgetText')?.value.trim() || '';
+    widget.data.textColor = document.getElementById('photoTextColor')?.value || '#ffffff';
+    widget.data.textSize = Math.max(12, Math.min(46, Number(document.getElementById('photoTextSize')?.value) || 22));
+    const savedTextX = Number(document.getElementById('photoWidgetTextX')?.value);
+    const savedTextY = Number(document.getElementById('photoWidgetTextY')?.value);
+    widget.data.textX = Math.max(0, Math.min(100, Number.isFinite(savedTextX) ? savedTextX : 50));
+    widget.data.textY = Math.max(0, Math.min(100, Number.isFinite(savedTextY) ? savedTextY : 86));
+    widget.data.rotate = Number(document.getElementById('photoWidgetRotate')?.value) || 0;
   } else {
     return;
   }
@@ -1723,30 +2125,52 @@ async function saveWidgetChanges() {
 
 async function saveWidgetToSupabase(widget, options = {}) {
   const { recordHistory = true, suppressErrorMessage = false } = options;
-  const { error } = await supabaseClient
-    .from('widgets')
-    .upsert({
-      id: widget.id,
-      title: widget.title,
-      side: widget.side,
-      x: Math.round(widget.x),
-      y: Math.round(widget.y),
-      data: widget.data || null,
-      content: widget.content || null,
-      updated_at: new Date().toISOString()
-    });
+  const payload = {
+    title: widget.title,
+    side: widget.side,
+    x: Math.round(widget.x),
+    y: Math.round(widget.y),
+    data: widget.data || null,
+    content: widget.content || null,
+    updated_at: new Date().toISOString()
+  };
 
-  if (error) {
-    console.error(error);
+  const { data: updatedRows, error: updateError } = await supabaseClient
+    .from('widgets')
+    .update(payload)
+    .eq('id', widget.id)
+    .select('id');
+
+  if (updateError) {
+    console.error(updateError);
     if (!suppressErrorMessage) {
-      showMessage(error.message);
+      showMessage(updateError.message);
     }
-    return;
+    return false;
+  }
+
+  if (!updatedRows?.length) {
+    const { error: insertError } = await supabaseClient
+      .from('widgets')
+      .insert({
+        id: widget.id,
+        ...payload
+      });
+
+    if (insertError) {
+      console.error(insertError);
+      if (!suppressErrorMessage) {
+        showMessage(insertError.message);
+      }
+      return false;
+    }
   }
 
   if (recordHistory) {
     recordWidgetHistory(widget);
   }
+
+  return true;
 }
 
 async function toggleWidgetWishlistItem(widgetId, wishId) {
@@ -2384,6 +2808,10 @@ function renderPlacedStickers() {
 
     const el = document.createElement('div');
     el.className = 'reaction-sticker';
+    el.dataset.stickerId = item.id;
+    if (visibleGifStickerControlTimers.has(item.id)) {
+      el.classList.add('show-controls');
+    }
     el.style.left = `${item.x}px`;
     el.style.top = `${item.y}px`;
 
@@ -2395,6 +2823,9 @@ function renderPlacedStickers() {
         if (event.button !== 0) return;
         event.preventDefault();
         event.stopPropagation();
+        if (isGif) {
+          showGifStickerControls(item.id);
+        }
 
         const layerRect = layer.getBoundingClientRect();
         draggingPlacedSticker = {
@@ -2411,6 +2842,12 @@ function renderPlacedStickers() {
       });
 
       if (isGif) {
+        stickerVisual.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          showGifStickerControls(item.id);
+        });
+
         const controlRow = document.createElement('div');
         controlRow.className = 'sticker-control-row';
 
@@ -2423,8 +2860,10 @@ function renderPlacedStickers() {
         shrinkBtn.textContent = '-';
         shrinkBtn.addEventListener('click', (event) => {
           event.stopPropagation();
+          hideGifStickerControls(item.id);
           savePlacedGifSize(item.id, gifSize - 12);
           renderPlacedStickers();
+          showGifStickerControls(item.id);
         });
 
         const growBtn = document.createElement('button');
@@ -2433,8 +2872,10 @@ function renderPlacedStickers() {
         growBtn.textContent = '+';
         growBtn.addEventListener('click', (event) => {
           event.stopPropagation();
+          hideGifStickerControls(item.id);
           savePlacedGifSize(item.id, gifSize + 12);
           renderPlacedStickers();
+          showGifStickerControls(item.id);
         });
 
         resizeControls.append(shrinkBtn, growBtn);
@@ -2446,6 +2887,7 @@ function renderPlacedStickers() {
         undoBtn.textContent = 'undo';
         undoBtn.addEventListener('click', async (event) => {
           event.stopPropagation();
+          hideGifStickerControls(item.id);
           await deletePlacedSticker(item.id);
         });
         controlRow.appendChild(undoBtn);
@@ -2467,7 +2909,38 @@ function renderPlacedStickers() {
   });
 }
 
+function hideGifStickerControls(stickerId) {
+  const stickerEl = document.querySelector(`.reaction-sticker[data-sticker-id="${stickerId}"]`);
+  if (stickerEl) {
+    stickerEl.classList.remove('show-controls');
+  }
+
+  const timer = visibleGifStickerControlTimers.get(stickerId);
+  if (timer) {
+    clearTimeout(timer);
+    visibleGifStickerControlTimers.delete(stickerId);
+  }
+}
+
+function showGifStickerControls(stickerId) {
+  const stickerEl = document.querySelector(`.reaction-sticker[data-sticker-id="${stickerId}"]`);
+  if (!stickerEl) return;
+
+  const existingTimer = visibleGifStickerControlTimers.get(stickerId);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  stickerEl.classList.add('show-controls');
+  const timer = window.setTimeout(() => hideGifStickerControls(stickerId), 2000);
+  visibleGifStickerControlTimers.set(stickerId, timer);
+}
+
 function startWidgetDrag(event, widget, element) {
+  if (window.matchMedia('(max-width: 1180px), (pointer: coarse)').matches) {
+    return;
+  }
+
   const zone = widget.side === 'left' ? leftZone : rightZone;
   bringWidgetToFront(widget);
   element.style.zIndex = String(widget.zIndex);
@@ -2519,13 +2992,21 @@ window.addEventListener('pointermove', (event) => {
 
   if (!dragWidget) return;
 
-  const { widget, zone, startX, startY, originX, originY } = dragWidget;
+  const { widget, zone, element, startX, startY, originX, originY } = dragWidget;
   const zoneRect = zone.getBoundingClientRect();
+  const pageRect = document.querySelector('.page')?.getBoundingClientRect() || document.documentElement.getBoundingClientRect();
+  const widgetWidth = element.offsetWidth || 240;
+  const widgetHeight = element.offsetHeight || 100;
   const nextX = originX + (event.clientX - startX);
   const nextY = originY + (event.clientY - startY);
 
-  widget.x = Math.max(-24, Math.min(zoneRect.width - 160, nextX));
-  widget.y = Math.max(0, Math.min(zoneRect.height - 100, nextY));
+  const minX = pageRect.left - zoneRect.left + 8;
+  const maxX = pageRect.right - zoneRect.left - widgetWidth - 8;
+  const minY = pageRect.top - zoneRect.top + 8;
+  const maxY = pageRect.bottom - zoneRect.top - widgetHeight - 8;
+
+  widget.x = Math.max(minX, Math.min(maxX, nextX));
+  widget.y = Math.max(minY, Math.min(maxY, nextY));
 
   dragWidget.element.style.left = widget.x + 'px';
   dragWidget.element.style.top = widget.y + 'px';
@@ -3516,18 +3997,56 @@ async function deletePlacedSticker(stickerId) {
 }
 
 async function updatePlacedStickerPosition(stickerId, x, y) {
-  const { error } = await supabaseClient
+  const user = await getCurrentUser();
+
+  if (!user) {
+    showMessage('please log in first ♡');
+    return false;
+  }
+
+  const nextX = Math.round(x);
+  const nextY = Math.round(y);
+  const localSticker = placedStickers.find((item) => item.id === stickerId);
+  const updatePayload = {
+    x: nextX,
+    y: nextY
+  };
+
+  let updateQuery = supabaseClient
     .from('post_stickers')
-    .update({
-      x: Math.round(x),
-      y: Math.round(y)
-    })
+    .update(updatePayload)
     .eq('id', stickerId);
+
+  if (localSticker?.userId) {
+    updateQuery = updateQuery.eq('user_id', localSticker.userId);
+  } else {
+    updateQuery = updateQuery.eq('user_id', user.id);
+  }
+
+  let { error } = await updateQuery;
 
   if (error) {
     console.error(error);
     showMessage(error.message);
     return false;
+  }
+
+  if (!localSticker?.userId || localSticker.userId !== user.id) {
+    const fallbackResult = await supabaseClient
+      .from('post_stickers')
+      .update(updatePayload)
+      .eq('id', stickerId);
+
+    if (fallbackResult.error) {
+      console.error(fallbackResult.error);
+      showMessage(fallbackResult.error.message);
+      return false;
+    }
+  }
+
+  if (localSticker) {
+    localSticker.x = nextX;
+    localSticker.y = nextY;
   }
 
   return true;
@@ -4350,6 +4869,7 @@ if (saveProfileBtn) saveProfileBtn.addEventListener('click', saveProfile);
 if (logoutBtn) logoutBtn.addEventListener('click', logoutUser);
 if (saveEntryBtn) saveEntryBtn.addEventListener('click', saveEntry);
 if (saveCommentBtn) saveCommentBtn.addEventListener('click', saveComment);
+if (toggleWidgetsBtn) toggleWidgetsBtn.addEventListener('click', toggleAllWidgetsMinimized);
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 window.addEventListener('scroll', updateFloatingEntryButtonVisibility, { passive: true });
 updateFloatingEntryButtonVisibility();

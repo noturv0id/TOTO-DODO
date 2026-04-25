@@ -243,11 +243,15 @@
       }
 
       .floating-entry-icon {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-family: 'Fredoka', sans-serif;
         font-size: 2.7rem;
         line-height: 1;
-        transform: translateY(-2px);
+        width: 1em;
+        height: 1em;
+        transform: translateY(-6px);
         pointer-events: none;
       }
 
@@ -655,6 +659,7 @@
       html[data-theme='dark'] .delete-date-btn,
       html[data-theme='dark'] .sticker-delete-btn,
       html[data-theme='dark'] .sticker-undo-btn,
+      html[data-theme='dark'] .sticker-size-btn,
       html[data-theme='dark'] .comment-like-btn,
       html[data-theme='dark'] .sticker-tab,
       html[data-theme='dark'] .sticker-pill,
@@ -683,6 +688,7 @@
 
       html[data-theme='dark'] .widget-edit-btn,
       html[data-theme='dark'] .widget-history-btn,
+      html[data-theme='dark'] .widget-minimize-btn,
       html[data-theme='dark'] .widget-wish-toggle {
         color: var(--text-soft);
       }
@@ -753,6 +759,7 @@
         grid-template-columns: 240px minmax(0, 1fr) 240px;
         gap: 32px;
         align-items: start;
+        overflow: visible;
       }
 
       .widget-zone {
@@ -761,6 +768,7 @@
         min-height: 620px;
         height: calc(100vh - 48px);
         max-height: 980px;
+        overflow: visible;
       }
 
       .widget {
@@ -824,6 +832,18 @@
         padding: 16px;
       }
 
+      .widget.is-minimized {
+        overflow: visible;
+      }
+
+      .widget.is-minimized .widget-bar {
+        border-radius: 24px;
+      }
+
+      .widget.is-minimized .widget-content {
+        display: none;
+      }
+
       .widget-wishlist-list {
         display: grid;
         gap: 2px;
@@ -865,6 +885,159 @@
         opacity: 0.65;
       }
 
+      .widget-photo-card,
+      .photo-editor-fields {
+        display: grid;
+        gap: 12px;
+      }
+
+      .widget-photo-frame,
+      .photo-editor-preview {
+        position: relative;
+        container-type: inline-size;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        height: auto !important;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(255, 250, 253, 0.72);
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+
+      .widget-photo-image,
+      .photo-editor-preview img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        min-width: 0;
+        min-height: 0;
+        transition: transform 0.2s ease;
+      }
+
+      .widget-photo-empty {
+        width: 100%;
+      }
+
+      .photo-editor-preview {
+        width: min(100%, 360px);
+        aspect-ratio: 1 / 1;
+        max-width: none;
+        min-height: 0;
+        justify-self: center;
+        color: var(--text-soft);
+        font-size: 0.92rem;
+      }
+
+      .widget-photo-text,
+      .photo-editor-preview-text {
+        position: absolute;
+        left: 50%;
+        top: 86%;
+        z-index: 1;
+        font-family: 'Fredoka', sans-serif;
+        font-size: clamp(12px, calc(var(--photo-text-size, 22) / 360 * 100cqw), 46px);
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: center;
+        white-space: nowrap;
+        text-shadow: 0 2px 8px rgba(30, 18, 28, 0.75);
+        transform: translate(-50%, -50%);
+        max-width: none;
+      }
+
+      .photo-editor-preview-text {
+        cursor: grab;
+        touch-action: none;
+        pointer-events: auto;
+      }
+
+      .photo-editor-preview-text.is-dragging {
+        cursor: grabbing;
+      }
+
+      .photo-editor-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .photo-editor-control {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .photo-editor-control span {
+        color: var(--text-soft);
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .photo-editor-toolbar input[type='color'] {
+        width: 46px;
+        min-width: 0;
+        height: 46px;
+        border: 1px solid var(--border-2);
+        border-radius: 16px;
+        background: rgba(255, 253, 254, 0.16);
+        padding: 3px;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(198, 133, 160, 0.12);
+      }
+
+      .photo-editor-toolbar input[type='number'] {
+        min-width: 0;
+        width: 72px;
+        height: 46px;
+        border: 1px solid var(--border-2);
+        border-radius: 16px;
+        background: rgba(255, 253, 254, 0.16);
+        color: var(--text);
+        padding: 8px 12px;
+        font-family: 'Quicksand', sans-serif;
+        font-weight: 700;
+        text-align: center;
+        box-shadow: 0 8px 18px rgba(198, 133, 160, 0.1);
+      }
+
+      .photo-editor-tool-btn {
+        min-height: 46px;
+        padding: 8px 14px;
+        border-radius: 16px;
+      }
+
+      .photo-editor-icon-btn {
+        width: 46px;
+        padding: 0;
+        font-size: 1.1rem;
+        font-weight: 800;
+      }
+
+      .photo-editor-toolbar input[type='color']::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+
+      .photo-editor-toolbar input[type='color']::-webkit-color-swatch {
+        border: none;
+        border-radius: 12px;
+      }
+
+      .photo-editor-toolbar input[type='color']::-moz-color-swatch {
+        border: none;
+        border-radius: 12px;
+      }
+
       .widget.sticker-widget {
         display: flex;
         flex-direction: column;
@@ -875,6 +1048,10 @@
         flex-direction: column;
         flex: 1;
         min-height: 0;
+      }
+
+      .widget.sticker-widget.is-minimized .widget-content {
+        display: none;
       }
 
       #widgetPopup .popup-card {
@@ -907,7 +1084,9 @@
         margin-top: 18px;
       }
 
-      .widget-edit-btn {
+      .widget-edit-btn,
+      .widget-history-btn,
+      .widget-minimize-btn {
         border: none;
         background: transparent;
         color: #704c5c;
@@ -919,7 +1098,16 @@
         font-family: inherit;
       }
 
-      .widget-edit-btn:hover {
+      .widget-minimize-btn {
+        min-width: 18px;
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .widget-edit-btn:hover,
+      .widget-history-btn:hover,
+      .widget-minimize-btn:hover {
         transform: scale(1.1);
         opacity: 1;
       }
@@ -932,23 +1120,6 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-      }
-
-      .widget-history-btn {
-        border: none;
-        background: transparent;
-        color: #704c5c;
-        font-size: 0.82rem;
-        opacity: 0.75;
-        cursor: pointer;
-        transition: transform 0.2s ease, opacity 0.2s ease;
-        padding: 0;
-        font-family: inherit;
-      }
-
-      .widget-history-btn:hover {
-        transform: scale(1.08);
-        opacity: 1;
       }
 
       .widget-history-list {
@@ -1033,6 +1204,103 @@
         background: linear-gradient(90deg, rgba(246, 214, 226, 0.48), rgba(255, 250, 253, 0.94), rgba(246, 214, 226, 0.48));
         background-size: 220% 100%;
         animation: skeletonShimmer 1.35s ease-in-out infinite;
+      }
+
+      /* Center only the sticker-widget add button and the sweet-reminder link */
+      .sticker-widget-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sticker-widget-footer {
+        width: 100%;
+        padding-top: 8px;
+        display: flex;
+        justify-content: center !important;
+        align-items: center !important;
+      }
+
+      .sticker-widget-footer .soft-btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto !important;
+        width: auto;
+      }
+
+      /* fallback: ensure the footer spans the widget-content area */
+      .widget .widget-content > .sticker-widget-body {
+        width: 100%;
+      }
+
+      /* Strong overrides to force the add-sticker button centered */
+      .widget .sticker-widget-footer {
+        box-sizing: border-box;
+        width: 100% !important;
+        padding: 10px 16px !important;
+        justify-content: center !important;
+      }
+
+      #openStickerPopup {
+        display: inline-flex !important;
+        margin: 0 auto !important;
+        justify-content: center !important;
+        align-items: center !important;
+      }
+
+      /* Absolute-centering fallback to overcome layout/padding offsets */
+      .sticker-widget-footer {
+        position: relative !important;
+      }
+
+      .sticker-widget-footer #openStickerPopup {
+        position: relative !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+      }
+
+      /* Match the large pill-style 'i miss you' button */
+      /* Unify all main widget action buttons to match the pin photo button */
+      /* Restore original soft-btn style for all widget action buttons */
+      .widget-miss-you-btn,
+      .soft-btn.widget-miss-you-btn,
+      #openStickerPopup,
+      .sticker-widget-footer .soft-btn,
+      .widget .widget-content a.soft-btn,
+      .widget .widget-content button.soft-btn {
+        border: 2px solid var(--border-2);
+        background: transparent;
+        color: var(--text);
+        border-radius: 999px;
+        padding: 14px 0;
+        min-height: 48px;
+        font-family: 'Quicksand', sans-serif;
+        font-weight: 600;
+        font-size: 0.90rem;
+        box-shadow: none;
+        cursor: pointer;
+        transition: background 0.22s, color 0.22s, border 0.22s, transform 0.22s;
+        display: block;
+        width: 100%;
+        text-align: center;
+        text-decoration: none;
+        outline: none;
+      }
+
+      .widget .widget-content a.soft-btn:hover,
+      .widget .widget-content button.soft-btn:hover {
+        transform: translateY(-2px) scale(1.03);
+        background: #fff7fb;
+        box-shadow: 0 12px 24px rgba(198, 133, 160, 0.18);
+      }
+
+      .widget .widget-content a[href*="anniversary-wrapper.html"] {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        margin-left: auto;
+        margin-right: auto;
       }
 
       .skeleton-line {
@@ -1386,6 +1654,7 @@
         filter: drop-shadow(0 6px 10px rgba(246, 214, 226, 0.35));
         transform: translate(-50%, -50%);
         transition: transform 0.2s ease;
+        z-index: 1;
       }
 
       .reaction-sticker:hover {
@@ -1394,6 +1663,11 @@
 
       .reaction-sticker.is-dragging {
         transform: translate(-50%, -50%) scale(1.02);
+        z-index: 40;
+      }
+
+      .reaction-sticker.show-controls {
+        z-index: 35;
       }
 
       .reaction-sticker-emoji {
@@ -1477,6 +1751,8 @@
       .sticker-widget-footer {
         flex-shrink: 0;
         padding-top: 2px;
+        display: flex;
+        justify-content: center;
       }
 
       .sticker-grid::-webkit-scrollbar {
@@ -1545,6 +1821,15 @@
         align-items: center;
         gap: 8px;
         pointer-events: auto;
+        z-index: 50;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.18s ease, visibility 0.18s ease;
+      }
+
+      .reaction-sticker.show-controls .sticker-control-row {
+        opacity: 1;
+        visibility: visible;
       }
 
       .sticker-size-controls {
@@ -2174,13 +2459,19 @@
       }
 
       @media (max-width: 1180px) {
+        .page {
+          padding: 24px;
+        }
+
         .layout {
           grid-template-columns: 1fr;
+          gap: 22px;
         }
 
         .toolbar-inner {
           grid-template-columns: 1fr;
           justify-items: center;
+          gap: 16px;
         }
 
         .brand,
@@ -2193,14 +2484,27 @@
         }
 
         .widget-zone {
-          min-height: 280px;
+          position: static;
+          min-height: 0;
+          height: auto;
+          max-height: none;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 16px;
         }
 
         .widget {
           position: relative;
           inset: auto !important;
+          left: auto !important;
+          top: auto !important;
           width: 100%;
-          margin-bottom: 16px;
+          margin: 0;
+        }
+
+        .widget:hover,
+        .post:hover {
+          transform: none;
         }
 
         .floating-entry-btn {
@@ -2211,5 +2515,302 @@
 
         .floating-entry-icon {
           font-size: 2.4rem;
+        }
+      }
+
+      @media (max-width: 720px) {
+        html,
+        body {
+          min-width: 320px;
+        }
+
+        .page {
+          padding: 12px 12px 96px;
+        }
+
+        .floating-decor {
+          display: none;
+        }
+
+        .toolbar {
+          margin-bottom: 16px;
+          padding: 12px;
+          border-radius: 22px;
+        }
+
+        .brand {
+          width: 100%;
+          min-width: 0;
+          justify-content: center;
+        }
+
+        .brand-icons {
+          gap: 5px;
+          font-size: 13px;
+        }
+
+        .site-title {
+          min-width: 0;
+          font-size: 1rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .quote-pill {
+          width: 100%;
+          padding: 8px 10px;
+          font-size: 0.84rem;
+          line-height: 1.35;
+          text-align: center;
+          overflow-wrap: anywhere;
+        }
+
+        .toolbar-actions,
+        .toolbar-skeleton-actions {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .toolbar-skeleton-brand {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .toolbar-skeleton-title {
+          width: min(160px, 72%);
+        }
+
+        .toolbar-skeleton-quote {
+          width: 100%;
+        }
+
+        .toolbar-skeleton-btn,
+        .toolbar-skeleton-btn-inbox,
+        .toolbar-skeleton-btn-toggle {
+          width: 100%;
+        }
+
+        .notifications-menu,
+        .notifications-btn,
+        .toolbar-actions .theme-toggle,
+        .toolbar-actions .soft-btn {
+          width: 100%;
+        }
+
+        .notifications-btn,
+        .toolbar-actions .theme-toggle,
+        .toolbar-actions .soft-btn {
+          min-height: 40px;
+          padding: 9px 8px;
+          border-radius: 14px;
+          font-size: 0.84rem;
+        }
+
+        .notifications-btn,
+        .toolbar-actions .theme-toggle {
+          gap: 6px;
+        }
+
+        .theme-toggle-track {
+          flex: 0 0 auto;
+        }
+
+        .theme-toggle-label {
+          min-width: 0;
+        }
+
+        .notifications-panel {
+          position: fixed;
+          top: calc(12px + env(safe-area-inset-top, 0px));
+          right: 12px;
+          left: 12px;
+          width: auto;
+          max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px));
+          border-radius: 20px;
+        }
+
+        .notifications-panel-header {
+          align-items: flex-start;
+          padding: 14px;
+          flex-direction: column;
+        }
+
+        .notifications-panel-actions {
+          width: 100%;
+          justify-content: space-between;
+          gap: 8px;
+        }
+
+        .layout {
+          gap: 16px;
+        }
+
+        .timeline {
+          order: 1;
+          gap: 16px;
+        }
+
+        #leftZone {
+          order: 2;
+        }
+
+        #rightZone {
+          order: 3;
+        }
+
+        .widget-zone {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .widget,
+        .post {
+          border-radius: 20px;
+        }
+
+        .widget-bar {
+          padding: 10px 82px 10px 12px;
+          cursor: default;
+        }
+
+        .widget-bar-actions {
+          right: 12px;
+        }
+
+        .widget-content {
+          padding: 14px;
+        }
+
+        .post-header {
+          padding: 10px 12px;
+          gap: 8px;
+          flex-wrap: wrap;
+          font-size: 0.86rem;
+        }
+
+        .post-body {
+          padding: 16px;
+          min-height: 150px;
+        }
+
+        .post-meta {
+          align-items: flex-start;
+          gap: 8px;
+          font-size: 0.86rem;
+        }
+
+        .post-avatar {
+          width: 32px;
+          height: 32px;
+        }
+
+        .post-text {
+          font-size: 0.96rem;
+          line-height: 1.75;
+        }
+
+        .post-actions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 16px;
+        }
+
+        .post-btn {
+          width: 100%;
+          padding: 10px 8px;
+          border-radius: 14px;
+        }
+
+        .youtube-preview {
+          border-radius: 14px;
+        }
+
+        .floating-entry-btn {
+          width: 62px;
+          height: 62px;
+          bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .floating-entry-icon {
+          font-size: 2rem;
+        }
+
+        .popup {
+          align-items: flex-end;
+          padding: 12px;
+        }
+
+        .popup-card,
+        #entryPopup .popup-card,
+        #widgetPopup .popup-card {
+          max-width: none;
+          max-height: calc(100dvh - 24px);
+          border-radius: 22px;
+        }
+
+        .popup-header {
+          padding: 12px 14px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .popup-title {
+          min-width: 0;
+          font-size: 0.96rem;
+          overflow-wrap: anywhere;
+        }
+
+        .popup-header-actions {
+          width: 100%;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .popup-header-actions .soft-btn,
+        .popup-header > .soft-btn {
+          min-height: 38px;
+          padding: 8px 12px;
+          border-radius: 14px;
+        }
+
+        .popup-body,
+        #widgetPopup .popup-body {
+          padding: 14px;
+        }
+
+        .popup-actions {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 10px;
+        }
+
+        .popup-actions .soft-btn {
+          width: 100%;
+        }
+
+        .sticker-tabs {
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 4px;
+        }
+
+        .sticker-tab {
+          flex: 0 0 auto;
+          white-space: nowrap;
+          padding: 8px 12px;
+        }
+
+        .gif-search-bar {
+          grid-template-columns: 1fr;
+        }
+
+        .gif-picker-grid {
+          grid-template-columns: 1fr 1fr;
+          max-height: 260px;
         }
       }

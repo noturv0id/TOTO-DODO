@@ -36,11 +36,11 @@
       <header class="toolbar" id="appToolbar" data-auth-state="checking">
         <div class="toolbar-inner toolbar-live">
           <div class="brand">
-            <div class="brand-icons"><span>??</span><span>?</span><span>?</span></div>
-            <div class="site-title">our memories ?</div>
+            <div class="brand-icons"><span>♡</span><span>✦</span><span>🎀</span></div>
+            <div class="site-title">our memories ♡</div>
           </div>
 
-          <div class="quote-pill">??�?????forever and always?????�??</div>
+          <div class="quote-pill">forever and always ♡</div>
 
           <div class="toolbar-actions">
             <div class="notifications-menu" id="notificationsMenu">
@@ -51,13 +51,13 @@
                 aria-label="open inbox"
                 aria-expanded="false"
               >
-                <span class="notifications-btn-icon" aria-hidden="true">?</span>
+                <span class="notifications-btn-icon" aria-hidden="true">💌</span>
                 <span class="notifications-btn-label">inbox</span>
                 <span class="notifications-badge" id="notificationsBadge" hidden>0</span>
               </button>
               <div class="notifications-panel" id="notificationsPanel" hidden>
                 <div class="notifications-panel-header">
-                  <h3 class="notifications-title">inbox ?</h3>
+                  <h3 class="notifications-title">inbox ♡</h3>
                   <div class="notifications-panel-actions">
                     <button class="notifications-mark-btn" id="markAllReadBtn" type="button">mark all read</button>
                     <button class="notifications-mark-btn" id="clearNotificationsBtn" type="button">clear notifications</button>
@@ -78,6 +78,7 @@
               </span>
               <span class="theme-toggle-label">dark</span>
             </button>
+            <button class="soft-btn" type="button" id="toggleWidgetsBtn" aria-pressed="false">widgets</button>
             <button class="soft-btn" type="button" id="profileBtn">profile</button>
           </div>
         </div>
@@ -114,7 +115,7 @@
     <div class="popup" id="profilePopup">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">my profile ?</h3>
+          <h3 class="popup-title">my profile ♡</h3>
           <button class="soft-btn" id="closeProfilePopup" type="button">close</button>
         </div>
         <div class="popup-body">
@@ -135,11 +136,11 @@
     <div class="popup" id="entryPopup">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">new entry ?</h3>
+          <h3 class="popup-title">new entry ✎</h3>
           <button class="soft-btn" id="closeEntryPopup" type="button">close</button>
         </div>
         <div class="popup-body">
-          <label class="popup-label">write something ?</label>
+          <label class="popup-label">write something ♡</label>
           <div class="entry-editor" id="entryEditor"></div>
           <textarea class="popup-input entry-fallback" id="entryContentFallback" rows="6" style="resize: vertical; min-height: 140px;"></textarea>
     
@@ -153,7 +154,7 @@
     <div class="popup" id="commentsPopup">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">comments ?</h3>
+          <h3 class="popup-title">comments ♡</h3>
           <button class="soft-btn" id="closeCommentsPopup" type="button">close</button>
         </div>
         <div class="popup-body">
@@ -198,7 +199,7 @@
     <div class="popup" id="stickerPopup">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">. ?? ? . ? sticker box ? . ? ? ?.</h3>
+          <h3 class="popup-title">✦ sticker box ♡</h3>
           <div class="popup-header-actions">
             <button class="soft-btn" id="saveStickerBtn" type="button">save</button>
             <button class="soft-btn" id="closeStickerPopup" type="button">close</button>
@@ -212,17 +213,17 @@
           </div>
 
           <div class="sticker-panel active" id="stickerTypePanel">
-          <label class="popup-label" for="stickerInput">add a little sticker ?</label>
+          <label class="popup-label" for="stickerInput">add a little sticker ♡</label>
           <input class="popup-input" id="stickerInput" maxlength="16" placeholder="" />
           </div>
 
           <div class="sticker-panel" id="stickerPickPanel">
-            <label class="popup-label">tap an emoji to use it ?</label>
+            <label class="popup-label">tap an emoji to use it ♡</label>
             <div class="emoji-picker-grid" id="emojiPickerGrid"></div>
           </div>
 
           <div class="sticker-panel" id="stickerGifPanel">
-            <label class="popup-label">search public gifs ?</label>
+            <label class="popup-label">search public gifs ♡</label>
             <div class="gif-search-bar">
               <input
                 class="popup-input gif-search-input"
@@ -232,12 +233,12 @@
               />
               <button class="soft-btn" id="gifSearchBtn" type="button">search</button>
             </div>
-            <div class="small-note" id="gifSearchStatus">search public gifs or pick one below ?</div>
+            <div class="small-note" id="gifSearchStatus">search public gifs or pick one below ♡</div>
             <div class="gif-picker-grid" id="gifPickerGrid"></div>
             <div class="gif-attribution">Powered by GIPHY</div>
           </div>
 
-          <div class="small-note">you can drag your stickers from the sticker box onto any diary entry ?</div>
+          <div class="small-note">you can drag your stickers from the sticker box onto any diary entry ♡</div>
         </div>
       </div>
     </div>
@@ -245,7 +246,7 @@
     <div class="popup open" id="authPopup">
         <div class="popup-card">
           <div class="popup-header">
-            <h3 class="popup-title">welcome back ?</h3>
+            <h3 class="popup-title">welcome back ♡</h3>
           </div>
           <div class="popup-body">
             <label class="popup-label">email</label>
@@ -261,7 +262,7 @@
                 aria-label="show password"
                 aria-pressed="false"
               >
-                <span class="password-toggle-icon" aria-hidden="true">?</span>
+                <span class="password-toggle-icon" aria-hidden="true">◉</span>
               </button>
             </div>
       
