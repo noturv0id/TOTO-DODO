@@ -3,244 +3,171 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <title>Opening Website</title>
     <style>
       :root {
-        color-scheme: light;
-        --bg: #fff7fb;
-        --card: rgba(255, 255, 255, 0.88);
-        --border: rgba(40, 32, 42, 0.1);
-        --text: #28202a;
-        --muted: rgba(40, 32, 42, 0.68);
+        color-scheme: dark;
+        --bg-1: #160f1b;
+        --bg-2: #211527;
+        --bg-3: #301c2f;
+        --card: rgba(43, 27, 48, 0.9);
+        --card-strong: rgba(59, 37, 56, 0.94);
+        --border: rgba(138, 82, 114, 0.82);
+        --text: #f7e7f1;
+        --muted: #c9aabe;
+        --accent: #f0b8cb;
+        --shadow: 0 24px 60px rgba(5, 2, 8, 0.52);
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html,
       body {
-        min-height: 100vh;
+        min-height: 100%;
         margin: 0;
-        display: grid;
-        place-items: center;
-        color: var(--text);
-        background:
-          radial-gradient(900px 460px at 18% 12%, #ffe6f2 0%, transparent 60%),
-          radial-gradient(780px 420px at 82% 5%, #e8f3ff 0%, transparent 58%),
-          var(--bg);
-        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
       }
 
-      body.is-silent {
-        background: transparent;
+      body {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 18% 16%, rgba(132, 76, 119, 0.34), transparent 19%),
+          radial-gradient(circle at 82% 14%, rgba(92, 58, 115, 0.34), transparent 22%),
+          radial-gradient(circle at 50% 62%, rgba(67, 40, 76, 0.56), transparent 30%),
+          linear-gradient(180deg, var(--bg-1), var(--bg-2), var(--bg-3));
+        font-family: "Quicksand", "Segoe UI", sans-serif;
+        overflow: hidden;
       }
 
       main {
-        width: min(92vw, 420px);
-        padding: 22px;
+        width: min(90vw, 520px);
+        padding: clamp(28px, 6vw, 44px);
         border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--card);
-        box-shadow: 0 18px 44px rgba(40, 32, 42, 0.12);
+        border-radius: 34px;
+        background:
+          linear-gradient(180deg, var(--card-strong), var(--card));
+        box-shadow: var(--shadow);
         text-align: center;
+        position: relative;
+        overflow: hidden;
       }
 
-      body.is-silent main {
-        display: none;
+      main::before,
+      main::after {
+        content: "";
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        border-radius: 999px;
+        background: rgba(240, 184, 203, 0.16);
+        filter: blur(4px);
+        pointer-events: none;
+      }
+
+      main::before {
+        top: -110px;
+        left: -70px;
+      }
+
+      main::after {
+        right: -90px;
+        bottom: -120px;
+      }
+
+      .eyebrow {
+        position: relative;
+        z-index: 1;
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-family: "Fredoka", "Quicksand", sans-serif;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
       }
 
       h1 {
-        margin: 0 0 10px;
-        font-size: 1.1rem;
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        font-family: "Fredoka", "Quicksand", sans-serif;
+        font-size: clamp(2.1rem, 8vw, 3.7rem);
+        line-height: 1.02;
+        text-transform: lowercase;
       }
 
       p {
-        margin: 0;
+        position: relative;
+        z-index: 1;
+        margin: 14px auto 0;
+        max-width: 30rem;
         color: var(--muted);
-        font-size: 0.92rem;
-        line-height: 1.45;
+        font-size: 1rem;
+        line-height: 1.5;
       }
 
-      button {
-        margin-top: 16px;
-        padding: 10px 14px;
-        border: 1px solid var(--border);
+      .loading-dots {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 24px;
+      }
+
+      .loading-dots span {
+        width: 9px;
+        height: 9px;
         border-radius: 999px;
-        background: #fff;
-        color: var(--text);
-        cursor: pointer;
-        font: inherit;
-        font-weight: 700;
+        background: var(--accent);
+        opacity: 0.42;
+        animation: dotPulse 1.18s ease-in-out infinite;
+      }
+
+      .loading-dots span:nth-child(2) {
+        animation-delay: 0.16s;
+      }
+
+      .loading-dots span:nth-child(3) {
+        animation-delay: 0.32s;
+      }
+
+      @keyframes dotPulse {
+        0%,
+        80%,
+        100% {
+          opacity: 0.38;
+          transform: translateY(0);
+        }
+
+        40% {
+          opacity: 1;
+          transform: translateY(-5px);
+        }
       }
     </style>
   </head>
-  <body class="is-silent">
+  <body>
     <main>
-      <h1>Opening website</h1>
-      <p id="status">Preparing the anniversary page...</p>
-      <button id="retryBtn" type="button" hidden>Try again</button>
+      <p class="eyebrow">our memories</p>
+      <h1>opening website</h1>
+      <p>Preparing the anniversary page...</p>
+      <div class="loading-dots" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
     </main>
-
-    <script>
-      const params = new URLSearchParams(location.search);
-      const statusEl = document.getElementById("status");
-      const retryBtn = document.getElementById("retryBtn");
-      const wrapperUrl = location.href.split("#")[0].split("?")[0];
-
-      const defaultConfig = {
-        supabaseUrl: "https://ytrbsxknhlsfqkqphlms.supabase.co",
-        bucket: "anniversary",
-        path: "index.html"
-      };
-
-      function setStatus(message) {
-        statusEl.textContent = message;
-      }
-
-      function showWrapperUi(message) {
-        document.body.classList.remove("is-silent");
-        if (message) setStatus(message);
-      }
-
-      function encodePath(path) {
-        return String(path)
-          .split("/")
-          .filter(Boolean)
-          .map((segment) => encodeURIComponent(segment))
-          .join("/");
-      }
-
-      function buildPublicUrl(config) {
-        const base = String(config.supabaseUrl || "").replace(/\/+$/, "");
-        if (!base || !config.bucket || !config.path) return "";
-        return `${base}/storage/v1/object/public/${encodeURIComponent(config.bucket)}/${encodePath(config.path)}`;
-      }
-
-      function getConfig() {
-        return {
-          supabaseUrl: params.get("supabaseUrl") || defaultConfig.supabaseUrl,
-          bucket: params.get("bucket") || defaultConfig.bucket,
-          path: params.get("path") || defaultConfig.path,
-          url: params.get("url") || ""
-        };
-      }
-
-      function resolveUrl(config) {
-        if (config.url && /^https?:\/\//i.test(config.url)) return config.url;
-        return buildPublicUrl(config);
-      }
-
-      function getAssetBaseUrl(url) {
-        return url.slice(0, url.lastIndexOf("/") + 1);
-      }
-
-      function addBaseHref(html, url) {
-        const baseTag = `<base href="${getAssetBaseUrl(url)}">`;
-        if (/<head[\s>]/i.test(html)) {
-          return html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
-        }
-        return `${baseTag}${html}`;
-      }
-
-      function escapeInlineScript(script) {
-        return script.replace(/<\/script/gi, "<\\/script");
-      }
-
-      function patchNavigationScript(script) {
-        return script.replaceAll(
-          "window.location.assign(getStoryPath())",
-          "window.__openWrappedPage(getStoryPath())"
-        );
-      }
-
-      function patchInlineNavigation(html) {
-        return html
-          .replaceAll("window.location.href = 'index.html';", "window.__openWrappedPage('index.html');")
-          .replaceAll('window.location.href = "index.html";', 'window.__openWrappedPage("index.html");');
-      }
-
-      function injectNavigationBridge(html, sourceUrl) {
-        const bridgeCode = `
-          window.__openWrappedPage = function (path) {
-            const nextUrl = new URL(path, ${JSON.stringify(getAssetBaseUrl(sourceUrl))}).href;
-            const launcherUrl = new URL(${JSON.stringify(wrapperUrl)});
-            launcherUrl.searchParams.set("url", nextUrl);
-            window.location.assign(launcherUrl.href);
-          };
-        `;
-        const closingScriptTag = "<" + "/script>";
-        const bridgeTag = `<script>${escapeInlineScript(bridgeCode)}${closingScriptTag}`;
-
-        if (/<head[\s>]/i.test(html)) {
-          return html.replace(/<head([^>]*)>/i, `<head$1>${bridgeTag}`);
-        }
-
-        return `${bridgeTag}${html}`;
-      }
-
-      async function inlinePatchedScripts(html, pageUrl) {
-        const pageOrigin = new URL(pageUrl).origin;
-        const scriptTagPattern = /<script\b([^>]*)\bsrc=["']([^"']+\.js[^"']*)["']([^>]*)>\s*<\/script>/gi;
-        const replacements = [];
-
-        for (const match of html.matchAll(scriptTagPattern)) {
-          const sourceUrl = new URL(match[2], pageUrl);
-          if (sourceUrl.origin !== pageOrigin) continue;
-
-          const response = await fetch(sourceUrl.href, { cache: "no-store" });
-          if (!response.ok) continue;
-
-          const attrs = `${match[1]}${match[3]}`.replace(/\s+(async|defer)\b/gi, "");
-          const patchedScript = patchNavigationScript(await response.text());
-          const closingScriptTag = "<" + "/script>";
-
-          replacements.push({
-            from: match[0],
-            to: `<script${attrs}>${escapeInlineScript(patchedScript)}${closingScriptTag}`
-          });
-        }
-
-        return replacements.reduce(
-          (updatedHtml, replacement) => updatedHtml.replace(replacement.from, replacement.to),
-          html
-        );
-      }
-
-      async function prepareHtml(html, url) {
-        let preparedHtml = html.replace(/^\uFEFF/, "");
-        preparedHtml = addBaseHref(preparedHtml, url);
-        preparedHtml = injectNavigationBridge(preparedHtml, url);
-        preparedHtml = patchInlineNavigation(preparedHtml);
-        preparedHtml = await inlinePatchedScripts(preparedHtml, url);
-        return preparedHtml;
-      }
-
-      async function openWebsite() {
-        retryBtn.hidden = true;
-
-        const url = resolveUrl(getConfig());
-        if (!url) {
-          showWrapperUi("Missing website URL.");
-          retryBtn.hidden = false;
-          return;
-        }
-
-        try {
-          const response = await fetch(url, { cache: "no-store" });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-          const html = await prepareHtml(await response.text(), url);
-          const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-          window.location.replace(blobUrl);
-        } catch (error) {
-          console.error(error);
-          showWrapperUi("Could not open the anniversary page. Please try again.");
-          retryBtn.hidden = false;
-        }
-      }
-
-      retryBtn.addEventListener("click", openWebsite);
-      openWebsite();
-    </script>
   </body>
 </html>

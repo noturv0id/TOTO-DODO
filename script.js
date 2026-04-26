@@ -6,7 +6,7 @@ const supabaseClient = supabase.createClient(
   SUPABASE_ANON_KEY
 );
 const ANNIVERSARY_WRAPPER_URL =
-  'https://noturv0id.github.io/our-memories/anniversary-wrapper.html?v=20260422-3';
+  'https://noturv0id.github.io/our-memories/anniversary-wrapper.html?v=20260426-4';
 const STICKER_MIME_TYPE = 'application/x-our-memories-sticker';
 const ENTRY_IMAGE_BUCKET = 'profile-pictures';
 // Add your GIPHY API key here to enable public GIF search in the sticker popup.
@@ -23,18 +23,6 @@ const PLACED_GIF_SIZE_STORAGE_KEY = 'placedGifStickerSizes';
 const DEFAULT_GIF_STICKER_SIZE = 72;
 const MIN_GIF_STICKER_SIZE = 44;
 const MAX_GIF_STICKER_SIZE = 160;
-const PHOTO_TEXT_COLOR_SWATCHES = [
-  '#ffffff',
-  '#ffe4ec',
-  '#ffd166',
-  '#b5f2a8',
-  '#9ad7ff',
-  '#bdb2ff',
-  '#ff8fab',
-  '#7d4f50',
-  '#1f2a44',
-  '#000000'
-];
 let hasRenderedEmojiPicker = false;
 let hasRenderedGifPicker = false;
 let selectedGifStickerUrl = '';
@@ -344,7 +332,148 @@ const STICKER_PICKER_GROUPS = [
           });
       }
 
+      const MOBILE_WIDGET_LAYOUT = {
+        right: ['photo-pin', 'photo-pin-right', 'miss-you', 'song', 'note'],
+        left: ['wishlist', 'weather', 'dates', 'reminder-copy', 'love']
+      };
+
+      function getWidgetMobileTabOrders(widget) {
+        const data = getWidgetDataObject(widget);
+        return data.mobileTabOrders && typeof data.mobileTabOrders === 'object'
+          ? data.mobileTabOrders
+          : {};
+      }
+
+      function getWidgetMobileTabOrder(widget, side, fallbackOrder = 0) {
+        const order = Number(getWidgetMobileTabOrders(widget)[side]);
+        return Number.isFinite(order) ? order : fallbackOrder;
+      }
+
+      function setWidgetMobileTabOrder(widget, side, order) {
+        const data = getWidgetDataObject(widget);
+        widget.data = {
+          ...data,
+          mobileTabOrders: {
+            ...(data.mobileTabOrders && typeof data.mobileTabOrders === 'object' ? data.mobileTabOrders : {}),
+            [side]: order
+          }
+        };
+      }
+
+      function getWidgetMobileRole(widget) {
+        const normalizedId = String(widget?.id || '').toLowerCase().trim();
+        const normalizedTitle = String(widget?.title || '').toLowerCase();
+
+        if (normalizedId === 'song') return 'song';
+        if (normalizedId === 'weather' || normalizedTitle.includes('current weather')) return 'weather';
+        if (normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter')) return 'miss-you';
+        if (normalizedId === 'love') return 'love';
+        if (normalizedId === 'sweet-reminder') return 'reminder';
+        if (normalizedId === 'wishlist' || normalizedTitle.includes('wishlist')) return 'wishlist';
+        if (normalizedId === 'dates' || normalizedTitle.includes('important dates')) return 'dates';
+        if (normalizedId === 'note' || normalizedTitle.includes('little note')) return 'note';
+        if (normalizedId === 'photo-pin' || normalizedId === 'photo-pin-right') return normalizedId;
+        if (normalizedTitle.includes('pinned photo')) return 'photo-pin';
+
+        return '';
+      }
+
+      function getMobileWidgetForRole(role) {
+        const lookupRole = role === 'reminder-copy' ? 'reminder' : role;
+        return widgets.find((widget) => getWidgetMobileRole(widget) === lookupRole);
+      }
+
+      function getMobileWidgetRenderItems() {
+        return Object.entries(MOBILE_WIDGET_LAYOUT).flatMap(([side, roles]) =>
+          roles.flatMap((role, order) => {
+            const widget = getMobileWidgetForRole(role);
+            if (!widget) return [];
+
+            const isReminderCopy = role === 'reminder-copy';
+            return {
+              widget: isReminderCopy
+                ? {
+                    ...widget,
+                    id: `${widget.id}-mobile-left`,
+                    side,
+                    zIndex: widget.zIndex || 1
+                  }
+                : widget,
+              renderId: isReminderCopy ? `${widget.id}-mobile-left` : widget.id,
+              sourceId: widget.id,
+              side,
+              order: getWidgetMobileTabOrder(widget, side, order),
+              isVirtual: isReminderCopy
+            };
+          })
+        );
+      }
+
+      function sortMobileRenderItems(items) {
+        return [...items].sort((a, b) => {
+          const orderDifference = a.order - b.order;
+          if (orderDifference !== 0) return orderDifference;
+          return MOBILE_WIDGET_LAYOUT[a.side].indexOf(a.renderId) - MOBILE_WIDGET_LAYOUT[b.side].indexOf(b.renderId);
+        });
+      }
+
+      async function moveMobileWidgetInOrder(renderId, direction) {
+        const renderItems = getMobileWidgetRenderItems();
+        const currentItem = renderItems.find((item) => item.renderId === renderId);
+        if (!currentItem) return;
+
+        const sideItems = sortMobileRenderItems(
+          renderItems.filter((item) => item.side === currentItem.side)
+        );
+        const currentIndex = sideItems.findIndex((item) => item.renderId === renderId);
+        const targetIndex =
+          direction === 'up' ? currentIndex - 1 :
+          direction === 'down' ? currentIndex + 1 :
+          currentIndex;
+
+        if (currentIndex === -1 || targetIndex < 0 || targetIndex >= sideItems.length) {
+          return;
+        }
+
+        [sideItems[currentIndex], sideItems[targetIndex]] =
+          [sideItems[targetIndex], sideItems[currentIndex]];
+
+        const changedWidgets = [];
+        sideItems.forEach((item, index) => {
+          const sourceWidget = widgets.find((widget) => widget.id === item.sourceId);
+          if (!sourceWidget) return;
+
+          if (getWidgetMobileTabOrder(sourceWidget, item.side, -1) !== index) {
+            setWidgetMobileTabOrder(sourceWidget, item.side, index);
+            changedWidgets.push(sourceWidget);
+          }
+        });
+
+        renderWidgets();
+
+        const uniqueChangedWidgets = changedWidgets.filter(
+          (widget, index, list) => list.findIndex((item) => item.id === widget.id) === index
+        );
+        const saveResults = await Promise.all(
+          uniqueChangedWidgets.map((item) =>
+            saveWidgetToSupabase(item, {
+              recordHistory: false,
+              suppressErrorMessage: true
+            })
+          )
+        );
+
+        if (saveResults.some((didSave) => !didSave)) {
+          showMessage('could not save widget order');
+        }
+      }
+
       async function moveWidgetInMobileOrder(widgetId, direction) {
+        if (isMobileLayoutActive()) {
+          await moveMobileWidgetInOrder(widgetId, direction);
+          return;
+        }
+
         const widget = widgets.find((item) => item.id === widgetId);
         if (!widget) return;
 
@@ -413,6 +542,7 @@ let missYouSaveQueued = false;
        let currentUser = null;
        let entryQuill = null;
        const pendingPostLikeIds = new Set();
+       const pendingWidgetLikeIds = new Set();
 
        const floatingDecorEl = document.getElementById('floatingDecor');
        const leftZone = document.getElementById('leftZone');
@@ -464,6 +594,7 @@ const timelineEl = document.getElementById('timeline');
       const closeWidgetPopup = document.getElementById('closeWidgetPopup');
       const widgetPopupTitle = document.getElementById('widgetPopupTitle');
       const headerSaveWidgetBtn = document.getElementById('headerSaveWidgetBtn');
+      const widgetPopupLikeBtn = document.getElementById('widgetPopupLikeBtn');
        const widgetEditorFields = document.getElementById('widgetEditorFields');
        const saveWidgetBtn = document.getElementById('saveWidgetBtn');
       const clearWidgetHistoryBtn = document.getElementById('clearWidgetHistoryBtn');
@@ -533,6 +664,26 @@ const timelineEl = document.getElementById('timeline');
         if (!headerSaveWidgetBtn) return;
         headerSaveWidgetBtn.hidden = !isVisible;
         headerSaveWidgetBtn.style.display = isVisible ? 'inline-flex' : 'none';
+      }
+
+      function setWidgetPopupLikeButton(widget = null) {
+        if (!widgetPopupLikeBtn) return;
+
+        const shouldShow = Boolean(widget && isLikeableWidget(widget));
+        widgetPopupLikeBtn.hidden = !shouldShow;
+        widgetPopupLikeBtn.style.display = shouldShow ? 'inline-flex' : 'none';
+
+        if (!shouldShow) {
+          widgetPopupLikeBtn.removeAttribute('data-widget-like-id');
+          widgetPopupLikeBtn.innerHTML = '';
+          widgetPopupLikeBtn.classList.remove('liked', 'is-pending');
+          widgetPopupLikeBtn.setAttribute('aria-label', 'like widget');
+          widgetPopupLikeBtn.setAttribute('aria-pressed', 'false');
+          return;
+        }
+
+        widgetPopupLikeBtn.dataset.widgetLikeId = widget.id;
+        syncWidgetLikeButton(widget.id);
       }
 
       function isMobileLayoutActive() {
@@ -651,8 +802,8 @@ const timelineEl = document.getElementById('timeline');
              'aria-label',
              isDark ? 'switch to light mode' : 'switch to dark mode'
            );
-           const label = themeToggle.querySelector('.theme-toggle-label');
-           if (label) label.textContent = isDark ? 'light' : 'dark';
+           const icon = themeToggle.querySelector('.theme-toggle-icon');
+           if (icon) icon.textContent = isDark ? '☀' : '☾';
          }
        }
 
@@ -798,6 +949,26 @@ const timelineEl = document.getElementById('timeline');
         } catch (error) {
           console.error(error);
         }
+      }
+
+      function isPercentStickerPosition(item) {
+        const x = Number(item?.x);
+        const y = Number(item?.y);
+        return Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 100 && y >= 0 && y <= 100;
+      }
+
+      function getStickerPositionFromPointer(event, layer, stickerRadius = 16) {
+        const rect = layer.getBoundingClientRect();
+        const xPx = Math.max(stickerRadius, Math.min(rect.width - stickerRadius, event.clientX - rect.left));
+        const yPx = Math.max(stickerRadius, Math.min(rect.height - stickerRadius, event.clientY - rect.top));
+
+        return {
+          x: Math.round((xPx / rect.width) * 100),
+          y: Math.round((yPx / rect.height) * 100),
+          xPx: Math.round(xPx),
+          yPx: Math.round(yPx),
+          rect
+        };
       }
 
        function escapeHtml(value) {
@@ -1487,6 +1658,118 @@ function normalizeMissYouWidget(widget) {
   return changed;
 }
 
+function isLikeableWidget(widget) {
+  const normalizedId = String(widget?.id || '').toLowerCase().trim();
+  const normalizedTitle = String(widget?.title || '').toLowerCase();
+
+  return (
+    normalizedId === 'note' ||
+    normalizedTitle.includes('little note') ||
+    normalizedId.startsWith('photo-pin') ||
+    normalizedTitle.includes('pinned photo')
+  );
+}
+
+function getWidgetLikeUserIds(widget) {
+  const widgetData = widget?.data && typeof widget.data === 'object' ? widget.data : {};
+  const rawLikes = Array.isArray(widgetData.likes)
+    ? widgetData.likes
+    : Array.isArray(widgetData.likedUserIds)
+      ? widgetData.likedUserIds
+      : [];
+
+  return [...new Set(
+    rawLikes
+      .map((userId) => String(userId || '').trim())
+      .filter(Boolean)
+  )];
+}
+
+function normalizeWidgetLikesData(widget) {
+  if (!widget || !isLikeableWidget(widget)) return false;
+
+  const rawData = widget.data && typeof widget.data === 'object' ? widget.data : {};
+  const normalizedLikes = getWidgetLikeUserIds({ data: rawData });
+  const hadLegacyLikesKey = Object.prototype.hasOwnProperty.call(rawData, 'likedUserIds');
+  const likesAlreadyNormalized =
+    Array.isArray(rawData.likes) &&
+    rawData.likes.length === normalizedLikes.length &&
+    rawData.likes.every((userId, index) => String(userId || '').trim() === normalizedLikes[index]);
+
+  if (widget.data === rawData && likesAlreadyNormalized && !hadLegacyLikesKey) {
+    return false;
+  }
+
+  const nextData = {
+    ...rawData,
+    likes: normalizedLikes
+  };
+  delete nextData.likedUserIds;
+  widget.data = nextData;
+  return true;
+}
+
+function getLikeButtonMarkup(likedByMe, likesCount) {
+  return `
+    <span class="post-btn-icon" aria-hidden="true">${likedByMe ? '🩷' : '♡'}</span>
+    <span class="post-btn-label">${likedByMe ? 'liked' : 'like'}</span>
+    <span class="post-btn-count">(${likesCount || 0})</span>
+  `;
+}
+
+function getWidgetLikeButtonMarkup(widget) {
+  const currentUserId = currentUser?.id || currentProfile?.id || '';
+  const likes = getWidgetLikeUserIds(widget);
+  const likedByMe = Boolean(currentUserId && likes.includes(currentUserId));
+  return `
+    <span class="post-btn-icon" aria-hidden="true">${likedByMe ? '🩷' : '♡'}</span>
+    <span class="post-btn-count">${likes.length || 0}</span>
+  `;
+}
+
+function getWidgetLikeContentSignature(widget) {
+  if (!widget || !isLikeableWidget(widget)) return '';
+
+  const normalizedId = String(widget.id || '').toLowerCase().trim();
+  const normalizedTitle = String(widget.title || '').toLowerCase();
+  const data = widget.data && typeof widget.data === 'object' ? widget.data : {};
+
+  if (normalizedId === 'note' || normalizedTitle.includes('little note')) {
+    return JSON.stringify({
+      text: data.text || ''
+    });
+  }
+
+  return JSON.stringify({
+    image: data.image || '',
+    text: data.text || '',
+    textColor: normalizeHexColor(data.textColor, '#ffffff'),
+    textSize: Math.max(12, Math.min(46, Number(data.textSize) || 22)),
+    textX: Math.max(0, Math.min(100, Number.isFinite(Number(data.textX)) ? Number(data.textX) : 50)),
+    textY: Math.max(0, Math.min(100, Number.isFinite(Number(data.textY)) ? Number(data.textY) : 86)),
+    rotate: Number(data.rotate) || 0
+  });
+}
+
+function syncWidgetLikeButton(widgetId) {
+  const widget = widgets.find((item) => item.id === widgetId);
+  const buttons = Array.from(document.querySelectorAll(`.widget-like-btn[data-widget-like-id="${widgetId}"]`));
+
+  if (!widget || !buttons.length || !isLikeableWidget(widget)) return;
+
+  const currentUserId = currentUser?.id || currentProfile?.id || '';
+  const likes = getWidgetLikeUserIds(widget);
+  const likedByMe = Boolean(currentUserId && likes.includes(currentUserId));
+
+  buttons.forEach((btn) => {
+    btn.innerHTML = getWidgetLikeButtonMarkup(widget);
+    btn.classList.toggle('liked', likedByMe);
+    btn.classList.toggle('is-pending', pendingWidgetLikeIds.has(widgetId));
+    btn.setAttribute('aria-label', likedByMe ? 'liked widget' : 'like widget');
+    btn.setAttribute('aria-pressed', String(likedByMe));
+  });
+}
+
 function getProfileDisplayName(profile, fallback) {
   if (!profile || typeof profile !== 'object') return fallback;
   const name = String(profile.nickname || profile.username || '').trim();
@@ -1648,6 +1931,7 @@ async function refreshWeatherWidget(options = {}) {
   normalizedId === 'note' || normalizedTitle.includes('little note');
 
 if (isNoteWidget) {
+  normalizeWidgetLikesData(widget);
   return `<div style="font-size:0.96rem;line-height:1.5;white-space:normal;word-break:break-word;overflow-wrap:anywhere;">${widget.data?.text || ''}</div>`;
 }
 
@@ -1815,6 +2099,7 @@ if (normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter'))
 }
 
 if (normalizedId === 'photo-pin' || normalizedTitle.includes('pinned photo')) {
+  normalizeWidgetLikesData(widget);
   const photoData = widget.data || {};
   const overlayText = escapeHtml(photoData.text || '');
   const textColor = escapeHtml(photoData.textColor || '#ffffff');
@@ -1940,6 +2225,7 @@ async function loadWidgets(options = {}) {
         normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter');
       const isSweetReminderWidget = normalizedId === 'sweet-reminder';
       const isSongWidget = normalizedId === 'song';
+      const isLikeable = isLikeableWidget(mergedWidget);
 
       if (isWishlistWidget && Array.isArray(mergedWidget.data?.items)) {
         const normalizedItems = getWishlistItemsInDisplayOrder(mergedWidget.data.items).map((item, index) => ({
@@ -1984,6 +2270,10 @@ async function loadWidgets(options = {}) {
       }
 
       if (isSongWidget && normalizeSongWidget(mergedWidget)) {
+        widgetsNeedingNormalization.push(mergedWidget);
+      }
+
+      if (isLikeable && normalizeWidgetLikesData(mergedWidget)) {
         widgetsNeedingNormalization.push(mergedWidget);
       }
 
@@ -2041,13 +2331,16 @@ function renderWidgets() {
   syncToggleWidgetsButton();
 
   const isMobileWidgetOrderActive = isMobileLayoutActive();
+  const mobileRenderItems = isMobileWidgetOrderActive ? getMobileWidgetRenderItems() : null;
   const mobileWidgetOrderLookup = new Map();
 
   if (isMobileWidgetOrderActive) {
     ['left', 'right'].forEach((side) => {
-      const orderedWidgets = getWidgetsForSideInMobileOrder(side);
-      orderedWidgets.forEach((widget, index) => {
-        mobileWidgetOrderLookup.set(widget.id, {
+      const orderedWidgets = sortMobileRenderItems(
+        (mobileRenderItems || []).filter((item) => item.side === side)
+      );
+      orderedWidgets.forEach((item, index) => {
+        mobileWidgetOrderLookup.set(item.renderId, {
           index,
           count: orderedWidgets.length
         });
@@ -2055,20 +2348,39 @@ function renderWidgets() {
     });
   }
 
-  [...widgets]
+  const widgetsToRender = isMobileWidgetOrderActive
+    ? mobileRenderItems
+    : widgets.map((widget) => ({
+        widget,
+        renderId: widget.id,
+        sourceId: widget.id,
+        side: widget.side === 'right' ? 'right' : 'left',
+        order: getWidgetMobileOrder(widget, 0),
+        isVirtual: false
+      }));
+
+  widgetsToRender
     .sort((a, b) => {
       if (isMobileWidgetOrderActive) {
-        const orderDifference =
-          getWidgetMobileOrder(a, 0) - getWidgetMobileOrder(b, 0);
+        const sideDifference = a.side === b.side ? 0 : a.side === 'left' ? -1 : 1;
+        if (sideDifference !== 0) {
+          return sideDifference;
+        }
+
+        const orderDifference = a.order - b.order;
 
         if (orderDifference !== 0) {
           return orderDifference;
         }
       }
 
-      return (a.zIndex || 0) - (b.zIndex || 0);
+      return (a.widget.zIndex || 0) - (b.widget.zIndex || 0);
     })
-    .forEach((widget) => {
+    .forEach((renderItem) => {
+    const widget = renderItem.widget;
+    const renderId = renderItem.renderId;
+    const renderSide = renderItem.side;
+    const isVirtualWidget = Boolean(renderItem.isVirtual);
     const normalizedId = String(widget.id || '').toLowerCase().trim();
     const normalizedTitle = String(widget.title || '').toLowerCase();
 
@@ -2105,17 +2417,19 @@ function renderWidgets() {
       normalizedId;
     const isMinimized = minimizedWidgetIds.has(widget.id);
     const isHidden = allWidgetsHidden;
-    const mobileOrderState = mobileWidgetOrderLookup.get(widget.id);
+    const mobileOrderState = mobileWidgetOrderLookup.get(renderId);
     const canMoveWidgetUp = Boolean(mobileOrderState && mobileOrderState.index > 0);
     const canMoveWidgetDown = Boolean(
       mobileOrderState && mobileOrderState.index < mobileOrderState.count - 1
     );
+    const showMobileOrderControls = isMobileWidgetOrderActive;
 
     const el = document.createElement('div');
     el.className = 'widget';
     el.classList.toggle('is-minimized', isMinimized);
     el.classList.toggle('is-hidden-all', isHidden);
-    el.dataset.widgetId = widget.id;
+    el.dataset.widgetId = renderId;
+    el.dataset.widgetSourceId = renderItem.sourceId;
     if (isStickerWidget) {
       el.classList.add('sticker-widget');
     }
@@ -2133,11 +2447,11 @@ function renderWidgets() {
       <div class="widget-bar" data-widget-id="${widget.id}">
         <span>${widget.title}</span>
         <div class="widget-bar-actions">
-          ${isMobileWidgetOrderActive ? `
+          ${showMobileOrderControls ? `
             <button
               class="widget-order-btn"
               type="button"
-              data-widget-move-id="${widget.id}"
+              data-widget-move-id="${renderId}"
               data-widget-move-direction="up"
               aria-label="move widget up"
               ${canMoveWidgetUp ? '' : 'disabled'}
@@ -2147,7 +2461,7 @@ function renderWidgets() {
             <button
               class="widget-order-btn"
               type="button"
-              data-widget-move-id="${widget.id}"
+              data-widget-move-id="${renderId}"
               data-widget-move-direction="down"
               aria-label="move widget down"
               ${canMoveWidgetDown ? '' : 'disabled'}
@@ -2164,10 +2478,12 @@ function renderWidgets() {
           >
             ${isMinimized ? '+' : '–'}
           </button>
-          ${hasHistory ? `<button class="widget-history-btn" type="button" data-widget-history-id="${widget.id}">🕘</button>` : ''}
-          <button class="widget-edit-btn" type="button" data-widget-id="${widget.id}">
-            ${isEditable ? '✎' : '✦'}
-          </button>
+          ${hasHistory && !isVirtualWidget ? `<button class="widget-history-btn" type="button" data-widget-history-id="${widget.id}">🕘</button>` : ''}
+          ${!isVirtualWidget ? `
+            <button class="widget-edit-btn" type="button" data-widget-id="${widget.id}">
+              ${isEditable ? '✎' : '✦'}
+            </button>
+          ` : ''}
         </div>
       </div>
       <div class="widget-content">${getWidgetContent(widget)}</div>
@@ -2274,6 +2590,23 @@ function renderWidgets() {
       });
     }
 
+    if (isLikeableWidget(widget)) {
+      el.querySelectorAll('.widget-like-btn').forEach((btn) => {
+        ['mousedown', 'pointerdown'].forEach((eventName) => {
+          btn.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          });
+        });
+
+        btn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          await toggleWidgetLike(btn.dataset.widgetLikeId || widget.id);
+        });
+      });
+    }
+
     if (normalizedId === 'miss-you') {
       el.querySelectorAll('.widget-miss-you-btn').forEach((btn) => {
         btn.addEventListener('mousedown', (event) => {
@@ -2295,7 +2628,7 @@ function renderWidgets() {
       });
     }
 
-    if (editBtn && isEditable) {
+    if (editBtn && isEditable && !isVirtualWidget) {
       editBtn.addEventListener('mousedown', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -2313,12 +2646,14 @@ function renderWidgets() {
       });
     }
 
-    bar.addEventListener('pointerdown', (event) => {
-      if (event.target.closest('button')) return;
-      startWidgetDrag(event, widget, el);
-    });
+    if (!isVirtualWidget) {
+      bar.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button')) return;
+        startWidgetDrag(event, widget, el);
+      });
+    }
 
-    if (widget.side === 'left') {
+    if (renderSide === 'left') {
       leftZone.appendChild(el);
     } else {
       rightZone.appendChild(el);
@@ -2450,6 +2785,7 @@ function openWidgetEditor(widgetId) {
   dragWidget = null;
   pendingWidgetDrag = null;
   if (clearWidgetHistoryBtn) clearWidgetHistoryBtn.style.display = 'none';
+  setWidgetPopupLikeButton(null);
 
   const normalizedId = String(widgetId || '').toLowerCase().trim();
 
@@ -2567,9 +2903,11 @@ function openWidgetEditor(widgetId) {
       }
     });
   } else if (normalizedId === 'note') {
+    normalizeWidgetLikesData(widget);
     widgetPopupTitle.textContent = '⋆𐙚₊little note˚⊹♡';
     saveWidgetBtn.style.display = 'inline-flex';
     setHeaderWidgetSaveVisibility(false);
+    setWidgetPopupLikeButton(widget);
 
     widgetEditorFields.innerHTML = `
       <label class="popup-label">little note</label>
@@ -2747,11 +3085,13 @@ function openWidgetEditor(widgetId) {
     if (!widget.data) {
       widget.data = {};
     }
+    normalizeWidgetLikesData(widget);
 
     widgetPopupTitle.textContent =
       normalizedId === 'photo-pin-right' ? 'dodos pinned photo' : 'dodos pinned photo';
     saveWidgetBtn.style.display = 'none';
     setHeaderWidgetSaveVisibility(false);
+    setWidgetPopupLikeButton(widget);
 
     const photoData = {
       image: widget.data.image || '',
@@ -2762,17 +3102,6 @@ function openWidgetEditor(widgetId) {
       textY: Number.isFinite(Number(widget.data.textY)) ? Number(widget.data.textY) : 86,
       rotate: Number(widget.data.rotate) || 0
     };
-    const photoColorSwatchesHtml = PHOTO_TEXT_COLOR_SWATCHES.map((color) => `
-      <button
-        class="photo-color-swatch${color === photoData.textColor ? ' is-active' : ''}"
-        type="button"
-        data-photo-color="${color}"
-        style="--swatch-color:${color};"
-        aria-label="set text color ${color}"
-        title="${color}"
-      ></button>
-    `).join('');
-
     widgetEditorFields.innerHTML = `
       <div class="photo-editor-fields">
         <label class="popup-label">photo</label>
@@ -2787,11 +3116,18 @@ function openWidgetEditor(widgetId) {
         <input class="popup-input" id="photoWidgetText" type="text" maxlength="60" value="${escapeHtml(photoData.text)}" />
 
         <div class="photo-editor-toolbar">
-          <label class="photo-editor-control">
-            <span aria-label="text color" title="text color">🎨</span>
+          <div class="photo-editor-control photo-editor-control-color">
+            <input
+              class="photo-color-trigger"
+              id="photoColorTrigger"
+              type="color"
+              value="${escapeHtml(photoData.textColor)}"
+              aria-label="choose text color"
+              title="choose text color"
+            />
             <input
               id="photoTextColor"
-              class="photo-color-input"
+              class="photo-color-hex-input"
               type="text"
               inputmode="text"
               autocapitalize="off"
@@ -2799,21 +3135,25 @@ function openWidgetEditor(widgetId) {
               spellcheck="false"
               maxlength="7"
               value="${escapeHtml(photoData.textColor)}"
-              aria-label="text color hex"
-              title="text color hex"
+              aria-label="text color"
             />
-          </label>
+          </div>
           <label class="photo-editor-control">
-            <span aria-label="text size" title="text size">T</span>
-            <input id="photoTextSize" type="number" min="12" max="46" value="${photoData.textSize}" />
+            <input
+              id="photoTextSize"
+              type="number"
+              min="12"
+              max="46"
+              value="${photoData.textSize}"
+              aria-label="text size"
+              title="text size"
+            />
           </label>
           <button class="soft-btn photo-editor-tool-btn photo-editor-icon-btn" id="centerPhotoTextXBtn" type="button" title="center text horizontally" aria-label="center text horizontally">↔</button>
           <button class="soft-btn photo-editor-tool-btn" id="rotatePhotoBtn" type="button">rotate</button>
           <button class="soft-btn photo-editor-tool-btn" id="clearPhotoBtn" type="button">clear</button>
           <button class="soft-btn photo-editor-tool-btn" id="savePhotoWidgetBtn" type="button">save</button>
         </div>
-        <div class="photo-color-swatches" id="photoColorSwatches">${photoColorSwatchesHtml}</div>
-
         <div class="photo-editor-preview${photoData.image ? ' has-image' : ''}" id="photoEditorPreview">
           ${photoData.image ? `
             <img id="photoEditorPreviewImage" src="${photoData.image}" alt="photo preview" />
@@ -2832,25 +3172,30 @@ function openWidgetEditor(widgetId) {
     const preview = document.getElementById('photoEditorPreview');
     const textInput = document.getElementById('photoWidgetText');
     const textColorInput = document.getElementById('photoTextColor');
+    const textColorTrigger = document.getElementById('photoColorTrigger');
     const textSizeInput = document.getElementById('photoTextSize');
     const centerPhotoTextXBtn = document.getElementById('centerPhotoTextXBtn');
     const rotateBtn = document.getElementById('rotatePhotoBtn');
     const clearPhotoBtn = document.getElementById('clearPhotoBtn');
     const savePhotoWidgetBtn = document.getElementById('savePhotoWidgetBtn');
-    const colorSwatchButtons = Array.from(document.querySelectorAll('[data-photo-color]'));
     let photoRotation = photoData.rotate;
     let textX = Math.max(0, Math.min(100, photoData.textX));
     let textY = Math.max(0, Math.min(100, photoData.textY));
     let activeTextColor = normalizeHexColor(textColorInput?.value, photoData.textColor);
 
-    const setActiveTextColor = (nextColor) => {
-      activeTextColor = normalizeHexColor(nextColor, activeTextColor);
+    const syncColorFields = () => {
       if (textColorInput) {
         textColorInput.value = activeTextColor;
       }
-      colorSwatchButtons.forEach((button) => {
-        button.classList.toggle('is-active', button.dataset.photoColor === activeTextColor);
-      });
+    };
+
+    const setActiveTextColor = (nextColor) => {
+      activeTextColor = normalizeHexColor(nextColor, activeTextColor);
+      syncColorFields();
+      if (textColorTrigger) {
+        textColorTrigger.value = activeTextColor;
+        textColorTrigger.title = `text color ${activeTextColor}`;
+      }
     };
 
     const updatePhotoPreview = () => {
@@ -2915,23 +3260,15 @@ function openWidgetEditor(widgetId) {
 
     textInput?.addEventListener('input', updatePhotoPreview);
     textSizeInput?.addEventListener('input', updatePhotoPreview);
-    textColorInput?.addEventListener('input', () => {
-      const raw = String(textColorInput.value || '').trim();
-      if (/^#?[0-9a-fA-F]{3}$/.test(raw) || /^#?[0-9a-fA-F]{6}$/.test(raw)) {
-        setActiveTextColor(raw);
-      }
+    const handleColorInput = (sourceInput) => {
+      const raw = String(sourceInput?.value || '').trim();
+      if (!raw) return;
+      setActiveTextColor(raw);
       updatePhotoPreview();
-    });
-    textColorInput?.addEventListener('blur', () => {
-      setActiveTextColor(textColorInput.value || activeTextColor);
-      updatePhotoPreview();
-    });
-    colorSwatchButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        setActiveTextColor(button.dataset.photoColor || activeTextColor);
-        updatePhotoPreview();
-      });
-    });
+    };
+    textColorInput?.addEventListener('input', () => handleColorInput(textColorInput));
+    textColorTrigger?.addEventListener('input', () => handleColorInput(textColorTrigger));
+    textColorInput?.addEventListener('blur', syncColorFields);
     setActiveTextColor(activeTextColor);
     updatePhotoPreview();
 
@@ -3002,6 +3339,23 @@ async function saveWidgetChanges() {
 
   if (!widget) return;
 
+  let beforeLikeContentSignature = '';
+
+  if (isLikeableWidget(widget)) {
+    try {
+      const latestSavedRow = await fetchLatestWidgetRow(widget.id);
+      if (latestSavedRow) {
+        mergeWidgetFromSavedRow(widget, latestSavedRow);
+      }
+      normalizeWidgetLikesData(widget);
+      beforeLikeContentSignature = getWidgetLikeContentSignature(widget);
+    } catch (error) {
+      console.error(error);
+      showMessage(error.message || 'could not load the latest widget state ♡');
+      return;
+    }
+  }
+
   const beforeSaveState = JSON.stringify({
     title: widget.title || '',
     data: widget.data || null
@@ -3043,6 +3397,13 @@ async function saveWidgetChanges() {
     return;
   }
 
+  if (
+    beforeLikeContentSignature &&
+    getWidgetLikeContentSignature(widget) !== beforeLikeContentSignature
+  ) {
+    widget.data.likes = [];
+  }
+
   const afterSaveState = JSON.stringify({
     title: widget.title || '',
     data: widget.data || null
@@ -3056,6 +3417,7 @@ async function saveWidgetChanges() {
   await saveWidgetToSupabase(widget);
   renderWidgets();
   widgetPopup.classList.remove('open');
+  setWidgetPopupLikeButton(null);
   showMessage('widget updated ♡');
 }
 
@@ -3156,11 +3518,7 @@ function getPostLikeIcon(post) {
 }
 
 function getPostLikeButtonMarkup(post) {
-  return `
-    <span class="post-btn-icon" aria-hidden="true">${post.likedByMe ? '🩷' : '♡'}</span>
-    <span class="post-btn-label">${post.likedByMe ? 'liked' : 'like'}</span>
-    <span class="post-btn-count">(${post.likesCount || 0})</span>
-  `;
+  return getLikeButtonMarkup(post.likedByMe, post.likesCount || 0);
 }
 
 function syncPostLikeButton(postId) {
@@ -3315,7 +3673,7 @@ function renderTimeline() {
     });
   });
 
-  document.querySelectorAll('.like-btn').forEach((btn) => {
+  document.querySelectorAll('.like-btn[data-post-id]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await toggleLike(btn.dataset.postId);
     });
@@ -3662,14 +4020,10 @@ async function searchPublicGifs() {
         }
 
         body.classList.remove('sticker-drop-ready');
-        const rect = body.getBoundingClientRect();
-        const stickerRadius = 16;
-        const x = Math.round(
-          Math.max(stickerRadius, Math.min(rect.width - stickerRadius, event.clientX - rect.left))
-        );
-        const y = Math.round(
-          Math.max(stickerRadius, Math.min(rect.height - stickerRadius, event.clientY - rect.top))
-        );
+        const stickerRadius = isGifSticker(droppedSticker)
+          ? Math.max(16, (activeStickerSize || DEFAULT_GIF_STICKER_SIZE) / 2)
+          : 16;
+        const { x, y } = getStickerPositionFromPointer(event, body, stickerRadius);
 
         const { error } = await supabaseClient
           .from('post_stickers')
@@ -3738,8 +4092,18 @@ function renderPlacedStickers() {
     if (visibleGifStickerControlTimers.has(item.id)) {
       el.classList.add('show-controls');
     }
-    el.style.left = `${item.x}px`;
-    el.style.top = `${item.y}px`;
+    if (isPercentStickerPosition(item)) {
+      el.style.left = `${item.x}%`;
+      el.style.top = `${item.y}%`;
+    } else {
+      const layerWidth = layer.clientWidth || layer.getBoundingClientRect().width;
+      const layerHeight = layer.clientHeight || layer.getBoundingClientRect().height;
+      const stickerRadius = Math.max(16, gifSize / 2);
+      const xPx = Math.max(stickerRadius, Math.min(layerWidth - stickerRadius, Number(item.x) || stickerRadius));
+      const yPx = Math.max(stickerRadius, Math.min(layerHeight - stickerRadius, Number(item.y) || stickerRadius));
+      el.style.left = `${Math.round(xPx)}px`;
+      el.style.top = `${Math.round(yPx)}px`;
+    }
 
     const stickerVisual = createStickerVisual(item.sticker, { size: gifSize });
     el.appendChild(stickerVisual);
@@ -3943,17 +4307,19 @@ window.addEventListener('pointermove', (event) => {
     const isGif = isGifSticker(sticker.sticker);
     const stickerSize = isGif ? getPlacedGifSize(stickerId) : 32;
     const stickerRadius = Math.max(16, stickerSize / 2);
-    const nextX = Math.round(
+    const nextXpx = Math.round(
       Math.max(stickerRadius, Math.min(layerRect.width - stickerRadius, event.clientX - layerRect.left))
     );
-    const nextY = Math.round(
+    const nextYpx = Math.round(
       Math.max(stickerRadius, Math.min(layerRect.height - stickerRadius, event.clientY - layerRect.top))
     );
+    const nextX = Math.round((nextXpx / layerRect.width) * 100);
+    const nextY = Math.round((nextYpx / layerRect.height) * 100);
 
     draggingPlacedSticker.nextX = nextX;
     draggingPlacedSticker.nextY = nextY;
-    element.style.left = `${nextX}px`;
-    element.style.top = `${nextY}px`;
+    element.style.left = `${nextX}%`;
+    element.style.top = `${nextY}%`;
     return;
   }
 
@@ -4211,6 +4577,7 @@ if (typedStickerPreview) {
         widgetPopup.classList.remove('open');
         saveWidgetBtn.style.display = 'inline-flex';
         setHeaderWidgetSaveVisibility(false);
+        setWidgetPopupLikeButton(null);
         if (clearWidgetHistoryBtn) clearWidgetHistoryBtn.style.display = 'none';
       });
 
@@ -4219,6 +4586,7 @@ if (typedStickerPreview) {
           widgetPopup.classList.remove('open');
           saveWidgetBtn.style.display = 'inline-flex';
           setHeaderWidgetSaveVisibility(false);
+          setWidgetPopupLikeButton(null);
           if (clearWidgetHistoryBtn) clearWidgetHistoryBtn.style.display = 'none';
         }
       });
@@ -4234,6 +4602,13 @@ if (typedStickerPreview) {
       saveWidgetBtn.addEventListener('click', saveWidgetChanges);
       if (headerSaveWidgetBtn) {
         headerSaveWidgetBtn.addEventListener('click', saveWidgetChanges);
+      }
+      if (widgetPopupLikeBtn) {
+        widgetPopupLikeBtn.addEventListener('click', async () => {
+          const widgetId = widgetPopupLikeBtn.dataset.widgetLikeId;
+          if (!widgetId) return;
+          await toggleWidgetLike(widgetId);
+        });
       }
       if (clearWidgetHistoryBtn) {
         clearWidgetHistoryBtn.addEventListener('click', () => {
@@ -4386,6 +4761,8 @@ function openWidgetHistory(widgetId) {
   const historyEntries = getWidgetHistoryEntries(widget.id);
   widgetPopupTitle.textContent = `${widget.title} history`;
   saveWidgetBtn.style.display = 'none';
+  setHeaderWidgetSaveVisibility(false);
+  setWidgetPopupLikeButton(null);
   if (clearWidgetHistoryBtn) {
     clearWidgetHistoryBtn.style.display = historyEntries.length ? 'inline-flex' : 'none';
     clearWidgetHistoryBtn.dataset.clearWidgetHistoryId = widget.id;
@@ -5624,6 +6001,87 @@ async function toggleLike(postId) {
   } finally {
     pendingPostLikeIds.delete(postId);
     syncPostLikeButton(postId);
+  }
+}
+
+async function fetchLatestWidgetRow(widgetId) {
+  const { data, error } = await supabaseClient
+    .from('widgets')
+    .select('*')
+    .eq('id', widgetId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.[0] || null;
+}
+
+function mergeWidgetFromSavedRow(widget, savedRow) {
+  if (!widget || !savedRow) return;
+
+  widget.title = savedRow.title ?? widget.title;
+  widget.side = savedRow.side ?? widget.side;
+  widget.x = savedRow.x ?? widget.x;
+  widget.y = savedRow.y ?? widget.y;
+  widget.data = savedRow.data ?? widget.data;
+  widget.content = savedRow.content ?? widget.content;
+}
+
+async function toggleWidgetLike(widgetId) {
+  if (pendingWidgetLikeIds.has(widgetId)) return;
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    showMessage('please log in first ♡');
+    return;
+  }
+
+  const widget = widgets.find((item) => item.id === widgetId);
+  if (!widget || !isLikeableWidget(widget)) return;
+
+  let previousLikes = getWidgetLikeUserIds(widget);
+
+  pendingWidgetLikeIds.add(widgetId);
+
+  try {
+    const latestSavedRow = await fetchLatestWidgetRow(widgetId);
+    if (latestSavedRow) {
+      mergeWidgetFromSavedRow(widget, latestSavedRow);
+    }
+
+    normalizeWidgetLikesData(widget);
+    previousLikes = getWidgetLikeUserIds(widget);
+
+    const wasLiked = previousLikes.includes(user.id);
+    widget.data.likes = wasLiked
+      ? previousLikes.filter((likedUserId) => likedUserId !== user.id)
+      : [...previousLikes, user.id];
+
+    renderWidgets();
+
+    const saved = await saveWidgetToSupabase(widget, {
+      recordHistory: false,
+      suppressErrorMessage: true
+    });
+
+    if (!saved) {
+      throw new Error('could not update widget like ♡');
+    }
+  } catch (error) {
+    console.error(error);
+    widget.data = {
+      ...(widget.data && typeof widget.data === 'object' ? widget.data : {}),
+      likes: previousLikes
+    };
+    renderWidgets();
+    showMessage(error.message || 'could not update widget like ♡');
+  } finally {
+    pendingWidgetLikeIds.delete(widgetId);
+    syncWidgetLikeButton(widgetId);
   }
 }
 
