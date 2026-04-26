@@ -23,6 +23,18 @@ const PLACED_GIF_SIZE_STORAGE_KEY = 'placedGifStickerSizes';
 const DEFAULT_GIF_STICKER_SIZE = 72;
 const MIN_GIF_STICKER_SIZE = 44;
 const MAX_GIF_STICKER_SIZE = 160;
+const PHOTO_TEXT_COLOR_SWATCHES = [
+  '#ffffff',
+  '#ffe4ec',
+  '#ffd166',
+  '#b5f2a8',
+  '#9ad7ff',
+  '#bdb2ff',
+  '#ff8fab',
+  '#7d4f50',
+  '#1f2a44',
+  '#000000'
+];
 let hasRenderedEmojiPicker = false;
 let hasRenderedGifPicker = false;
 let selectedGifStickerUrl = '';
@@ -796,6 +808,23 @@ const timelineEl = document.getElementById('timeline');
            .replaceAll('"', '&quot;')
            .replaceAll("'", '&#39;');
        }
+
+function normalizeHexColor(value, fallback = '#ffffff') {
+  const fallbackHex = String(fallback || '#ffffff').trim().toLowerCase();
+  const raw = String(value || '').trim();
+  const matchThree = raw.match(/^#?([0-9a-fA-F]{3})$/);
+  if (matchThree) {
+    const [r, g, b] = matchThree[1].toLowerCase().split('');
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+
+  const matchSix = raw.match(/^#?([0-9a-fA-F]{6})$/);
+  if (matchSix) {
+    return `#${matchSix[1].toLowerCase()}`;
+  }
+
+  return /^#[0-9a-f]{6}$/.test(fallbackHex) ? fallbackHex : '#ffffff';
+}
 
        function looksLikeHtml(value) {
          return /<\/?[a-z][\w:-]*(?:\s[^<>]*?)?>/i.test(String(value || ''));
@@ -2727,12 +2756,22 @@ function openWidgetEditor(widgetId) {
     const photoData = {
       image: widget.data.image || '',
       text: widget.data.text || '',
-      textColor: widget.data.textColor || '#ffffff',
+      textColor: normalizeHexColor(widget.data.textColor, '#ffffff'),
       textSize: Number(widget.data.textSize) || 22,
       textX: Number.isFinite(Number(widget.data.textX)) ? Number(widget.data.textX) : 50,
       textY: Number.isFinite(Number(widget.data.textY)) ? Number(widget.data.textY) : 86,
       rotate: Number(widget.data.rotate) || 0
     };
+    const photoColorSwatchesHtml = PHOTO_TEXT_COLOR_SWATCHES.map((color) => `
+      <button
+        class="photo-color-swatch${color === photoData.textColor ? ' is-active' : ''}"
+        type="button"
+        data-photo-color="${color}"
+        style="--swatch-color:${color};"
+        aria-label="set text color ${color}"
+        title="${color}"
+      ></button>
+    `).join('');
 
     widgetEditorFields.innerHTML = `
       <div class="photo-editor-fields">
@@ -2750,7 +2789,19 @@ function openWidgetEditor(widgetId) {
         <div class="photo-editor-toolbar">
           <label class="photo-editor-control">
             <span aria-label="text color" title="text color">🎨</span>
-            <input id="photoTextColor" type="color" value="${escapeHtml(photoData.textColor)}" />
+            <input
+              id="photoTextColor"
+              class="photo-color-input"
+              type="text"
+              inputmode="text"
+              autocapitalize="off"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="7"
+              value="${escapeHtml(photoData.textColor)}"
+              aria-label="text color hex"
+              title="text color hex"
+            />
           </label>
           <label class="photo-editor-control">
             <span aria-label="text size" title="text size">T</span>
@@ -2761,6 +2812,7 @@ function openWidgetEditor(widgetId) {
           <button class="soft-btn photo-editor-tool-btn" id="clearPhotoBtn" type="button">clear</button>
           <button class="soft-btn photo-editor-tool-btn" id="savePhotoWidgetBtn" type="button">save</button>
         </div>
+        <div class="photo-color-swatches" id="photoColorSwatches">${photoColorSwatchesHtml}</div>
 
         <div class="photo-editor-preview${photoData.image ? ' has-image' : ''}" id="photoEditorPreview">
           ${photoData.image ? `
@@ -2785,9 +2837,21 @@ function openWidgetEditor(widgetId) {
     const rotateBtn = document.getElementById('rotatePhotoBtn');
     const clearPhotoBtn = document.getElementById('clearPhotoBtn');
     const savePhotoWidgetBtn = document.getElementById('savePhotoWidgetBtn');
+    const colorSwatchButtons = Array.from(document.querySelectorAll('[data-photo-color]'));
     let photoRotation = photoData.rotate;
     let textX = Math.max(0, Math.min(100, photoData.textX));
     let textY = Math.max(0, Math.min(100, photoData.textY));
+    let activeTextColor = normalizeHexColor(textColorInput?.value, photoData.textColor);
+
+    const setActiveTextColor = (nextColor) => {
+      activeTextColor = normalizeHexColor(nextColor, activeTextColor);
+      if (textColorInput) {
+        textColorInput.value = activeTextColor;
+      }
+      colorSwatchButtons.forEach((button) => {
+        button.classList.toggle('is-active', button.dataset.photoColor === activeTextColor);
+      });
+    };
 
     const updatePhotoPreview = () => {
       const image = document.getElementById('photoEditorPreviewImage');
@@ -2799,7 +2863,7 @@ function openWidgetEditor(widgetId) {
         text.textContent = textInput?.value || '';
         text.style.left = `${textX}%`;
         text.style.top = `${textY}%`;
-        text.style.color = textColorInput?.value || '#ffffff';
+        text.style.color = activeTextColor;
         text.style.setProperty('--photo-text-size', String(Math.max(12, Math.min(46, Number(textSizeInput?.value) || 22))));
       }
       if (photoRotateInput) {
@@ -2849,9 +2913,27 @@ function openWidgetEditor(widgetId) {
       updatePhotoPreview();
     }
 
-    [textInput, textColorInput, textSizeInput].forEach((input) => {
-      input?.addEventListener('input', updatePhotoPreview);
+    textInput?.addEventListener('input', updatePhotoPreview);
+    textSizeInput?.addEventListener('input', updatePhotoPreview);
+    textColorInput?.addEventListener('input', () => {
+      const raw = String(textColorInput.value || '').trim();
+      if (/^#?[0-9a-fA-F]{3}$/.test(raw) || /^#?[0-9a-fA-F]{6}$/.test(raw)) {
+        setActiveTextColor(raw);
+      }
+      updatePhotoPreview();
     });
+    textColorInput?.addEventListener('blur', () => {
+      setActiveTextColor(textColorInput.value || activeTextColor);
+      updatePhotoPreview();
+    });
+    colorSwatchButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setActiveTextColor(button.dataset.photoColor || activeTextColor);
+        updatePhotoPreview();
+      });
+    });
+    setActiveTextColor(activeTextColor);
+    updatePhotoPreview();
 
     photoInput?.addEventListener('change', async () => {
       const file = photoInput.files?.[0];
@@ -2950,7 +3032,7 @@ async function saveWidgetChanges() {
     widget.data.image = document.getElementById('photoWidgetImageData')?.value || '';
     delete widget.data.caption;
     widget.data.text = document.getElementById('photoWidgetText')?.value.trim() || '';
-    widget.data.textColor = document.getElementById('photoTextColor')?.value || '#ffffff';
+    widget.data.textColor = normalizeHexColor(document.getElementById('photoTextColor')?.value, '#ffffff');
     widget.data.textSize = Math.max(12, Math.min(46, Number(document.getElementById('photoTextSize')?.value) || 22));
     const savedTextX = Number(document.getElementById('photoWidgetTextX')?.value);
     const savedTextY = Number(document.getElementById('photoWidgetTextY')?.value);
@@ -4389,8 +4471,12 @@ function renderSignedOutShell() {
   renderNotifications();
 }
 
+function getNotificationStorageUserId() {
+  return currentUser?.id || currentProfile?.id || '';
+}
+
 function getNotificationsSeenStorageKey() {
-  const userId = currentProfile?.id || currentUser?.id;
+  const userId = getNotificationStorageUserId();
   return userId ? `notificationsSeenAt:${userId}` : '';
 }
 
@@ -4410,6 +4496,14 @@ function setNotificationsSeenAt(value) {
   if (!key) return;
 
   try {
+    if (!value) return;
+    const existingValue = localStorage.getItem(key) || '';
+    const existingTimestamp = existingValue ? new Date(existingValue).getTime() : 0;
+    const nextTimestamp = new Date(value).getTime();
+
+    if (!nextTimestamp) return;
+    if (existingTimestamp && nextTimestamp < existingTimestamp) return;
+
     localStorage.setItem(key, value);
   } catch (error) {
     console.error(error);
@@ -4417,7 +4511,7 @@ function setNotificationsSeenAt(value) {
 }
 
 function getNotificationsClearedStorageKey() {
-  const userId = currentProfile?.id || currentUser?.id;
+  const userId = getNotificationStorageUserId();
   return userId ? `notificationsClearedAt:${userId}` : '';
 }
 
@@ -4455,6 +4549,19 @@ function getVisibleNotifications() {
     const createdAt = new Date(item.created_at).getTime();
     return !clearedTimestamp || createdAt > clearedTimestamp;
   });
+}
+
+function ensureNotificationsSeenBaseline() {
+  const key = getNotificationsSeenStorageKey();
+  if (!key || !notifications.length) return;
+
+  const existingSeenAt = getNotificationsSeenAt();
+  if (existingSeenAt) return;
+
+  const latestCreatedAt = notifications[0]?.created_at || '';
+  if (latestCreatedAt) {
+    setNotificationsSeenAt(latestCreatedAt);
+  }
 }
 
 function formatNotificationRelativeTime(dateString) {
@@ -4700,6 +4807,7 @@ function buildNotifications({
   notifications = nextNotifications.sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
+  ensureNotificationsSeenBaseline();
 
   if (render) {
     renderNotifications();
@@ -5796,6 +5904,7 @@ async function checkSession() {
     await refreshUserData({ includeWidgets: true });
     setCurrentUser(session.user);
   } else {
+    currentProfile = null;
     knownProfiles = [];
     setCurrentUser(null);
     authPopup.classList.add('open');
@@ -5881,7 +5990,7 @@ document.addEventListener('click', (event) => {
 
   event.preventDefault();
         window.open(ANNIVERSARY_WRAPPER_URL, '_blank', 'noopener,noreferrer');
-      }, true);
+}, true);
 
 setTheme(document.documentElement.dataset.theme);
 normalizeChromeSymbols();
