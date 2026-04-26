@@ -6,7 +6,7 @@ const supabaseClient = supabase.createClient(
   SUPABASE_ANON_KEY
 );
 const ANNIVERSARY_WRAPPER_URL =
-  'https://noturv0id.github.io/our-memories/anniversary-wrapper.html?v=20260426-6';
+  'https://noturv0id.github.io/our-memories/anniversary-wrapper.html?v=20260426-7';
 const STICKER_MIME_TYPE = 'application/x-our-memories-sticker';
 const ENTRY_IMAGE_BUCKET = 'profile-pictures';
 // Add your GIPHY API key here to enable public GIF search in the sticker popup.
@@ -20,6 +20,7 @@ const WEATHER_WIDGET_LOCATIONS = [
 ];
 const RECENT_GIF_STORAGE_KEY = 'recentGifStickers';
 const PLACED_GIF_SIZE_STORAGE_KEY = 'placedGifStickerSizes';
+const PLACED_STICKER_POSITION_STORAGE_KEY = 'placedStickerPositions';
 const DEFAULT_GIF_STICKER_SIZE = 72;
 const MIN_GIF_STICKER_SIZE = 44;
 const MAX_GIF_STICKER_SIZE = 160;
@@ -946,6 +947,66 @@ const timelineEl = document.getElementById('timeline');
           const sizeMap = getPlacedGifSizeMap();
           delete sizeMap[stickerId];
           localStorage.setItem(PLACED_GIF_SIZE_STORAGE_KEY, JSON.stringify(sizeMap));
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function clampStickerPercent(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return 50;
+        return Math.max(0, Math.min(100, Math.round(number)));
+      }
+
+      function getPlacedStickerPositionMap() {
+        try {
+          const raw = localStorage.getItem(PLACED_STICKER_POSITION_STORAGE_KEY);
+          const parsed = JSON.parse(raw || '{}');
+          return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (error) {
+          console.error(error);
+          return {};
+        }
+      }
+
+      function getSavedPlacedStickerPosition(stickerId) {
+        if (!stickerId) return null;
+        const positionMap = getPlacedStickerPositionMap();
+        const savedPosition = positionMap[stickerId];
+        if (!savedPosition || typeof savedPosition !== 'object') return null;
+
+        const x = Number(savedPosition.x);
+        const y = Number(savedPosition.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+
+        return {
+          x: clampStickerPercent(x),
+          y: clampStickerPercent(y)
+        };
+      }
+
+      function savePlacedStickerPosition(stickerId, x, y) {
+        if (!stickerId) return;
+
+        try {
+          const positionMap = getPlacedStickerPositionMap();
+          positionMap[stickerId] = {
+            x: clampStickerPercent(x),
+            y: clampStickerPercent(y)
+          };
+          localStorage.setItem(PLACED_STICKER_POSITION_STORAGE_KEY, JSON.stringify(positionMap));
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function clearPlacedStickerPosition(stickerId) {
+        if (!stickerId) return;
+
+        try {
+          const positionMap = getPlacedStickerPositionMap();
+          delete positionMap[stickerId];
+          localStorage.setItem(PLACED_STICKER_POSITION_STORAGE_KEY, JSON.stringify(positionMap));
         } catch (error) {
           console.error(error);
         }
@@ -5405,14 +5466,18 @@ async function loadPlacedStickers() {
     (row) => !duplicateStickerIds.includes(row.id)
   );
 
-  placedStickers = uniqueStickerRows.map((row) => ({
-    id: row.id,
-    postId: row.post_id,
-    userId: row.user_id,
-    sticker: row.emoji,
-    x: row.x,
-    y: row.y
-  }));
+  placedStickers = uniqueStickerRows.map((row) => {
+    const savedPosition = getSavedPlacedStickerPosition(row.id);
+
+    return {
+      id: row.id,
+      postId: row.post_id,
+      userId: row.user_id,
+      sticker: row.emoji,
+      x: savedPosition?.x ?? row.x,
+      y: savedPosition?.y ?? row.y
+    };
+  });
 
   renderPlacedStickers();
 
@@ -5450,6 +5515,7 @@ async function deletePlacedSticker(stickerId) {
   }
 
   clearPlacedGifSize(stickerId);
+  clearPlacedStickerPosition(stickerId);
   await loadPlacedStickers();
   showMessage('sticker removed ♡');
 }
@@ -5462,13 +5528,19 @@ async function updatePlacedStickerPosition(stickerId, x, y) {
     return false;
   }
 
-  const nextX = Math.round(x);
-  const nextY = Math.round(y);
+  const nextX = clampStickerPercent(x);
+  const nextY = clampStickerPercent(y);
   const localSticker = placedStickers.find((item) => item.id === stickerId);
   const updatePayload = {
     x: nextX,
     y: nextY
   };
+
+  savePlacedStickerPosition(stickerId, nextX, nextY);
+  if (localSticker) {
+    localSticker.x = nextX;
+    localSticker.y = nextY;
+  }
 
   let updateQuery = supabaseClient
     .from('post_stickers')
@@ -5481,25 +5553,36 @@ async function updatePlacedStickerPosition(stickerId, x, y) {
     updateQuery = updateQuery.eq('user_id', user.id);
   }
 
-  let { error } = await updateQuery;
+  let { data: updatedSticker, error } = await updateQuery.select('id').maybeSingle();
 
   if (error) {
     console.error(error);
     showMessage(error.message);
-    return false;
+    showMessage('position saved on this device ♡');
+    return true;
   }
 
-  if (!localSticker?.userId || localSticker.userId !== user.id) {
+  if (!updatedSticker || !localSticker?.userId || localSticker.userId !== user.id) {
     const fallbackResult = await supabaseClient
       .from('post_stickers')
       .update(updatePayload)
-      .eq('id', stickerId);
+      .eq('id', stickerId)
+      .select('id')
+      .maybeSingle();
 
     if (fallbackResult.error) {
       console.error(fallbackResult.error);
       showMessage(fallbackResult.error.message);
-      return false;
+      showMessage('position saved on this device ♡');
+      return true;
     }
+
+    updatedSticker = fallbackResult.data;
+  }
+
+  if (!updatedSticker) {
+    showMessage('position saved on this device ♡');
+    return true;
   }
 
   if (localSticker) {
@@ -5507,6 +5590,7 @@ async function updatePlacedStickerPosition(stickerId, x, y) {
     localSticker.y = nextY;
   }
 
+  clearPlacedStickerPosition(stickerId);
   return true;
 }
 
@@ -5832,14 +5916,18 @@ async function loadPosts(options = {}) {
     };
   });
 
-  placedStickers = (stickersData || []).map((row) => ({
-    id: row.id,
-    postId: row.post_id,
-    userId: row.user_id,
-    sticker: row.emoji,
-    x: row.x,
-    y: row.y
-  }));
+  placedStickers = (stickersData || []).map((row) => {
+    const savedPosition = getSavedPlacedStickerPosition(row.id);
+
+    return {
+      id: row.id,
+      postId: row.post_id,
+      userId: row.user_id,
+      sticker: row.emoji,
+      x: savedPosition?.x ?? row.x,
+      y: savedPosition?.y ?? row.y
+    };
+  });
 
   buildNotifications({
     postsData: postsData || [],

@@ -39,7 +39,7 @@
         min-height: 100vh;
         display: grid;
         place-items: center;
-        padding: 24px;
+        padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
         color: var(--text);
         background:
           radial-gradient(circle at 18% 16%, rgba(132, 76, 119, 0.34), transparent 19%),
@@ -60,34 +60,35 @@
         box-shadow: var(--shadow);
         text-align: center;
         position: relative;
-        overflow: hidden;
+        overflow: clip;
+        isolation: isolate;
       }
 
       main::before,
       main::after {
         content: "";
         position: absolute;
-        width: 180px;
-        height: 180px;
+        width: 140px;
+        height: 140px;
         border-radius: 999px;
-        background: rgba(240, 184, 203, 0.16);
-        filter: blur(4px);
+        background: radial-gradient(circle, rgba(240, 184, 203, 0.16), transparent 68%);
         pointer-events: none;
+        z-index: 0;
       }
 
       main::before {
-        top: -110px;
-        left: -70px;
+        top: -58px;
+        left: -52px;
       }
 
       main::after {
-        right: -90px;
-        bottom: -120px;
+        right: -54px;
+        bottom: -60px;
       }
 
       .eyebrow {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         margin: 0 0 12px;
         color: var(--muted);
         font-family: "Fredoka", "Quicksand", sans-serif;
@@ -99,7 +100,7 @@
 
       h1 {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         margin: 0;
         font-family: "Fredoka", "Quicksand", sans-serif;
         font-size: clamp(2.1rem, 8vw, 3.7rem);
@@ -109,7 +110,7 @@
 
       p {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         margin: 14px auto 0;
         max-width: 30rem;
         color: var(--muted);
@@ -119,7 +120,7 @@
 
       .retry-btn {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -143,11 +144,22 @@
 
       .loading-dots {
         position: relative;
-        z-index: 1;
+        z-index: 2;
         display: inline-flex;
         justify-content: center;
         gap: 8px;
         margin-top: 24px;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding-inline: 16px;
+        }
+
+        main {
+          width: min(100%, 520px);
+          border-radius: 30px;
+        }
       }
 
       .loading-dots span {
