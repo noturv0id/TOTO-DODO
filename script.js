@@ -112,7 +112,7 @@ const STICKER_PICKER_GROUPS = [
       let widgets = [
   {
     id: 'song',
-    title: 'currently listening to ₊˚⊹ᰔ ',
+    title: '₊˚⊹ now playing ♫',
     side: 'left',
     x: 8,
     y: 20,
@@ -127,7 +127,7 @@ const STICKER_PICKER_GROUPS = [
   },
   {
     id: '⋆𐙚₊little note˚⊹♡',
-    title: '⋆𐙚₊little note˚⊹♡',
+    title: '⋆𐙚₊smol note˚⊹♡',
     side: 'left',
     x: 16,
     y: 255,
@@ -166,7 +166,7 @@ const STICKER_PICKER_GROUPS = [
 
 {
   id: 'weather',
-  title: '˚₊‧꒰ა current weather ໒꒱ ‧₊˚',
+  title: '☁ ˚｡ weather ₊˚',
   side: 'left',
   x: 8,
   y: 620,
@@ -201,7 +201,7 @@ const STICKER_PICKER_GROUPS = [
 
   {
     id: 'sweet-reminder',
-    title: '⊹ little reminder ⊹',
+    title: '⊹˚₊ ♡ toto’s gift ♡ ₊˚⊹',
     side: 'right',
     x: 10,
     y: 352,
@@ -221,7 +221,7 @@ const STICKER_PICKER_GROUPS = [
 
   {
     id: 'photo-pin',
-    title: '✦ pinned photo ♡',
+    title: '₊˚⊹ pin it ♡',
     side: 'left',
     x: 12,
     y: 760,
@@ -239,7 +239,7 @@ const STICKER_PICKER_GROUPS = [
   // Duplicate of pinned photo widget on the right side
   {
     id: 'photo-pin-right',
-    title: '✦ pinned photo ♡',
+    title: '♡ pin it ⊹˚₊',
     side: 'right',
     x: 12,
     y: 760,
@@ -366,15 +366,15 @@ const STICKER_PICKER_GROUPS = [
         const normalizedTitle = String(widget?.title || '').toLowerCase();
 
         if (normalizedId === 'song') return 'song';
-        if (normalizedId === 'weather' || normalizedTitle.includes('current weather')) return 'weather';
+        if (normalizedId === 'weather' || normalizedTitle.includes('weather')) return 'weather';
         if (normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter')) return 'miss-you';
         if (normalizedId === 'love') return 'love';
         if (normalizedId === 'sweet-reminder') return 'reminder';
         if (normalizedId === 'wishlist' || normalizedTitle.includes('wishlist')) return 'wishlist';
         if (normalizedId === 'dates' || normalizedTitle.includes('important dates')) return 'dates';
-        if (normalizedId === 'note' || normalizedTitle.includes('little note')) return 'note';
+        if (normalizedId === 'note' || normalizedTitle.includes('little note') || normalizedTitle.includes('smol note')) return 'note';
         if (normalizedId === 'photo-pin' || normalizedId === 'photo-pin-right') return normalizedId;
-        if (normalizedTitle.includes('pinned photo')) return 'photo-pin';
+        if (normalizedTitle.includes('pinned photo') || normalizedTitle.includes('pinned') || normalizedTitle.includes('pin it')) return 'photo-pin';
 
         return '';
       }
@@ -626,7 +626,7 @@ const timelineEl = document.getElementById('timeline');
 
         const quotePillEl = document.querySelector('.quote-pill');
         if (quotePillEl) {
-          quotePillEl.textContent = 'forever and always ♡';
+          quotePillEl.textContent = '⊹˚₊ forever and always ₊˚⊹';
         }
 
         const notificationsIconEl = document.querySelector('.notifications-btn-icon');
@@ -1821,8 +1821,11 @@ function isLikeableWidget(widget) {
   return (
     normalizedId === 'note' ||
     normalizedTitle.includes('little note') ||
+    normalizedTitle.includes('smol note') ||
     normalizedId.startsWith('photo-pin') ||
-    normalizedTitle.includes('pinned photo')
+    normalizedTitle.includes('pinned photo') ||
+    normalizedTitle.includes('pinned') ||
+    normalizedTitle.includes('pin it')
   );
 }
 
@@ -1890,7 +1893,7 @@ function getWidgetLikeContentSignature(widget) {
   const normalizedTitle = String(widget.title || '').toLowerCase();
   const data = widget.data && typeof widget.data === 'object' ? widget.data : {};
 
-  if (normalizedId === 'note' || normalizedTitle.includes('little note')) {
+  if (normalizedId === 'note' || normalizedTitle.includes('little note') || normalizedTitle.includes('smol note')) {
     return JSON.stringify({
       text: data.text || ''
     });
@@ -2084,7 +2087,7 @@ async function refreshWeatherWidget(options = {}) {
   }
 
   const isNoteWidget =
-  normalizedId === 'note' || normalizedTitle.includes('little note');
+  normalizedId === 'note' || normalizedTitle.includes('little note') || normalizedTitle.includes('smol note');
 
 if (isNoteWidget) {
   normalizeWidgetLikesData(widget);
@@ -2177,7 +2180,7 @@ if (normalizedId === 'wishlist' || normalizedTitle.includes('wishlist')) {
   return `<div class="widget-wishlist-list">${html}</div>`;
 }
 
-if (normalizedId === 'weather' || normalizedTitle.includes('current weather')) {
+if (normalizedId === 'weather' || normalizedTitle.includes('weather')) {
   const weatherData = widget.data || {};
 
   if (weatherData.status === 'error') {
@@ -2254,7 +2257,7 @@ if (normalizedId === 'miss-you' || normalizedTitle.includes('miss you counter'))
   `;
 }
 
-if (normalizedId === 'photo-pin' || normalizedTitle.includes('pinned photo')) {
+if (normalizedId.startsWith('photo-pin') || normalizedTitle.includes('pinned photo') || normalizedTitle.includes('pinned') || normalizedTitle.includes('pin it')) {
   normalizeWidgetLikesData(widget);
   const photoData = widget.data || {};
   const overlayText = escapeHtml(photoData.text || '');
@@ -2433,21 +2436,20 @@ async function loadWidgets(options = {}) {
         widgetsNeedingNormalization.push(mergedWidget);
       }
 
+      const titleChanged = mergedWidget.title !== defaultWidget.title;
+
+      if (titleChanged) {
+        mergedWidget.title = defaultWidget.title;
+        widgetsNeedingNormalization.push(mergedWidget);
+      }
+
       if (isSweetReminderWidget) {
-        const reminderChanged =
-          mergedWidget.title !== defaultWidget.title ||
-          mergedWidget.content !== defaultWidget.content;
+        const reminderChanged = mergedWidget.content !== defaultWidget.content;
 
         if (reminderChanged) {
-          mergedWidget.title = defaultWidget.title;
           mergedWidget.content = defaultWidget.content;
           widgetsNeedingNormalization.push(mergedWidget);
         }
-      }
-
-      if (normalizedId === 'photo-pin-right' && mergedWidget.title !== defaultWidget.title) {
-        mergedWidget.title = defaultWidget.title;
-        widgetsNeedingNormalization.push(mergedWidget);
       }
 
       return mergedWidget;
@@ -2547,12 +2549,12 @@ function renderWidgets() {
       normalizedId === 'wishlist' || normalizedTitle.includes('wishlist');
 
     const isNoteWidget =
-      normalizedId === 'note' || normalizedTitle.includes('little note');
+      normalizedId === 'note' || normalizedTitle.includes('little note') || normalizedTitle.includes('smol note');
 
     const isStickerWidget =
       normalizedId.includes('stickers') || normalizedTitle.includes('stickers');
     const isPhotoWidget =
-      normalizedId.startsWith('photo-pin') || normalizedTitle.includes('pinned photo');
+      normalizedId.startsWith('photo-pin') || normalizedTitle.includes('pinned photo') || normalizedTitle.includes('pinned') || normalizedTitle.includes('pin it');
 
     const hasHistory =
       normalizedId === 'song' ||
@@ -2952,8 +2954,8 @@ function openWidgetEditor(widgetId) {
     if (itemId === normalizedId) return true;
     if (normalizedId === 'dates' && itemTitle.includes('important dates')) return true;
     if (normalizedId === 'wishlist' && itemTitle.includes('wishlist')) return true;
-    if (normalizedId === 'note' && itemTitle.includes('little note')) return true;
-    if (normalizedId === 'photo-pin' && itemTitle.includes('pinned photo')) return true;
+    if (normalizedId === 'note' && (itemTitle.includes('little note') || itemTitle.includes('smol note'))) return true;
+    if (normalizedId === 'photo-pin' && (itemTitle.includes('pinned photo') || itemTitle.includes('pinned') || itemTitle.includes('pin it'))) return true;
 
     return false;
   });
@@ -3060,13 +3062,13 @@ function openWidgetEditor(widgetId) {
     });
   } else if (normalizedId === 'note') {
     normalizeWidgetLikesData(widget);
-    widgetPopupTitle.textContent = '⋆𐙚₊little note˚⊹♡';
+    widgetPopupTitle.textContent = '⋆𐙚₊smol note˚⊹♡';
     saveWidgetBtn.style.display = 'inline-flex';
     setHeaderWidgetSaveVisibility(false);
     setWidgetPopupLikeButton(widget);
 
     widgetEditorFields.innerHTML = `
-      <label class="popup-label">little note</label>
+      <label class="popup-label">smol note</label>
       <textarea class="popup-input" id="widgetFieldText" rows="5" style="resize: vertical; min-height: 110px;">${widget.data?.text || ''}</textarea>
     `;
   } else if (normalizedId === 'dates') {
@@ -3244,7 +3246,7 @@ function openWidgetEditor(widgetId) {
     normalizeWidgetLikesData(widget);
 
     widgetPopupTitle.textContent =
-      normalizedId === 'photo-pin-right' ? 'dodos pinned photo' : 'dodos pinned photo';
+      normalizedId === 'photo-pin-right' ? '♡ pin it ⊹˚₊' : '₊˚⊹ pin it ♡';
     saveWidgetBtn.style.display = 'none';
     setHeaderWidgetSaveVisibility(false);
     setWidgetPopupLikeButton(widget);
@@ -3487,8 +3489,8 @@ async function saveWidgetChanges() {
     if (itemId === editingWidgetId) return true;
     if (editingWidgetId === 'dates' && itemTitle.includes('important dates')) return true;
     if (editingWidgetId === 'wishlist' && itemTitle.includes('wishlist')) return true;
-    if (editingWidgetId === 'note' && itemTitle.includes('little note')) return true;
-    if (editingWidgetId === 'photo-pin' && itemTitle.includes('pinned photo')) return true;
+    if (editingWidgetId === 'note' && (itemTitle.includes('little note') || itemTitle.includes('smol note'))) return true;
+    if (editingWidgetId === 'photo-pin' && (itemTitle.includes('pinned photo') || itemTitle.includes('pinned') || itemTitle.includes('pin it'))) return true;
 
     return false;
   });
@@ -3519,7 +3521,7 @@ async function saveWidgetChanges() {
 
   if (editingWidgetId === 'song') {
     if (!widget.data) widget.data = {};
-    widget.title = widget.title || 'currently listening to ₊˚⊹ᰔ ';
+    widget.title = widget.title || '₊˚⊹ now playing ♫';
     const rawSpotifyUrl = document.getElementById('widgetFieldSpotifyUrl')?.value.trim() || '';
     const normalizedTrack = normalizeSpotifyTrackUrl(rawSpotifyUrl);
     widget.data.spotifyUrl = normalizedTrack?.spotifyUrl || '';
@@ -3537,7 +3539,7 @@ async function saveWidgetChanges() {
   } else if (editingWidgetId === 'note') {
     if (!widget.data) widget.data = {};
     widget.data.text = document.getElementById('widgetFieldText').value.trim();
-  } else if (String(widget.title || '').toLowerCase().includes('pinned photo') || String(editingWidgetId || '').toLowerCase().startsWith('photo-pin')) {
+  } else if (String(widget.title || '').toLowerCase().includes('pinned photo') || String(widget.title || '').toLowerCase().includes('pinned') || String(widget.title || '').toLowerCase().includes('pin it') || String(editingWidgetId || '').toLowerCase().startsWith('photo-pin')) {
     if (!widget.data) widget.data = {};
     widget.data.image = document.getElementById('photoWidgetImageData')?.value || '';
     delete widget.data.caption;
@@ -3717,7 +3719,7 @@ function renderTimeline() {
     postEl.dataset.postId = post.id;
     postEl.innerHTML = `
       <div class="post-header">
-        <span>˚₊‧ entry ❤︎‧₊˚ — ${formatEntryDate(post.created_at)}</span>
+        <span>˚₊‧ post ❤︎‧₊˚ — ${formatEntryDate(post.created_at)}</span>
         ${post.isEdited ? `<span class="post-edited-badge">edited</span>` : ''}
       </div>
       <div class="post-body">
@@ -4864,8 +4866,8 @@ function summarizeWidgetHistory(widget) {
     return `since ${widget.data?.startDate || ''}`.trim();
   }
 
-  if (normalizedId === 'note' || normalizedTitle.includes('little note')) {
-    return widget.data?.text || 'little note';
+  if (normalizedId === 'note' || normalizedTitle.includes('little note') || normalizedTitle.includes('smol note')) {
+    return widget.data?.text || 'smol note';
   }
 
   if (normalizedId === 'dates' || normalizedTitle.includes('important dates')) {
