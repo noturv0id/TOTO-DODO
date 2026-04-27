@@ -468,7 +468,7 @@ const STICKER_PICKER_GROUPS = [
       }
 
       async function moveWidgetInMobileOrder(widgetId, direction) {
-        if (isMobileLayoutActive()) {
+        if (isTabbedLayoutActive()) {
           await moveMobileWidgetInOrder(widgetId, direction);
           return;
         }
@@ -607,11 +607,13 @@ const timelineEl = document.getElementById('timeline');
       const clearWidgetHistoryBtn = document.getElementById('clearWidgetHistoryBtn');
       let lastScrollY = window.scrollY || 0;
       const MOBILE_VIEW_STORAGE_KEY = 'ourMemoriesMobileView';
+      const MAC_TABBED_LAYOUT_QUERY = '(min-width: 721px) and (max-width: 1440px)';
+      const PHONE_LAYOUT_QUERY = '(max-width: 720px)';
       const BOOT_SPLASH_MIN_MS = 2000;
       const BOOT_SPLASH_FADE_MS = 450;
       const bootStartedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
       let activeMobileView = 'timeline';
-      let wasMobileLayoutActive = isMobileLayoutActive();
+      let wasTabbedLayoutActive = isTabbedLayoutActive();
       let mobileViewTransitionTimer = null;
       let mobileViewTransitionId = 0;
 
@@ -695,12 +697,16 @@ const timelineEl = document.getElementById('timeline');
         syncWidgetLikeButton(widget.id);
       }
 
+      function isTabbedLayoutActive() {
+        return window.matchMedia(MAC_TABBED_LAYOUT_QUERY).matches || isMobileLayoutActive();
+      }
+
       function isMobileLayoutActive() {
-        return window.matchMedia('(max-width: 720px)').matches;
+        return window.matchMedia(PHONE_LAYOUT_QUERY).matches;
       }
 
       function shouldUseLaunchSplash() {
-        return window.matchMedia('(max-width: 720px)').matches;
+        return isMobileLayoutActive();
       }
 
       function syncMobileViewButtons() {
@@ -719,7 +725,7 @@ const timelineEl = document.getElementById('timeline');
 
       function canAnimateMobileViewTransition() {
         return (
-          isMobileLayoutActive() &&
+          isTabbedLayoutActive() &&
           !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
         );
       }
@@ -829,6 +835,10 @@ const timelineEl = document.getElementById('timeline');
         const pageEl = document.querySelector('.page');
         if (!pageEl) return;
 
+        if (!['timeline', 'left', 'right'].includes(activeMobileView)) {
+          activeMobileView = 'timeline';
+        }
+
         pageEl.dataset.mobileView = activeMobileView;
         syncMobileViewButtons();
       }
@@ -836,30 +846,49 @@ const timelineEl = document.getElementById('timeline');
       function setMobileView(nextView, options = {}) {
         const { persist = true } = options;
         const allowedViews = new Set(['timeline', 'left', 'right']);
-        const pageEl = document.querySelector('.page');
-        const visibleView = pageEl?.dataset.mobileView;
-        const previousView = allowedViews.has(visibleView) ? visibleView : activeMobileView;
-        const previousHeight =
-          isMobileLayoutActive()
-            ? getMobileViewSection(previousView)?.getBoundingClientRect().height || 0
-            : 0;
         activeMobileView = allowedViews.has(nextView) ? nextView : 'timeline';
-        if (activeMobileView !== previousView && canAnimateMobileViewTransition()) {
-          syncMobileViewButtons();
-          animateMobileViewTransition(activeMobileView, previousView, previousHeight);
-        } else {
-          mobileViewTransitionId += 1;
-          if (mobileViewTransitionTimer) {
-            window.clearTimeout(mobileViewTransitionTimer);
-            mobileViewTransitionTimer = null;
-          }
-          const layoutEl = document.querySelector('.layout');
-          layoutEl?.classList.remove('mobile-view-transitioning');
-          if (layoutEl) {
-            layoutEl.style.minHeight = '';
-          }
-          applyMobileView();
+
+        mobileViewTransitionId += 1;
+        if (mobileViewTransitionTimer) {
+          window.clearTimeout(mobileViewTransitionTimer);
+          mobileViewTransitionTimer = null;
         }
+
+        [timelineEl, leftZone, rightZone].forEach((section) => {
+          section?.getAnimations?.().forEach((animation) => animation.cancel());
+        });
+
+        const layoutEl = document.querySelector('.layout');
+        layoutEl?.classList.remove('mobile-view-transitioning');
+        if (layoutEl) {
+          layoutEl.style.minHeight = '';
+        }
+
+        applyMobileView();
+
+        if (isTabbedLayoutActive() && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+          const activeSection = getMobileViewSection(activeMobileView);
+          activeSection?.animate?.(
+            [
+              { opacity: 0.72, transform: 'translate3d(0, 4px, 0)' },
+              { opacity: 1, transform: 'translate3d(0, 0, 0)' }
+            ],
+            {
+              duration: 180,
+              easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
+            }
+          );
+        }
+
+        requestAnimationFrame(() => {
+          const pageEl = document.querySelector('.page');
+          const visibleSection = getMobileViewSection(pageEl?.dataset.mobileView);
+
+          if (!visibleSection || visibleSection.getBoundingClientRect().height <= 0) {
+            activeMobileView = 'timeline';
+            applyMobileView();
+          }
+        });
 
         if (!persist) return;
 
@@ -873,12 +902,12 @@ const timelineEl = document.getElementById('timeline');
       function syncMobileViewSwitcherVisibility() {
         if (!mobileViewSwitcher) return;
 
-        const isMobile = isMobileLayoutActive();
-        const layoutChanged = isMobile !== wasMobileLayoutActive;
-        wasMobileLayoutActive = isMobile;
-        mobileViewSwitcher.hidden = !isMobile;
+        const isTabbed = isTabbedLayoutActive();
+        const layoutChanged = isTabbed !== wasTabbedLayoutActive;
+        wasTabbedLayoutActive = isTabbed;
+        mobileViewSwitcher.hidden = !isTabbed;
 
-        if (!isMobile) {
+        if (!isTabbed) {
           const pageEl = document.querySelector('.page');
           if (pageEl) {
             pageEl.dataset.mobileView = 'all';
@@ -2630,7 +2659,7 @@ async function loadWidgets(options = {}) {
 }
 
 function renderWidgets() {
-  const shouldAnimateMobileReorder = isMobileLayoutActive();
+  const shouldAnimateMobileReorder = isTabbedLayoutActive();
   const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   previousMobileWidgetRects.clear();
@@ -2646,7 +2675,7 @@ function renderWidgets() {
   ensureWidgetStackOrder();
   syncToggleWidgetsButton();
 
-  const isMobileWidgetOrderActive = isMobileLayoutActive();
+  const isMobileWidgetOrderActive = isTabbedLayoutActive();
   const mobileRenderItems = isMobileWidgetOrderActive ? getMobileWidgetRenderItems() : null;
   const mobileWidgetOrderLookup = new Map();
 
@@ -4573,7 +4602,7 @@ function showGifStickerControls(stickerId) {
 }
 
 function startWidgetDrag(event, widget, element) {
-  if (window.matchMedia('(max-width: 1180px), (pointer: coarse)').matches) {
+  if (isTabbedLayoutActive() || window.matchMedia('(pointer: coarse)').matches) {
     return;
   }
 
