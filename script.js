@@ -921,6 +921,19 @@ function syncMobileViewSwitcherVisibility() {
   }
 }
 
+function getThemeChromeColor(nextTheme) {
+  const styles = window.getComputedStyle(document.documentElement);
+  const overscrollBg = styles.getPropertyValue("--overscroll-bg").trim();
+  if (overscrollBg && !overscrollBg.startsWith("var(")) {
+    return overscrollBg;
+  }
+
+  return (
+    styles.getPropertyValue("--bg-3").trim() ||
+    (nextTheme === "dark" ? "#2a1a2a" : "#fffdfd")
+  );
+}
+
 function setTheme(theme) {
   const nextTheme = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = nextTheme;
@@ -928,13 +941,9 @@ function setTheme(theme) {
     document.getElementById("themeColorMeta") ||
     document.querySelector('meta[name="theme-color"]');
   if (themeColorMeta) {
-    const styles = window.getComputedStyle(document.documentElement);
-    const themeColor =
-      styles.getPropertyValue("--overscroll-bg").trim() ||
-      (nextTheme === "dark" ? "#211527" : "#fff8fb");
     themeColorMeta.setAttribute(
       "content",
-      themeColor,
+      getThemeChromeColor(nextTheme),
     );
   }
 

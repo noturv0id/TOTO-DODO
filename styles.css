@@ -15,7 +15,7 @@
   --shadow-strong: 0 22px 44px rgba(198, 133, 160, 0.26);
   --scrollbar-track: #fff8fb;
   --scrollbar-thumb: #eeb6c8;
-  --overscroll-bg: var(--bg-1);
+  --overscroll-bg: var(--bg-3);
   --page-bg:
     radial-gradient(
       circle at 18% 12%,
@@ -64,7 +64,7 @@ html[data-theme="dark"] {
   --shadow-strong: 0 22px 48px rgba(8, 4, 12, 0.56);
   --scrollbar-track: #17101c;
   --scrollbar-thumb: #eeb6c8;
-  --overscroll-bg: var(--bg-2);
+  --overscroll-bg: var(--bg-3);
   --page-bg:
     radial-gradient(circle at 18% 14%, rgba(98, 55, 88, 0.42), transparent 17%),
     radial-gradient(
