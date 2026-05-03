@@ -68,18 +68,30 @@
       body {
         min-height: 100%;
         margin: 0;
+        background-color: var(--bg-3);
       }
 
       body {
+        position: relative;
         min-height: 100vh;
         display: grid;
         place-items: center;
         padding: max(24px, env(safe-area-inset-top)) 24px
           max(24px, env(safe-area-inset-bottom));
         color: var(--text);
-        background: var(--body-bg);
+        background: transparent;
         font-family: "Quicksand", "Segoe UI", sans-serif;
         overflow: hidden;
+        isolation: isolate;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -100vmax;
+        z-index: -1;
+        pointer-events: none;
+        background: var(--body-bg);
       }
 
       main {

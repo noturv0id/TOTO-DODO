@@ -924,6 +924,19 @@ function syncMobileViewSwitcherVisibility() {
 function setTheme(theme) {
   const nextTheme = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = nextTheme;
+  const themeColorMeta =
+    document.getElementById("themeColorMeta") ||
+    document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) {
+    const styles = window.getComputedStyle(document.documentElement);
+    const themeColor =
+      styles.getPropertyValue("--overscroll-bg").trim() ||
+      (nextTheme === "dark" ? "#211527" : "#fff8fb");
+    themeColorMeta.setAttribute(
+      "content",
+      themeColor,
+    );
+  }
 
   if (themeToggle) {
     const isDark = nextTheme === "dark";
@@ -953,6 +966,11 @@ function toggleTheme() {
 
 function updateFloatingEntryButtonVisibility() {
   if (!newEntryBtn) return;
+
+  if (!currentUser) {
+    newEntryBtn.classList.add("is-hidden");
+    return;
+  }
 
   const currentScrollY = window.scrollY || 0;
   const scrollDelta = currentScrollY - lastScrollY;
@@ -1572,6 +1590,7 @@ function createGenericLinkPreview(sourceUrl) {
   preview.href = sourceUrl;
   preview.target = "_blank";
   preview.rel = "noopener noreferrer";
+  preview.draggable = false;
   preview.dataset.sourceUrl = sourceUrl;
 
   let details;
@@ -1621,6 +1640,7 @@ function createYouTubeLinkPreview(videoId, sourceUrl) {
   preview.href = getYouTubeWatchUrl(videoId, sourceUrl);
   preview.target = "_blank";
   preview.rel = "noopener noreferrer";
+  preview.draggable = false;
   preview.dataset.sourceUrl = sourceUrl;
   preview.setAttribute("aria-label", "watch video on YouTube");
 
@@ -2789,6 +2809,7 @@ async function queueMissYouWidgetSave() {
       await saveWidgetToSupabase(widget, {
         recordHistory: false,
         suppressErrorMessage: true,
+        notifyUpdate: true,
       });
     } while (missYouSaveQueued);
   } finally {
@@ -5010,11 +5031,13 @@ function renderTimeline() {
     const postBody = postEl.querySelector(".post-body");
 
     postBody.addEventListener("dragenter", (event) => {
+      if (!isStickerDragEvent(event)) return;
       event.preventDefault();
       postBody.classList.add("sticker-drop-ready");
     });
 
     postBody.addEventListener("dragover", (event) => {
+      if (!isStickerDragEvent(event)) return;
       event.preventDefault();
       postBody.classList.add("sticker-drop-ready");
       if (event.dataTransfer) {
@@ -5029,11 +5052,13 @@ function renderTimeline() {
     });
 
     postBody.addEventListener("drop", (event) => {
+      if (!isStickerDragEvent(event)) return;
       event.stopPropagation();
       handleStickerDrop(event, post.id);
     });
 
     postEl.addEventListener("dragover", (event) => {
+      if (!isStickerDragEvent(event)) return;
       event.preventDefault();
       const dropBody = getDropBodyFromTarget(event.target) || postBody;
       dropBody.classList.add("sticker-drop-ready");
@@ -5043,6 +5068,7 @@ function renderTimeline() {
     });
 
     postEl.addEventListener("drop", (event) => {
+      if (!isStickerDragEvent(event)) return;
       handleStickerDrop(event, post.id);
     });
 
@@ -5088,6 +5114,13 @@ function getDropBodyFromTarget(target) {
   if (!target) return null;
   if (target.classList?.contains("post-body")) return target;
   return target.closest?.(".post-body") || null;
+}
+
+function isStickerDragEvent(event) {
+  if (activeSticker) return true;
+
+  const types = Array.from(event?.dataTransfer?.types || []);
+  return types.includes(STICKER_MIME_TYPE);
 }
 
 function switchStickerTab(nextTab) {
@@ -5900,6 +5933,11 @@ stickerPopup.addEventListener("click", (event) => {
 
 if (newEntryBtn) {
   newEntryBtn.addEventListener("click", () => {
+    if (!currentUser) {
+      newEntryBtn.classList.add("is-hidden");
+      return;
+    }
+
     resetEntryPopup();
     entryPopup.classList.add("open");
     newEntryBtn.classList.remove("is-hidden");
@@ -6256,12 +6294,14 @@ function openEntryEditor(postId) {
 
 function setCurrentUser(user) {
   currentUser = user || null;
+  document.body.classList.toggle("app-authenticated", Boolean(currentUser));
   if (appToolbar) {
     appToolbar.dataset.authState = currentUser ? "logged-in" : "logged-out";
   }
   if (!currentUser) {
     closeNotificationsPanel();
   }
+  updateFloatingEntryButtonVisibility();
 }
 
 function setToolbarAuthState(state) {
@@ -6491,6 +6531,7 @@ function getNotificationTypeLabel(type) {
   if (type === "post_like") return "like";
   if (type === "comment_like") return "comment like";
   if (type === "widget_like") return "widget like";
+  if (type === "miss_you") return "miss you";
   if (type === "poem") return "poem";
   if (type === "widget_update") return "widget";
   if (type === "sticker") return "sticker";
@@ -6681,6 +6722,26 @@ function getPoemWidgetNotificationMessage(actorName, widgetData) {
   return `${actorName} updated TOTO’S POEMS`;
 }
 
+function getWidgetUpdateNotificationType(widget) {
+  return widget?.id === "entry-preview"
+    ? "poem"
+    : widget?.id === "miss-you"
+      ? "miss_you"
+      : "widget_update";
+}
+
+function getWidgetUpdateNotificationMessage(widget, actorName, widgetData) {
+  if (widget?.id === "entry-preview") {
+    return getPoemWidgetNotificationMessage(actorName, widgetData);
+  }
+
+  if (widget?.id === "miss-you") {
+    return `${actorName} missed you sooo many`;
+  }
+
+  return `${actorName} updated ${getWidgetNotificationName(widget)}`;
+}
+
 function buildNotifications({
   postsData = [],
   commentsData = [],
@@ -6825,14 +6886,15 @@ function buildNotifications({
 
       nextNotifications.push({
         id: `widget-update:${widget.id}:${lastUpdatedAt}`,
-        type: widget.id === "entry-preview" ? "poem" : "widget_update",
+        type: getWidgetUpdateNotificationType(widget),
         created_at: lastUpdatedAt,
         widgetId: widget.id,
         openComments: false,
-        message:
-          widget.id === "entry-preview"
-            ? getPoemWidgetNotificationMessage(actorName, widgetData)
-            : `${actorName} updated ${widgetName}`,
+        message: getWidgetUpdateNotificationMessage(
+          widget,
+          actorName,
+          widgetData,
+        ),
       });
     }
 
