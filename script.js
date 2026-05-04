@@ -9,6 +9,7 @@ const ENTRY_IMAGE_BUCKET = "profile-pictures";
 const GIPHY_API_KEY = "34udc7WiSDjXKrRbb9UgwcD2piNXT3uO";
 const GIPHY_CLIENT_KEY = "our_memories_sticker_box";
 const GIPHY_SEARCH_ENDPOINT = "https://api.giphy.com/v1/gifs/search";
+const GIPHY_STICKER_SEARCH_ENDPOINT = "https://api.giphy.com/v1/stickers/search";
 const OPEN_METEO_FORECAST_ENDPOINT = "https://api.open-meteo.com/v1/forecast";
 const WEATHER_WIDGET_LOCATIONS = [
   { label: "Hateen, Kuwait", latitude: 29.28233, longitude: 48.02874 },
@@ -19,6 +20,7 @@ function getAnniversaryWrapperUrl() {
   return ANNIVERSARY_WRAPPER_BASE_URL;
 }
 const RECENT_GIF_STORAGE_KEY = "recentGifStickers";
+const RECENT_GIPHY_STICKER_STORAGE_KEY = "recentGiphyStickers";
 const PLACED_GIF_SIZE_STORAGE_KEY = "placedGifStickerSizes";
 const PLACED_STICKER_POSITION_STORAGE_KEY = "placedStickerPositions";
 const DEFAULT_GIF_STICKER_SIZE = 72;
@@ -27,6 +29,7 @@ const MAX_GIF_STICKER_SIZE = 200;
 let hasRenderedEmojiPicker = false;
 let gifSearchResults = [];
 let gifSearchQuery = "";
+let activeGiphySearchType = "gif";
 let activeStickerSize = null;
 const STICKER_PICKER_GROUPS = [
   {
@@ -634,6 +637,7 @@ let activeSticker = null;
 let dragWidget = null;
 let draggingPlacedSticker = null;
 let knownProfiles = [];
+let activeProfilePopupUserId = "";
 const visibleGifStickerControlTimers = new Map();
 const minimizedWidgetIds = new Set();
 const previousMobileWidgetRects = new Map();
@@ -670,6 +674,7 @@ const typedStickerPreview = document.getElementById("typedStickerPreview");
 const emojiPickerGrid = document.getElementById("emojiPickerGrid");
 const gifPickerGrid = document.getElementById("gifPickerGrid");
 const gifSearchInput = document.getElementById("gifSearchInput");
+const gifSearchLabel = document.getElementById("gifSearchLabel");
 const gifSearchBtn = document.getElementById("gifSearchBtn");
 const gifSearchStatus = document.getElementById("gifSearchStatus");
 const closeStickerPopup = document.getElementById("closeStickerPopup");
@@ -1051,9 +1056,29 @@ function getGiphyStickerUrl(gifObject) {
   );
 }
 
-function getRecentGifStickers() {
+function getGiphyTypeLabel(type = activeGiphySearchType) {
+  return type === "giphy-sticker" ? "sticker" : "gif";
+}
+
+function getGiphyTypePlural(type = activeGiphySearchType) {
+  return type === "giphy-sticker" ? "stickers" : "gifs";
+}
+
+function getGiphySearchEndpoint(type = activeGiphySearchType) {
+  return type === "giphy-sticker"
+    ? GIPHY_STICKER_SEARCH_ENDPOINT
+    : GIPHY_SEARCH_ENDPOINT;
+}
+
+function getRecentGiphyStorageKey(type = activeGiphySearchType) {
+  return type === "giphy-sticker"
+    ? RECENT_GIPHY_STICKER_STORAGE_KEY
+    : RECENT_GIF_STORAGE_KEY;
+}
+
+function getRecentGiphyItems(type = activeGiphySearchType) {
   try {
-    const raw = localStorage.getItem(RECENT_GIF_STORAGE_KEY);
+    const raw = localStorage.getItem(getRecentGiphyStorageKey(type));
     const parsed = JSON.parse(raw || "[]");
     return Array.isArray(parsed) ? parsed.filter((item) => item?.url) : [];
   } catch (error) {
@@ -1062,18 +1087,29 @@ function getRecentGifStickers() {
   }
 }
 
-function saveRecentGifSticker(gifItem) {
+function getRecentGifStickers() {
+  return getRecentGiphyItems("gif");
+}
+
+function saveRecentGiphyItem(gifItem, type = activeGiphySearchType) {
   if (!gifItem?.url) return;
 
   try {
     const nextItems = [
-      gifItem,
-      ...getRecentGifStickers().filter((item) => item.url !== gifItem.url),
+      { ...gifItem, type },
+      ...getRecentGiphyItems(type).filter((item) => item.url !== gifItem.url),
     ].slice(0, 6);
-    localStorage.setItem(RECENT_GIF_STORAGE_KEY, JSON.stringify(nextItems));
+    localStorage.setItem(
+      getRecentGiphyStorageKey(type),
+      JSON.stringify(nextItems),
+    );
   } catch (error) {
     console.error(error);
   }
+}
+
+function saveRecentGifSticker(gifItem, type = activeGiphySearchType) {
+  saveRecentGiphyItem(gifItem, type);
 }
 
 function getPlacedGifSizeMap() {
@@ -2568,6 +2604,379 @@ function getProfileDisplayName(profile, fallback) {
   if (!profile || typeof profile !== "object") return fallback;
   const name = String(profile.nickname || profile.username || "").trim();
   return name || fallback;
+}
+
+function mergeProfileRecords(existingProfile = {}, incomingProfile = {}) {
+  const nextProfile = {
+    ...(existingProfile && typeof existingProfile === "object"
+      ? existingProfile
+      : {}),
+  };
+
+  if (!incomingProfile || typeof incomingProfile !== "object") {
+    return nextProfile;
+  }
+
+  Object.entries(incomingProfile).forEach(([key, value]) => {
+    if (value !== undefined) {
+      nextProfile[key] = value;
+    }
+  });
+
+  return nextProfile;
+}
+
+function upsertKnownProfile(profile) {
+  if (!profile?.id) return;
+
+  const existingProfile = knownProfiles.find((item) => item?.id === profile.id);
+  const nextProfile = mergeProfileRecords(existingProfile, profile);
+
+  knownProfiles = existingProfile
+    ? knownProfiles.map((item) => (item?.id === profile.id ? nextProfile : item))
+    : [nextProfile, ...knownProfiles];
+}
+
+function replaceKnownProfiles(profiles = []) {
+  const profileMap = new Map(
+    knownProfiles
+      .filter((profile) => profile?.id)
+      .map((profile) => [profile.id, profile]),
+  );
+
+  profiles.forEach((profile) => {
+    if (!profile?.id) return;
+    profileMap.set(
+      profile.id,
+      mergeProfileRecords(profileMap.get(profile.id), profile),
+    );
+  });
+
+  if (currentProfile?.id) {
+    profileMap.set(
+      currentProfile.id,
+      mergeProfileRecords(profileMap.get(currentProfile.id), currentProfile),
+    );
+  }
+
+  knownProfiles = [...profileMap.values()];
+}
+
+function getKnownProfileById(userId, fallbackProfile = null) {
+  if (!userId) {
+    return fallbackProfile && typeof fallbackProfile === "object"
+      ? { ...fallbackProfile }
+      : null;
+  }
+
+  const matchingKnownProfile = knownProfiles.find((profile) => profile?.id === userId);
+  const matchingCurrentProfile = currentProfile?.id === userId ? currentProfile : null;
+  const mergedProfile = mergeProfileRecords(
+    mergeProfileRecords(matchingKnownProfile, matchingCurrentProfile),
+    fallbackProfile,
+  );
+
+  return mergedProfile?.id ? mergedProfile : null;
+}
+
+function isCurrentUsersProfile(userId) {
+  if (!userId) return false;
+  return userId === (currentProfile?.id || currentUser?.id || "");
+}
+
+function getProfileHandle(profile, fallbackUserId = "") {
+  const username = String(profile?.username || "").trim();
+  if (username) return `@${username}`;
+  return fallbackUserId ? `id ${fallbackUserId.slice(0, 8)}` : "@memory";
+}
+
+function formatProfileDurationShort(dateString) {
+  const timestamp = new Date(dateString).getTime();
+  if (!timestamp) return "new";
+
+  const diffMs = Math.max(0, Date.now() - timestamp);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffDays < 1) return "today";
+  if (diffDays < 7) return `${diffDays}d`;
+
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 5) return `${diffWeeks}w`;
+
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${Math.max(1, diffMonths)}mo`;
+
+  return `${Math.floor(diffDays / 365)}y`;
+}
+
+function getProfileJoinedInfo(userId, profile = null) {
+  const directCreatedAt = String(profile?.created_at || "").trim();
+  if (directCreatedAt && Number.isFinite(new Date(directCreatedAt).getTime())) {
+    return {
+      date: directCreatedAt,
+      value: formatProfileDurationShort(directCreatedAt),
+      label: "since signup",
+      summary: `joined ${formatEntryDate(directCreatedAt)}`,
+    };
+  }
+
+  const activityDates = [];
+
+  posts.forEach((post) => {
+    if (post?.userId === userId && post?.created_at) {
+      activityDates.push(post.created_at);
+    }
+  });
+
+  (notificationSourceData.likesData || []).forEach((like) => {
+    if (like?.user_id === userId && like?.created_at) {
+      activityDates.push(like.created_at);
+    }
+  });
+
+  (notificationSourceData.commentsData || []).forEach((comment) => {
+    if (comment?.user_id === userId && comment?.created_at) {
+      activityDates.push(comment.created_at);
+    }
+  });
+
+  (notificationSourceData.stickersData || []).forEach((sticker) => {
+    if (sticker?.user_id === userId && sticker?.created_at) {
+      activityDates.push(sticker.created_at);
+    }
+  });
+
+  widgets.forEach((widget) => {
+    if (!isLikeableWidget(widget)) return;
+    normalizeWidgetLikesData(widget);
+    const likeTimestamps = getWidgetLikeTimestamps(widget);
+    const createdAt = likeTimestamps[userId];
+    if (createdAt) {
+      activityDates.push(createdAt);
+    }
+  });
+
+  const earliestActivity = activityDates
+    .filter((value) => Number.isFinite(new Date(value).getTime()))
+    .sort((left, right) => new Date(left).getTime() - new Date(right).getTime())[0];
+
+  if (earliestActivity) {
+    return {
+      date: earliestActivity,
+      value: formatProfileDurationShort(earliestActivity),
+      label: "at least",
+      summary: `around here since ${formatEntryDate(earliestActivity)}`,
+    };
+  }
+
+  return {
+    date: "",
+    value: "new",
+    label: "time here",
+    summary: "signup date hidden",
+  };
+}
+
+function getProfileLikeCount(userId) {
+  const postAndCommentLikes = (notificationSourceData.likesData || []).filter(
+    (like) => like?.user_id === userId,
+  ).length;
+
+  const widgetLikes = widgets.reduce((total, widget) => {
+    if (!isLikeableWidget(widget)) return total;
+    normalizeWidgetLikesData(widget);
+    return total + getWidgetLikeUserIds(widget).filter((id) => id === userId).length;
+  }, 0);
+
+  return postAndCommentLikes + widgetLikes;
+}
+
+function getProfileStats(userId, profile = null) {
+  return {
+    postsCount: posts.filter((post) => post?.userId === userId).length,
+    likesCount: getProfileLikeCount(userId),
+    joined: getProfileJoinedInfo(userId, profile),
+  };
+}
+
+function renderProfilePopupAvatar(profile) {
+  if (!profileSummaryAvatar) return;
+
+  const avatarUrl = String(profile?.avatar_url || "").trim();
+  const displayName = getProfileDisplayName(profile, "memory");
+
+  if (avatarUrl) {
+    profileSummaryAvatar.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" />`;
+    return;
+  }
+
+  profileSummaryAvatar.textContent = displayName.charAt(0).toUpperCase() || "♡";
+}
+
+function setProfilePopupEditMode(isEditing) {
+  const viewingOwnProfile = isCurrentUsersProfile(activeProfilePopupUserId);
+
+  if (profileEditSection) {
+    profileEditSection.hidden = !viewingOwnProfile || !isEditing;
+  }
+
+  if (editProfileBtn) {
+    editProfileBtn.hidden = !viewingOwnProfile || isEditing;
+  }
+
+  if (cancelProfileEditBtn) {
+    cancelProfileEditBtn.hidden = !viewingOwnProfile || !isEditing;
+  }
+
+  if (logoutBtn) {
+    logoutBtn.hidden = !viewingOwnProfile || isEditing;
+  }
+
+  if (saveProfileBtn) {
+    saveProfileBtn.hidden = !viewingOwnProfile || !isEditing;
+  }
+}
+
+function closeProfileDetailsPopup() {
+  activeProfilePopupUserId = "";
+  setProfilePopupEditMode(false);
+  if (profilePopup) {
+    profilePopup.classList.remove("open");
+  }
+}
+
+function renderProfilePopup(profile, options = {}) {
+  const resolvedProfile = profile || {};
+  const profileUserId = String(
+    resolvedProfile.id || activeProfilePopupUserId || currentProfile?.id || currentUser?.id || "",
+  );
+  const isOwnProfile = isCurrentUsersProfile(profileUserId);
+  const displayName = getProfileDisplayName(
+    resolvedProfile,
+    isOwnProfile ? "you" : "memory",
+  );
+  const profileTitleEl = document.querySelector("#profilePopup .popup-title");
+  const profileStats = getProfileStats(profileUserId, resolvedProfile);
+  const bio = String(resolvedProfile.bio || "").trim();
+
+  activeProfilePopupUserId = profileUserId;
+
+  if (profileTitleEl) {
+    profileTitleEl.textContent = isOwnProfile
+      ? "my profile ♡"
+      : `${displayName}'s profile ♡`;
+  }
+
+  renderProfilePopupAvatar(resolvedProfile);
+
+  if (profileSummaryName) {
+    profileSummaryName.textContent = displayName;
+  }
+
+  if (profileSummaryHandle) {
+    profileSummaryHandle.textContent = getProfileHandle(resolvedProfile, profileUserId);
+  }
+
+  if (profileSummaryJoined) {
+    profileSummaryJoined.textContent = profileStats.joined.summary;
+  }
+
+  if (profileSummaryBio) {
+    profileSummaryBio.textContent = bio || "no bio yet ♡";
+  }
+
+  if (profilePostsStat) {
+    profilePostsStat.textContent = String(profileStats.postsCount);
+  }
+
+  if (profileLikesStat) {
+    profileLikesStat.textContent = String(profileStats.likesCount);
+  }
+
+  if (profileJoinedStat) {
+    profileJoinedStat.textContent = profileStats.joined.value;
+  }
+
+  if (profileJoinedStatLabel) {
+    profileJoinedStatLabel.textContent = profileStats.joined.label;
+  }
+
+  if (isOwnProfile) {
+    if (nicknameInput) {
+      nicknameInput.value = String(currentProfile?.nickname || resolvedProfile.nickname || "");
+    }
+    if (bioInput) {
+      bioInput.value = String(currentProfile?.bio || resolvedProfile.bio || "");
+    }
+    if (pfpInput) {
+      pfpInput.value = "";
+    }
+  }
+
+  setProfilePopupEditMode(Boolean(options.startEditing));
+}
+
+async function openProfilePopupForUser(
+  userId,
+  fallbackProfile = null,
+  options = {},
+) {
+  const user = await getCurrentUser();
+  const resolvedUserId = String(userId || currentProfile?.id || user?.id || "").trim();
+
+  if (!resolvedUserId) {
+    showMessage("please log in first ♡");
+    return;
+  }
+
+  if (user?.id === resolvedUserId && !currentProfile) {
+    await loadProfile(user);
+  }
+
+  const resolvedProfile =
+    getKnownProfileById(resolvedUserId, fallbackProfile) ||
+    mergeProfileRecords(fallbackProfile, { id: resolvedUserId });
+
+  renderProfilePopup(resolvedProfile, options);
+  profilePopup?.classList.add("open");
+}
+
+function bindProfilePopupTrigger(element, openProfilePopup) {
+  if (!element || typeof openProfilePopup !== "function") return;
+
+  element.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void openProfilePopup();
+  });
+
+  element.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    void openProfilePopup();
+  });
+}
+
+async function fetchProfilesDirectory() {
+  const selectCandidates = [
+    "id, nickname, username, avatar_url, bio, created_at",
+    "id, nickname, username, avatar_url, created_at",
+    "id, nickname, username, avatar_url",
+    "id, nickname, username",
+  ];
+
+  let lastError = null;
+
+  for (const selectClause of selectCandidates) {
+    const result = await supabaseClient.from("profiles").select(selectClause);
+    if (!result.error) {
+      return result;
+    }
+    lastError = result.error;
+  }
+
+  return { data: null, error: lastError };
 }
 
 function getMissYouCounterLabels() {
@@ -4974,9 +5383,10 @@ function renderTimeline() {
 
   posts.forEach((post) => {
     const isOwner = currentProfile && post.userId === currentProfile.id;
+    const profileAriaLabel = `open ${post.nickname || "profile"} profile`;
     const avatarHtml = post.avatarUrl
-      ? `<img class="post-avatar${isOwner ? " post-avatar-editable" : ""}" src="${post.avatarUrl}" alt="${post.nickname || "profile"}"${isOwner ? ' role="button" tabindex="0" aria-label="change avatar" title="change avatar"' : ""} />`
-      : `<div class="post-avatar${isOwner ? " post-avatar-editable" : ""}"${isOwner ? ' role="button" tabindex="0" aria-label="change avatar" title="change avatar"' : ""}></div>`;
+      ? `<img class="post-avatar profile-trigger" src="${post.avatarUrl}" alt="${post.nickname || "profile"}" role="button" tabindex="0" aria-label="${escapeHtml(profileAriaLabel)}" title="open profile" />`
+      : `<div class="post-avatar profile-trigger" role="button" tabindex="0" aria-label="${escapeHtml(profileAriaLabel)}" title="open profile"></div>`;
 
     const postEl = document.createElement("article");
     postEl.className = "post";
@@ -4990,7 +5400,7 @@ function renderTimeline() {
         <div class="post-meta">
           ${avatarHtml}
           <div class="post-author-text">
-            <span class="post-author-name${isOwner ? " post-author-name-editable" : ""}"${isOwner ? ' role="button" tabindex="0" aria-label="edit displayed name" title="edit name"' : ""}>${post.nickname || post.author}</span>
+            <span class="post-author-name profile-trigger" role="button" tabindex="0" aria-label="${escapeHtml(profileAriaLabel)}" title="open profile">${post.nickname || post.author}</span>
             <span>${post.author}</span>
           </div>
        </div>
@@ -5044,99 +5454,15 @@ function renderTimeline() {
     const postBody = postEl.querySelector(".post-body");
     const avatarEl = postEl.querySelector(".post-avatar");
     const authorNameEl = postEl.querySelector(".post-author-name");
-
-    if (isOwner && avatarEl) {
-      const openAvatarPicker = (triggerEvent) => {
-        triggerEvent?.preventDefault?.();
-        triggerEvent?.stopPropagation?.();
-
-        const pickerInput = document.createElement("input");
-        pickerInput.type = "file";
-        pickerInput.accept = "image/*";
-
-        pickerInput.addEventListener("change", async () => {
-          const file = pickerInput.files?.[0];
-          if (!file) return;
-          await saveInlinePostAvatar(file);
-        });
-
-        pickerInput.click();
-      };
-
-      avatarEl.addEventListener("click", openAvatarPicker);
-      avatarEl.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        event.stopPropagation();
-        openAvatarPicker(event);
+    const openProfileDetails = () =>
+      openProfilePopupForUser(post.userId, {
+        id: post.userId,
+        nickname: post.nickname,
+        avatar_url: post.avatarUrl || "",
       });
-    }
 
-    if (isOwner && authorNameEl) {
-      const openInlineNameEditor = (triggerEvent) => {
-        triggerEvent?.preventDefault?.();
-        triggerEvent?.stopPropagation?.();
-        if (authorNameEl.querySelector("input")) return;
-
-        const currentName = String(currentProfile?.nickname || post.nickname || "")
-          .trim();
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "post-author-name-input";
-        input.maxLength = 60;
-        input.value = currentName;
-        input.setAttribute("aria-label", "edit displayed name");
-
-        authorNameEl.textContent = "";
-        authorNameEl.appendChild(input);
-        input.focus();
-        input.select();
-        let didFinish = false;
-
-        const finish = async (shouldSave) => {
-          if (didFinish) return;
-          didFinish = true;
-          const nextName = input.value.trim();
-          authorNameEl.textContent = currentName || post.author;
-
-          if (!shouldSave || !nextName || nextName === currentName) return;
-
-          await saveInlinePostDisplayName(nextName);
-        };
-
-        ["click", "mousedown", "pointerdown"].forEach((eventName) => {
-          input.addEventListener(eventName, (event) => {
-            event.stopPropagation();
-          });
-        });
-
-        input.addEventListener("keydown", async (event) => {
-          event.stopPropagation();
-          if (event.key === "Enter") {
-            event.preventDefault();
-            await finish(true);
-          }
-
-          if (event.key === "Escape") {
-            event.preventDefault();
-            await finish(false);
-          }
-        });
-
-        input.addEventListener("blur", (event) => {
-          event.stopPropagation();
-          finish(true);
-        });
-      };
-
-      authorNameEl.addEventListener("click", openInlineNameEditor);
-      authorNameEl.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        event.stopPropagation();
-        openInlineNameEditor(event);
-      });
-    }
+    bindProfilePopupTrigger(avatarEl, openProfileDetails);
+    bindProfilePopupTrigger(authorNameEl, openProfileDetails);
 
     postBody.addEventListener("dragenter", (event) => {
       if (!isStickerDragEvent(event)) return;
@@ -5233,6 +5559,17 @@ function isStickerDragEvent(event) {
 
 function switchStickerTab(nextTab) {
   let activeTabButton = null;
+  const nextGiphyType = nextTab === "giphy-sticker" ? "giphy-sticker" : "gif";
+  const isGiphyTab = nextTab === "gif" || nextTab === "giphy-sticker";
+
+  if (isGiphyTab && activeGiphySearchType !== nextGiphyType) {
+    activeGiphySearchType = nextGiphyType;
+    gifSearchResults = [];
+    gifSearchQuery = "";
+    if (gifSearchInput) {
+      gifSearchInput.value = "";
+    }
+  }
 
   document.querySelectorAll(".sticker-tab").forEach((button) => {
     const isActive = button.dataset.stickerTab === nextTab;
@@ -5255,19 +5592,33 @@ function switchStickerTab(nextTab) {
   }
 
   if (gifPanel) {
-    gifPanel.classList.toggle("active", nextTab === "gif");
+    gifPanel.classList.toggle("active", isGiphyTab);
+  }
+
+  if (gifSearchLabel) {
+    gifSearchLabel.textContent =
+      activeGiphySearchType === "giphy-sticker"
+        ? "search GIPHY stickers ♡"
+        : "search public gifs ♡";
+  }
+
+  if (gifSearchInput) {
+    gifSearchInput.placeholder =
+      activeGiphySearchType === "giphy-sticker"
+        ? "Search GIPHY stickers"
+        : "Search GIPHY";
   }
 
   if (nextTab === "type") {
     renderTypedStickerPreview();
   }
 
-  if (nextTab === "gif") {
+  if (isGiphyTab) {
     if (!gifSearchQuery && !gifSearchResults.length) {
       setGifSearchStatus(
         GIPHY_API_KEY
           ? ""
-          : "add your GIPHY API key in script.js to enable public search",
+          : "add your GIPHY API key in script.js to enable GIPHY search",
       );
     }
     renderGifPicker();
@@ -5344,13 +5695,19 @@ function renderEmojiPicker() {
 function renderGifPicker() {
   if (!gifPickerGrid) return;
   gifPickerGrid.innerHTML = "";
-  const recentGifStickers = getRecentGifStickers();
+  const giphyTypeLabel = getGiphyTypeLabel();
+  const giphyTypePlural = getGiphyTypePlural();
+  const recentGifStickers = getRecentGiphyItems();
   const gifItems = gifSearchResults.length
     ? gifSearchResults
     : recentGifStickers;
 
   if (!gifSearchResults.length) {
-    setGifSearchStatus(recentGifStickers.length ? "recently used gifs ♡" : "");
+    setGifSearchStatus(
+      recentGifStickers.length
+        ? `recently used ${giphyTypePlural} ♡`
+        : "",
+    );
   }
 
   gifItems.forEach((gifItem) => {
@@ -5359,7 +5716,10 @@ function renderGifPicker() {
     button.type = "button";
     button.dataset.gifUrl = gifItem.url;
     button.draggable = true;
-    button.setAttribute("aria-label", `choose ${gifItem.label} gif`);
+    button.setAttribute(
+      "aria-label",
+      `choose ${gifItem.label} ${giphyTypeLabel}`,
+    );
 
     const image = document.createElement("img");
     image.src = gifItem.url;
@@ -5425,6 +5785,8 @@ async function searchPublicGifs() {
   if (!gifSearchInput) return;
 
   const query = gifSearchInput.value.trim();
+  const giphyType = activeGiphySearchType;
+  const giphyTypePlural = getGiphyTypePlural(giphyType);
   gifSearchQuery = query;
 
   if (!query) {
@@ -5437,17 +5799,21 @@ async function searchPublicGifs() {
   if (!GIPHY_API_KEY) {
     gifSearchResults = [];
     setGifSearchStatus(
-      "add your GIPHY API key in script.js to enable public search",
+      "add your GIPHY API key in script.js to enable GIPHY search",
     );
     renderGifPicker();
     return;
   }
 
-  setGifSearchStatus(`searching for "${query}"...`);
+  setGifSearchStatus(`searching ${giphyTypePlural} for "${query}"...`);
 
   try {
+    const endpoint = getGiphySearchEndpoint(giphyType);
+    const searchUrl =
+      `${endpoint}?api_key=${encodeURIComponent(GIPHY_API_KEY)}` +
+      `&q=${escapeQueryParam(query)}&limit=12&rating=g&bundle=messaging_non_clips`;
     const response = await fetch(
-      `${GIPHY_SEARCH_ENDPOINT}?api_key=${encodeURIComponent(GIPHY_API_KEY)}&q=${escapeQueryParam(query)}&limit=12&rating=g&bundle=messaging_non_clips`,
+      searchUrl,
       {
         headers: {
           "X-Requested-With": GIPHY_CLIENT_KEY,
@@ -5460,23 +5826,26 @@ async function searchPublicGifs() {
     }
 
     const payload = await response.json();
+    if (activeGiphySearchType !== giphyType) return;
+
     gifSearchResults = (payload?.data || [])
       .map((gifItem) => ({
         label: gifItem?.title || query,
         url: getGiphyStickerUrl(gifItem),
+        type: giphyType,
       }))
       .filter((gifItem) => gifItem.url);
 
     if (gifSearchResults.length) {
-      setGifSearchStatus(`showing public gifs for "${query}"`);
+      setGifSearchStatus(`showing GIPHY ${giphyTypePlural} for "${query}"`);
     } else {
-      setGifSearchStatus(`no public gifs found for "${query}"`);
+      setGifSearchStatus(`no GIPHY ${giphyTypePlural} found for "${query}"`);
     }
     renderGifPicker();
   } catch (error) {
     console.error(error);
     gifSearchResults = [];
-    setGifSearchStatus("could not load public gifs right now");
+    setGifSearchStatus(`could not load GIPHY ${giphyTypePlural} right now`);
     renderGifPicker();
   }
 }
@@ -5535,11 +5904,18 @@ async function handleStickerDrop(event, postId) {
     const gifItem = gifSearchResults.find(
       (item) => item.url === droppedSticker,
     ) ||
+      getRecentGiphyItems(activeGiphySearchType).find(
+        (item) => item.url === droppedSticker,
+      ) ||
       getRecentGifStickers().find((item) => item.url === droppedSticker) || {
-        label: "gif sticker",
+        label:
+          activeGiphySearchType === "giphy-sticker"
+            ? "GIPHY sticker"
+            : "gif sticker",
         url: droppedSticker,
+        type: activeGiphySearchType,
       };
-    saveRecentGifSticker(gifItem);
+    saveRecentGifSticker(gifItem, gifItem.type || activeGiphySearchType);
   }
 
   activeSticker = null;
@@ -6041,15 +6417,7 @@ stickerPopup.addEventListener("click", (event) => {
 
 if (newEntryBtn) {
   newEntryBtn.addEventListener("click", () => {
-    if (!currentUser) {
-      newEntryBtn.classList.add("is-hidden");
-      return;
-    }
-
-    resetEntryPopup();
-    entryPopup.classList.add("open");
-    newEntryBtn.classList.remove("is-hidden");
-    focusEntryComposerToEnd();
+    void openNewEntryComposer();
   });
 }
 
@@ -6238,7 +6606,22 @@ const loginBtn = document.getElementById("loginBtn");
 const profileBtn = document.getElementById("profileBtn");
 const profilePopup = document.getElementById("profilePopup");
 const closeProfilePopup = document.getElementById("closeProfilePopup");
+const profileSummaryAvatar = document.getElementById("profileSummaryAvatar");
+const profileSummaryName = document.getElementById("profileSummaryName");
+const profileSummaryHandle = document.getElementById("profileSummaryHandle");
+const profileSummaryJoined = document.getElementById("profileSummaryJoined");
+const profileSummaryBio = document.getElementById("profileSummaryBio");
+const profilePostsStat = document.getElementById("profilePostsStat");
+const profileLikesStat = document.getElementById("profileLikesStat");
+const profileJoinedStat = document.getElementById("profileJoinedStat");
+const profileJoinedStatLabel = document.getElementById(
+  "profileJoinedStatLabel",
+);
+const profileEditSection = document.getElementById("profileEditSection");
+const editProfileBtn = document.getElementById("editProfileBtn");
+const cancelProfileEditBtn = document.getElementById("cancelProfileEditBtn");
 const nicknameInput = document.getElementById("nicknameInput");
+const bioInput = document.getElementById("bioInput");
 const pfpInput = document.getElementById("pfpInput");
 const saveProfileBtn = document.getElementById("saveProfileBtn");
 const messageBox = document.getElementById("messageBox");
@@ -6907,6 +7290,25 @@ function resetEntryPopup() {
   if (entryPopupLabel) entryPopupLabel.textContent = "write something ♡";
   if (saveEntryBtn) saveEntryBtn.textContent = "post";
   clearEntryComposer();
+}
+
+async function openNewEntryComposer() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    if (newEntryBtn) {
+      newEntryBtn.classList.add("is-hidden");
+    }
+    showMessage("please log in first ♡");
+    return;
+  }
+
+  resetEntryPopup();
+  entryPopup.classList.add("open");
+  if (newEntryBtn) {
+    newEntryBtn.classList.remove("is-hidden");
+  }
+  focusEntryComposerToEnd();
 }
 
 function openEntryEditor(postId) {
@@ -7684,16 +8086,28 @@ async function refreshUserData(options = {}) {
 }
 
 profileBtn.addEventListener("click", () => {
-  profilePopup.classList.add("open");
+  void openProfilePopupForUser(currentProfile?.id || currentUser?.id || "");
 });
 
 closeProfilePopup.addEventListener("click", () => {
-  profilePopup.classList.remove("open");
+  closeProfileDetailsPopup();
 });
+
+if (editProfileBtn) {
+  editProfileBtn.addEventListener("click", () => {
+    setProfilePopupEditMode(true);
+  });
+}
+
+if (cancelProfileEditBtn) {
+  cancelProfileEditBtn.addEventListener("click", () => {
+    renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
+  });
+}
 
 profilePopup.addEventListener("click", (event) => {
   if (event.target === profilePopup && !popupPointerStartedInsideCard) {
-    profilePopup.classList.remove("open");
+    closeProfileDetailsPopup();
   }
 });
 
@@ -7749,15 +8163,11 @@ async function loadProfile(user) {
   currentProfile = data;
 
   if (currentProfile) {
-    const hasCurrentProfile = knownProfiles.some(
-      (profile) => profile?.id === currentProfile.id,
-    );
-    knownProfiles = hasCurrentProfile
-      ? knownProfiles.map((profile) =>
-          profile?.id === currentProfile.id ? currentProfile : profile,
-        )
-      : [currentProfile, ...knownProfiles];
+    upsertKnownProfile(currentProfile);
     nicknameInput.value = currentProfile.nickname || "";
+    if (bioInput) {
+      bioInput.value = currentProfile.bio || "";
+    }
   }
 
   return data;
@@ -8025,12 +8435,36 @@ async function updateCurrentUserProfile(profileUpdates = {}) {
     ...profileUpdates,
   };
 
-  const { data: savedProfile, error } = await supabaseClient
+  let { data: savedProfile, error } = await supabaseClient
     .from("profiles")
     .update(nextProfilePayload)
     .eq("id", user.id)
     .select()
     .single();
+
+  if (
+    error &&
+    Object.prototype.hasOwnProperty.call(nextProfilePayload, "bio") &&
+    String(error.message || "").toLowerCase().includes("bio")
+  ) {
+    const { bio, ...fallbackPayload } = nextProfilePayload;
+    const fallbackResult = await supabaseClient
+      .from("profiles")
+      .update(fallbackPayload)
+      .eq("id", user.id)
+      .select()
+      .single();
+
+    savedProfile = fallbackResult.data;
+    error = fallbackResult.error;
+
+    if (!error && savedProfile) {
+      savedProfile = {
+        ...savedProfile,
+        bio: String(nextProfilePayload.bio || ""),
+      };
+    }
+  }
 
   if (error) {
     console.error(error);
@@ -8040,14 +8474,10 @@ async function updateCurrentUserProfile(profileUpdates = {}) {
 
   currentProfile = savedProfile;
   nicknameInput.value = currentProfile.nickname || "";
-  const hasCurrentProfile = knownProfiles.some(
-    (profile) => profile?.id === currentProfile.id,
-  );
-  knownProfiles = hasCurrentProfile
-    ? knownProfiles.map((profile) =>
-        profile?.id === currentProfile.id ? currentProfile : profile,
-      )
-    : [currentProfile, ...knownProfiles];
+  if (bioInput) {
+    bioInput.value = currentProfile.bio || "";
+  }
+  upsertKnownProfile(currentProfile);
 
   return savedProfile;
 }
@@ -8072,6 +8502,7 @@ async function uploadProfileAvatarFile(userId, file) {
 
 async function saveProfile() {
   const nickname = nicknameInput.value.trim();
+  const bio = String(bioInput?.value || "").trim();
   const file = pfpInput.files[0];
 
   const user = await getCurrentUser();
@@ -8102,6 +8533,7 @@ async function saveProfile() {
     username: currentProfile?.username || usernameBase,
     nickname: finalNickname,
     avatar_url: avatarUrl,
+    bio,
   });
 
   if (!savedProfile) {
@@ -8119,8 +8551,8 @@ async function saveProfile() {
   );
 
   renderTimeline();
-  profilePopup.classList.remove("open");
   pfpInput.value = "";
+  renderProfilePopup(savedProfile);
 
   showMessage("updated! <3");
 }
@@ -8298,7 +8730,7 @@ async function loadPosts(options = {}) {
     supabaseClient
       .from("likes")
       .select("id, post_id, comment_id, user_id, created_at"),
-    supabaseClient.from("profiles").select("id, nickname, username"),
+    fetchProfilesDirectory(),
   ]);
 
   if (postsError) {
@@ -8325,7 +8757,7 @@ async function loadPosts(options = {}) {
     return;
   }
 
-  knownProfiles = profilesData || [];
+  replaceKnownProfiles(profilesData || []);
 
   let { data: likesData, error: likesError } = likesResult;
 
@@ -8451,6 +8883,10 @@ async function loadPosts(options = {}) {
     profilesData: profilesData || [],
     render,
   });
+
+  if (profilePopup?.classList.contains("open") && activeProfilePopupUserId) {
+    renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
+  }
 
   if (render) {
     renderTimeline();
@@ -8821,7 +9257,7 @@ function renderCommentsList(postId) {
         .map((reply) => {
           return `
         <div class="comment-reply" data-comment-id="${reply.id}">
-          <div class="comment-name">${reply.nickname || "memory"}</div>
+          <div class="comment-name profile-trigger" role="button" tabindex="0" data-comment-profile-id="${reply.userId}">${reply.nickname || "memory"}</div>
           <div class="comment-text" data-comment-text-id="${reply.id}"></div>
           <div class="comment-link-preview-list link-preview-list" data-comment-preview-id="${reply.id}" hidden></div>
 
@@ -8846,7 +9282,7 @@ function renderCommentsList(postId) {
 
       return `
       <div class="comment-item" data-comment-id="${comment.id}">
-        <div class="comment-name">${comment.nickname || "memory"}</div>
+        <div class="comment-name profile-trigger" role="button" tabindex="0" data-comment-profile-id="${comment.userId}">${comment.nickname || "memory"}</div>
         <div class="comment-text" data-comment-text-id="${comment.id}"></div>
         <div class="comment-link-preview-list link-preview-list" data-comment-preview-id="${comment.id}" hidden></div>
 
@@ -8927,6 +9363,17 @@ function renderCommentsList(postId) {
       await deleteComment(btn.dataset.commentId);
     });
   });
+
+  commentsList.querySelectorAll("[data-comment-profile-id]").forEach((nameEl) => {
+    const profileId = nameEl.getAttribute("data-comment-profile-id") || "";
+    const fallbackProfile = {
+      id: profileId,
+      nickname: nameEl.textContent?.trim() || "memory",
+    };
+    bindProfilePopupTrigger(nameEl, () =>
+      openProfilePopupForUser(profileId, fallbackProfile),
+    );
+  });
 }
 
 async function saveComment() {
@@ -9006,12 +9453,15 @@ async function logoutUser() {
   currentProfile = null;
   knownProfiles = [];
   setCurrentUser(null);
-  profilePopup.classList.remove("open");
+  closeProfileDetailsPopup();
   authPopup.classList.add("open");
 
   emailInput.value = "";
   passwordInput.value = "";
   nicknameInput.value = "";
+  if (bioInput) {
+    bioInput.value = "";
+  }
   pfpInput.value = "";
 
   placedStickers = [];
@@ -9039,6 +9489,7 @@ async function checkSession() {
     currentProfile = null;
     knownProfiles = [];
     setCurrentUser(null);
+    closeProfileDetailsPopup();
     authPopup.classList.add("open");
     posts = [];
     placedStickers = [];
