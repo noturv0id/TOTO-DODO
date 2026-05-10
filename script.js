@@ -2,8 +2,7 @@
 const SUPABASE_ANON_KEY = "sb_publishable_oyurIPBCFJuFsjN0L6LyIg_PaXihCYn";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const ANNIVERSARY_WRAPPER_BASE_URL =
-  "https://noturv0id.github.io/our-memories/anniversary-wrapper.html?v=20260502-3";
+const ANNIVERSARY_WRAPPER_VERSION = "20260511-1";
 const STICKER_MIME_TYPE = "application/x-our-memories-sticker";
 const ENTRY_IMAGE_BUCKET = "profile-pictures";
 const GIPHY_API_KEY = "34udc7WiSDjXKrRbb9UgwcD2piNXT3uO";
@@ -19,7 +18,7 @@ const PROFILE_ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 const PROFILE_PRESENCE_HEARTBEAT_MS = 60 * 1000;
 
 function getAnniversaryWrapperUrl() {
-  return ANNIVERSARY_WRAPPER_BASE_URL;
+  return `./anniversary-wrapper.html?v=${ANNIVERSARY_WRAPPER_VERSION}`;
 }
 const RECENT_GIF_STORAGE_KEY = "recentGifStickers";
 const RECENT_GIPHY_STICKER_STORAGE_KEY = "recentGiphyStickers";
@@ -114,6 +113,15 @@ const sparkleDecor = Array.from({ length: 42 }, (_, index) => ({
   top: `${((index * 37) % 96) + 1}%`,
   left: `${((index * 53) % 96) + 1}%`,
   size: `${30 + (index % 4)}px`,
+  delay: `${(index % 14) * 0.32}s`,
+  duration: `${3.4 + (index % 6) * 0.45}s`,
+}));
+const fadingEmojiIcons = ["♡", "ᰔ", "✧", "☾", "☁", "🎀", "🌸", "💌", "🫧"];
+const fadingEmojiDecor = Array.from({ length: 34 }, (_, index) => ({
+  icon: fadingEmojiIcons[index % fadingEmojiIcons.length],
+  top: `${((index * 37 + 19) % 96) + 1}%`,
+  left: `${((index * 53 + 31) % 96) + 1}%`,
+  size: `${18 + (index % 4) * 2}px`,
   delay: `${(index % 14) * 0.32}s`,
   duration: `${3.4 + (index % 6) * 0.45}s`,
 }));
@@ -669,6 +677,9 @@ let currentUser = null;
 let entryQuill = null;
 const pendingPostLikeIds = new Set();
 const pendingWidgetLikeIds = new Set();
+const pendingLocalWidgetUpdates = new Map();
+const pendingLocalProfileFetches = new Map();
+const recentLocalRealtimeTables = new Map();
 
 const floatingDecorEl = document.getElementById("floatingDecor");
 const leftZone = document.getElementById("leftZone");
@@ -2042,6 +2053,18 @@ function renderDecor() {
     fragment.appendChild(node);
   });
 
+  fadingEmojiDecor.forEach((item) => {
+    const node = document.createElement("div");
+    node.className = "decor sparkle-decor fading-emoji-decor";
+    node.textContent = item.icon;
+    node.style.top = item.top;
+    node.style.left = item.left;
+    node.style.fontSize = item.size;
+    node.style.animationDelay = item.delay;
+    node.style.animationDuration = item.duration;
+    fragment.appendChild(node);
+  });
+
   floatingDecorEl.appendChild(fragment);
 }
 
@@ -2921,8 +2944,8 @@ function getKnownProfileById(userId, fallbackProfile = null) {
   const matchingKnownProfile = knownProfiles.find((profile) => profile?.id === userId);
   const matchingCurrentProfile = currentProfile?.id === userId ? currentProfile : null;
   const mergedProfile = mergeProfileRecords(
-    mergeProfileRecords(matchingKnownProfile, matchingCurrentProfile),
-    fallbackProfile,
+    mergeProfileRecords(fallbackProfile, matchingKnownProfile),
+    matchingCurrentProfile,
   );
 
   return mergedProfile?.id ? mergedProfile : null;
@@ -3416,6 +3439,8 @@ async function openProfilePopupForUser(
 
   renderProfilePopup(resolvedProfile, options);
   profilePopup?.classList.add("open");
+
+  void refreshProfilePopupFromSupabase(resolvedUserId);
 }
 
 function bindProfilePopupTrigger(element, openProfilePopup) {
@@ -3457,6 +3482,85 @@ async function fetchProfilesDirectory() {
   }
 
   return { data: null, error: lastError };
+}
+
+async function fetchProfileById(userId) {
+  const normalizedUserId = String(userId || "").trim();
+  if (!normalizedUserId) {
+    return { data: null, error: null };
+  }
+
+  const selectCandidates = [
+    "id, nickname, username, avatar_url, bio, last_seen_at, created_at",
+    "id, nickname, username, avatar_url, bio, created_at",
+    "id, nickname, username, avatar_url, last_seen_at, created_at",
+    "id, nickname, username, avatar_url, created_at",
+    "id, nickname, username, avatar_url, last_seen_at",
+    "id, nickname, username, avatar_url",
+    "id, nickname, username",
+  ];
+  let lastError = null;
+
+  for (const selectClause of selectCandidates) {
+    const result = await supabaseClient
+      .from("profiles")
+      .select(selectClause)
+      .eq("id", normalizedUserId)
+      .maybeSingle();
+
+    if (!result.error) {
+      return result;
+    }
+
+    lastError = result.error;
+  }
+
+  return { data: null, error: lastError };
+}
+
+async function refreshProfilePopupFromSupabase(userId) {
+  const normalizedUserId = String(userId || "").trim();
+  if (!normalizedUserId) return;
+
+  const existingFetch = pendingLocalProfileFetches.get(normalizedUserId);
+  if (existingFetch) {
+    await existingFetch;
+    return;
+  }
+
+  const fetchPromise = (async () => {
+    const { data, error } = await fetchProfileById(normalizedUserId);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (!data?.id) return;
+
+    upsertKnownProfile(data);
+
+    if (currentProfile?.id === data.id) {
+      currentProfile = mergeProfileRecords(currentProfile, data);
+    }
+
+    applyProfileToTimeline(data);
+
+    if (
+      profilePopup?.classList.contains("open") &&
+      activeProfilePopupUserId === normalizedUserId
+    ) {
+      renderProfilePopup(getKnownProfileById(normalizedUserId));
+    }
+  })();
+
+  pendingLocalProfileFetches.set(normalizedUserId, fetchPromise);
+
+  try {
+    await fetchPromise;
+  } finally {
+    pendingLocalProfileFetches.delete(normalizedUserId);
+  }
 }
 
 function getMissYouCounterLabels() {
@@ -3724,6 +3828,47 @@ function refreshMissYouWidgetDom(widget) {
   });
 }
 
+function refreshWidgetContentDom(widget) {
+  if (!widget?.id) return;
+
+  const matchingWidgets = Array.from(
+    document.querySelectorAll(".widget"),
+  ).filter((widgetEl) => {
+    const renderedId =
+      widgetEl.dataset.widgetSourceId || widgetEl.dataset.widgetId || "";
+    return renderedId === widget.id;
+  });
+
+  if (!matchingWidgets.length) return;
+
+  matchingWidgets.forEach((widgetEl) => {
+    const content = widgetEl.querySelector(".widget-content");
+    if (!content) return;
+
+    content.innerHTML = getWidgetContent(widget);
+    upgradeLegacyAnniversaryLinks(content);
+    bindMissYouWidgetButtons(content);
+    bindEntryPreviewWidgetButtons(content);
+
+    content.querySelectorAll(".widget-wish-toggle").forEach((btn) => {
+      ["mousedown", "pointerdown"].forEach((eventName) => {
+        btn.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+      });
+
+      btn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await toggleWidgetWishlistItem(widget.id, btn.dataset.widgetWishId);
+      });
+    });
+  });
+
+  syncWidgetLikeButton(widget.id);
+}
+
 async function queueMissYouWidgetSave() {
   if (missYouSaveInFlight) {
     missYouSaveQueued = true;
@@ -3742,6 +3887,7 @@ async function queueMissYouWidgetSave() {
         recordHistory: false,
         suppressErrorMessage: true,
         notifyUpdate: true,
+        preservePosition: true,
       });
     } while (missYouSaveQueued);
   } finally {
@@ -3791,7 +3937,10 @@ async function refreshWeatherWidget(options = {}) {
       error: "",
     };
 
-    await saveWidgetToSupabase(widget, { recordHistory: false });
+    await saveWidgetToSupabase(widget, {
+      recordHistory: false,
+      preservePosition: true,
+    });
   } catch (error) {
     console.error(error);
     widget.data = {
@@ -4845,6 +4994,8 @@ function openWidgetEditor(widgetId) {
     return false;
   });
 
+  widgetPopup?.classList.toggle("love-widget-popup", normalizedId === "love");
+
   if (!widget) return;
 
   editingWidgetId = normalizedId;
@@ -4855,7 +5006,7 @@ function openWidgetEditor(widgetId) {
     setHeaderWidgetSaveVisibility(false);
 
     widgetEditorFields.innerHTML = `
-      <div class="small-note">i hope i get forever with you, sweetie ᰔᩚ</div>
+      <div class="small-note love-note-text">i hope i get forever with you, sweetie ᰔᩚ</div>
     `;
   } else if (normalizedId === "song") {
     normalizeSongWidget(widget);
@@ -4901,7 +5052,7 @@ function openWidgetEditor(widgetId) {
       </div>
       ${getPhotoWidgetCommentSectionMarkup(widget, {
         prefix: songCommentPrefix,
-        title: "comments ♡",
+        title: "comments",
       })}
     `;
 
@@ -4961,7 +5112,7 @@ function openWidgetEditor(widgetId) {
 
     bindPhotoWidgetCommentSection(widget, {
       prefix: songCommentPrefix,
-      title: "comments ♡",
+      title: "comments",
     });
   } else if (normalizedId === "note") {
     normalizeWidgetLikesData(widget);
@@ -4971,7 +5122,7 @@ function openWidgetEditor(widgetId) {
     setWidgetPopupLikeButton(widget);
 
     widgetEditorFields.innerHTML = `
-      <label class="popup-label">smol note</label>
+      <label class="popup-label">write something ♡</label>
       <textarea class="popup-input" id="widgetFieldText" rows="5" style="resize: vertical; min-height: 110px;">${widget.data?.text || ""}</textarea>
     `;
   } else if (normalizedId === "dates") {
@@ -5037,7 +5188,10 @@ function openWidgetEditor(widgetId) {
           date,
         });
 
-        await saveWidgetToSupabase(widget, { notifyUpdate: true });
+        await saveWidgetToSupabase(widget, {
+          notifyUpdate: true,
+          preservePosition: true,
+        });
         renderWidgets();
         openWidgetEditor("dates");
         showMessage("date added ♡");
@@ -5052,7 +5206,10 @@ function openWidgetEditor(widgetId) {
           (item) => item.id !== dateId,
         );
 
-        await saveWidgetToSupabase(widget, { notifyUpdate: true });
+        await saveWidgetToSupabase(widget, {
+          notifyUpdate: true,
+          preservePosition: true,
+        });
         renderWidgets();
         openWidgetEditor("dates");
         showMessage("date deleted ♡");
@@ -5122,8 +5279,11 @@ function openWidgetEditor(widgetId) {
           order: getNextWishlistOrder(widget.data.items),
         });
 
-        await saveWidgetToSupabase(widget, { notifyUpdate: true });
-        renderWidgets();
+        await saveWidgetToSupabase(widget, {
+          notifyUpdate: true,
+          preservePosition: true,
+        });
+        refreshWidgetContentDom(widget);
         openWidgetEditor("wishlist");
         showMessage("added to wishlist ♡");
       });
@@ -5137,8 +5297,11 @@ function openWidgetEditor(widgetId) {
           (item) => item.id !== wishId,
         );
 
-        await saveWidgetToSupabase(widget, { notifyUpdate: true });
-        renderWidgets();
+        await saveWidgetToSupabase(widget, {
+          notifyUpdate: true,
+          preservePosition: true,
+        });
+        refreshWidgetContentDom(widget);
         openWidgetEditor("wishlist");
         showMessage("wishlist item deleted ♡");
       });
@@ -5175,8 +5338,11 @@ function openWidgetEditor(widgetId) {
           animateWishlistEditorRows(list, previousRects);
         }
 
-        await saveWidgetToSupabase(widget, { notifyUpdate: true });
-        renderWidgets();
+        await saveWidgetToSupabase(widget, {
+          notifyUpdate: true,
+          preservePosition: true,
+        });
+        refreshWidgetContentDom(widget);
         showMessage("wishlist updated ♡");
       });
     });
@@ -5189,8 +5355,11 @@ function openWidgetEditor(widgetId) {
           item.id === wishId ? { ...item, done: !item.done } : item,
         );
 
-        await saveWidgetToSupabase(widget, { notifyUpdate: true });
-        renderWidgets();
+        await saveWidgetToSupabase(widget, {
+          notifyUpdate: true,
+          preservePosition: true,
+        });
+        refreshWidgetContentDom(widget);
         openWidgetEditor("wishlist");
         showMessage("wishlist updated ♡");
       });
@@ -5351,13 +5520,13 @@ function openWidgetEditor(widgetId) {
         })}
         ${getPhotoWidgetCommentSectionMarkup(widget, {
           prefix: photoCommentPrefix,
-          title: "little notes ♡",
+          title: "comments",
         })}
       `;
 
       bindPhotoWidgetCommentSection(widget, {
         prefix: photoCommentPrefix,
-        title: "little notes ♡",
+        title: "comments",
       });
       widgetPopup.classList.add("open");
       return;
@@ -5428,7 +5597,7 @@ function openWidgetEditor(widgetId) {
       </div>
       ${getPhotoWidgetCommentSectionMarkup(widget, {
         prefix: photoCommentPrefix,
-        title: "little notes ♡",
+        title: "comments",
       })}
     `;
 
@@ -5599,7 +5768,7 @@ function openWidgetEditor(widgetId) {
 
     bindPhotoWidgetCommentSection(widget, {
       prefix: photoCommentPrefix,
-      title: "little notes ♡",
+      title: "comments",
     });
   } else {
     widgetPopupTitle.textContent = widget.title;
@@ -5653,7 +5822,9 @@ async function saveWidgetChanges() {
     try {
       const latestSavedRow = await fetchLatestWidgetRow(widget.id);
       if (latestSavedRow) {
-        mergeWidgetFromSavedRow(widget, latestSavedRow);
+        mergeWidgetFromSavedRow(widget, latestSavedRow, {
+          preservePosition: true,
+        });
       }
       normalizeWidgetLikesData(widget);
       beforeLikeContentSignature = getWidgetLikeContentSignature(widget);
@@ -5843,7 +6014,10 @@ async function saveWidgetChanges() {
     return;
   }
 
-  await saveWidgetToSupabase(widget, { notifyUpdate: true });
+  await saveWidgetToSupabase(widget, {
+    notifyUpdate: true,
+    preservePosition: true,
+  });
   renderWidgets();
   widgetPopup.classList.remove("open");
   setWidgetPopupLikeButton(null);
@@ -5860,6 +6034,7 @@ async function saveWidgetToSupabase(widget, options = {}) {
     recordHistory = true,
     suppressErrorMessage = false,
     notifyUpdate = false,
+    preservePosition = false,
   } = options;
   if (notifyUpdate) {
     markWidgetContentUpdated(widget);
@@ -5872,12 +6047,22 @@ async function saveWidgetToSupabase(widget, options = {}) {
   const payload = {
     title: widget.title,
     side: widget.side,
-    x: Math.round(widget.x),
-    y: Math.round(widget.y),
     data: widget.data || null,
     content: widget.content || null,
     updated_at: new Date().toISOString(),
   };
+
+  if (!preservePosition) {
+    payload.x = Math.round(widget.x);
+    payload.y = Math.round(widget.y);
+  }
+
+  pendingLocalWidgetUpdates.set(widget.id, payload.updated_at);
+  window.setTimeout(() => {
+    if (pendingLocalWidgetUpdates.get(widget.id) === payload.updated_at) {
+      pendingLocalWidgetUpdates.delete(widget.id);
+    }
+  }, 7000);
 
   const { data: updatedRows, error: updateError } = await supabaseClient
     .from("widgets")
@@ -5897,6 +6082,8 @@ async function saveWidgetToSupabase(widget, options = {}) {
     const { error: insertError } = await supabaseClient.from("widgets").insert({
       id: widget.id,
       ...payload,
+      x: Math.round(widget.x),
+      y: Math.round(widget.y),
     });
 
     if (insertError) {
@@ -5931,6 +6118,7 @@ async function toggleWidgetWishlistItem(widgetId, wishId) {
 
   if (!widget?.data?.items?.length) return;
 
+  const previousItems = getWishlistItemsInDisplayOrder(widget.data.items);
   widget.data.items = getWishlistItemsInDisplayOrder(widget.data.items).map(
     (item, index) => ({
       ...item,
@@ -5939,8 +6127,18 @@ async function toggleWidgetWishlistItem(widgetId, wishId) {
     }),
   );
 
-  await saveWidgetToSupabase(widget, { notifyUpdate: true });
-  renderWidgets();
+  refreshWidgetContentDom(widget);
+
+  const saved = await saveWidgetToSupabase(widget, {
+    notifyUpdate: true,
+    preservePosition: true,
+  });
+  if (!saved) {
+    widget.data.items = previousItems;
+    refreshWidgetContentDom(widget);
+    showMessage("could not save wishlist update ♡");
+    return;
+  }
   if (
     widgetPopup?.classList.contains("open") &&
     editingWidgetId === "wishlist"
@@ -5975,6 +6173,190 @@ function syncPostLikeButton(postId) {
   btn.classList.toggle("is-pending", pendingPostLikeIds.has(postId));
   btn.setAttribute("aria-label", post.likedByMe ? "liked post" : "like post");
   btn.setAttribute("aria-pressed", String(Boolean(post.likedByMe)));
+}
+
+function getPostCommentCount(post) {
+  return (post?.comments || []).reduce(
+    (total, comment) => total + 1 + (comment.replies || []).length,
+    0,
+  );
+}
+
+function syncPostCommentButton(postId) {
+  const post = posts.find((item) => item.id === postId);
+  const countEl = document.querySelector(
+    `.comments-btn[data-post-id="${postId}"] .post-btn-count`,
+  );
+
+  if (!post || !countEl) return;
+
+  countEl.textContent = `(${getPostCommentCount(post)})`;
+}
+
+function getPostCommentById(post, commentId) {
+  if (!post) return null;
+
+  for (const comment of post.comments || []) {
+    if (comment.id === commentId) return comment;
+    const matchingReply = (comment.replies || []).find(
+      (reply) => reply.id === commentId,
+    );
+    if (matchingReply) return matchingReply;
+  }
+
+  return null;
+}
+
+function syncCommentLikeButton(commentId) {
+  const post = posts.find((item) => item.id === currentCommentsPostId);
+  const comment = getPostCommentById(post, commentId);
+  const button = commentsList?.querySelector(
+    `.comment-like-btn[data-comment-id="${commentId}"]`,
+  );
+
+  if (!comment || !button) return;
+
+  button.textContent = `${comment.likedByMe ? "🩷 liked" : "♡ like"} (${comment.likesCount || 0})`;
+}
+
+function addCommentToPost(postId, comment) {
+  const post = posts.find((item) => item.id === postId);
+  if (!post || !comment) return false;
+
+  post.comments = Array.isArray(post.comments) ? post.comments : [];
+
+  if (comment.parent_comment_id) {
+    const parent = post.comments.find(
+      (item) => item.id === comment.parent_comment_id,
+    );
+
+    if (!parent) return false;
+
+    parent.replies = Array.isArray(parent.replies) ? parent.replies : [];
+    parent.replies.push(comment);
+  } else {
+    post.comments.push({
+      ...comment,
+      replies: Array.isArray(comment.replies) ? comment.replies : [],
+    });
+  }
+
+  return true;
+}
+
+function removeCommentFromPost(postId, commentId) {
+  const post = posts.find((item) => item.id === postId);
+  if (!post?.comments) return null;
+
+  const topLevelIndex = post.comments.findIndex(
+    (comment) => comment.id === commentId,
+  );
+
+  if (topLevelIndex !== -1) {
+    const [removedComment] = post.comments.splice(topLevelIndex, 1);
+    return {
+      removedComment,
+      restore() {
+        post.comments.splice(topLevelIndex, 0, removedComment);
+      },
+    };
+  }
+
+  for (const comment of post.comments) {
+    const replies = comment.replies || [];
+    const replyIndex = replies.findIndex((reply) => reply.id === commentId);
+
+    if (replyIndex === -1) continue;
+
+    const [removedReply] = replies.splice(replyIndex, 1);
+    return {
+      removedComment: removedReply,
+      restore() {
+        replies.splice(replyIndex, 0, removedReply);
+      },
+    };
+  }
+
+  return null;
+}
+
+function updateLocalCommentId(postId, temporaryId, savedComment) {
+  const post = posts.find((item) => item.id === postId);
+  const comment = getPostCommentById(post, temporaryId);
+  if (!comment || !savedComment?.id) return;
+
+  comment.id = savedComment.id;
+  comment.created_at = savedComment.created_at || comment.created_at;
+}
+
+function applyProfileToTimeline(profile) {
+  if (!profile?.id) return;
+
+  const displayName =
+    profile.nickname || profile.username || "memory";
+  const avatarUrl = profile.avatar_url || "";
+
+  posts = posts.map((post) =>
+    post.userId === profile.id
+      ? {
+          ...post,
+          nickname: displayName,
+          avatarUrl,
+        }
+      : post,
+  );
+
+  document
+    .querySelectorAll(`[data-post-id]`)
+    .forEach((postEl) => {
+      const post = posts.find((item) => item.id === postEl.dataset.postId);
+      if (!post || post.userId !== profile.id) return;
+
+      const authorName = postEl.querySelector(".post-author-name");
+      if (authorName) {
+        authorName.textContent = displayName;
+      }
+
+      const avatar = postEl.querySelector(".post-avatar");
+      if (!avatar) return;
+
+      const profileAriaLabel = `open ${displayName || "profile"} profile`;
+      avatar.setAttribute("aria-label", profileAriaLabel);
+      avatar.setAttribute("title", "open profile");
+
+      if (avatarUrl && avatar.tagName === "IMG") {
+        avatar.src = avatarUrl;
+        avatar.alt = displayName || "profile";
+      }
+    });
+}
+
+function syncPostContent(postId) {
+  const post = posts.find((item) => item.id === postId);
+  const postEl = document.querySelector(`[data-post-id="${postId}"]`);
+  if (!post || !postEl) return;
+
+  const textEl = postEl.querySelector(".post-text");
+  const previewEl = postEl.querySelector(".link-preview-list");
+  if (!textEl) return;
+
+  textEl.innerHTML = getPostDisplayHtml(post.text);
+  textEl.querySelectorAll("a").forEach((link) => {
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+  });
+  renderLinkPreviews(textEl, previewEl);
+
+  const editedBadge = postEl.querySelector(".post-edited-badge");
+  if (post.isEdited && !editedBadge) {
+    const header = postEl.querySelector(".post-header");
+    header?.insertAdjacentHTML(
+      "beforeend",
+      `<span class="post-edited-badge">edited</span>`,
+    );
+  } else if (!post.isEdited && editedBadge) {
+    editedBadge.remove();
+  }
 }
 
 function renderTimeline() {
@@ -6035,7 +6417,7 @@ function renderTimeline() {
           >
             <span class="post-btn-icon" aria-hidden="true">💬</span>
             <span class="post-btn-label">comments</span>
-            <span class="post-btn-count">(${post.comments?.length || 0})</span>
+            <span class="post-btn-count">(${getPostCommentCount(post)})</span>
           </button>
           <button
             class="post-btn stickers-btn"
@@ -6489,18 +6871,41 @@ async function handleStickerDrop(event, postId) {
     ? Math.max(16, (activeStickerSize || DEFAULT_GIF_STICKER_SIZE) / 2)
     : 16;
   const { x, y } = getStickerPositionFromPointer(event, body, stickerRadius);
-
-  const { error } = await supabaseClient.from("post_stickers").insert({
-    post_id: postId,
-    user_id: user.id,
-    emoji: droppedSticker,
+  const temporaryStickerId = `local-sticker-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+  const optimisticSticker = {
+    id: temporaryStickerId,
+    postId,
+    userId: user.id,
+    sticker: droppedSticker,
     x,
     y,
-  });
+  };
+
+  placedStickers.push(optimisticSticker);
+  renderPlacedStickers();
+
+  const { data: savedSticker, error } = await supabaseClient
+    .from("post_stickers")
+    .insert({
+      post_id: postId,
+      user_id: user.id,
+      emoji: droppedSticker,
+      x,
+      y,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     console.error("POST STICKER INSERT ERROR:", error);
     showMessage(error.message);
+    placedStickers = placedStickers.filter(
+      (item) => item.id !== temporaryStickerId,
+    );
+    clearPlacedGifSize(temporaryStickerId);
+    renderPlacedStickers();
     return;
   }
 
@@ -6525,27 +6930,23 @@ async function handleStickerDrop(event, postId) {
   activeSticker = null;
   document.body.classList.remove("sticker-dragging");
   showMessage("sticker placed ♡");
-  await loadPlacedStickers();
 
-  if (isGifSticker(droppedSticker)) {
-    const insertedSticker = [...placedStickers]
-      .reverse()
-      .find(
-        (item) =>
-          item.postId === postId &&
-          item.userId === user.id &&
-          item.sticker === droppedSticker &&
-          item.x === x &&
-          item.y === y,
-      );
-
-    if (insertedSticker) {
-      savePlacedGifSize(
-        insertedSticker.id,
-        activeStickerSize || DEFAULT_GIF_STICKER_SIZE,
-      );
-      renderPlacedStickers();
+  if (savedSticker?.id) {
+    markLocalRealtimeTable("post_stickers");
+    const localSticker = placedStickers.find(
+      (item) => item.id === temporaryStickerId,
+    );
+    if (localSticker) {
+      localSticker.id = savedSticker.id;
     }
+
+    if (isGifSticker(droppedSticker)) {
+      const gifSize = activeStickerSize || DEFAULT_GIF_STICKER_SIZE;
+      clearPlacedGifSize(temporaryStickerId);
+      savePlacedGifSize(savedSticker.id, gifSize);
+    }
+
+    renderPlacedStickers();
   }
 
   activeStickerSize = null;
@@ -7093,6 +7494,7 @@ deleteEntryPopup?.addEventListener("click", (event) => {
 
 closeWidgetPopup.addEventListener("click", () => {
   widgetPopup.classList.remove("open");
+  widgetPopup.classList.remove("love-widget-popup");
   widgetPopupCard?.classList.remove("photo-history-popup-card");
   saveWidgetBtn.style.display = "inline-flex";
   setHeaderWidgetSaveVisibility(false);
@@ -7106,6 +7508,7 @@ closeWidgetPopup.addEventListener("click", () => {
 widgetPopup.addEventListener("click", (event) => {
   if (event.target === widgetPopup && !popupPointerStartedInsideCard) {
     widgetPopup.classList.remove("open");
+    widgetPopup.classList.remove("love-widget-popup");
     widgetPopupCard?.classList.remove("photo-history-popup-card");
     saveWidgetBtn.style.display = "inline-flex";
     setHeaderWidgetSaveVisibility(false);
@@ -7810,7 +8213,7 @@ function getWidgetCommentPreviewSnapshot(widget) {
 function getPhotoWidgetCommentSectionMarkup(widget, options = {}) {
   const {
     prefix = `photo-widget-comments-${widget?.id || "widget"}`,
-    title = "little notes ♡",
+    title = "comments",
     includeInput = true,
   } = options;
   const comments = getPhotoWidgetComments(widget);
@@ -7858,7 +8261,7 @@ function getPhotoWidgetCommentSectionMarkup(widget, options = {}) {
 function renderPhotoWidgetCommentsSection(widget, options = {}) {
   const {
     prefix = `photo-widget-comments-${widget?.id || "widget"}`,
-    title = "little notes ♡",
+    title = "comments",
   } = options;
   const ids = getPhotoWidgetCommentSectionIds(prefix);
   const listEl = document.getElementById(ids.listId);
@@ -8031,10 +8434,11 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
   }
 
   normalizePhotoWidgetComments(widget);
+  const previousComments = getPhotoWidgetComments(widget);
   widget.data = {
     ...(widget.data && typeof widget.data === "object" ? widget.data : {}),
     comments: [
-      ...getPhotoWidgetComments(widget),
+      ...previousComments,
       {
         id: createPhotoWidgetCommentId(),
         userId: user.id,
@@ -8046,18 +8450,26 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
     ].slice(-60),
   };
 
-  const saved = await saveWidgetToSupabase(widget, {
-    recordHistory: false,
-    notifyUpdate: false,
-    suppressErrorMessage: false,
-  });
-
-  if (!saved) return;
-
   if (input) {
     input.value = "";
   }
   renderPhotoWidgetCommentsSection(widget, options);
+
+  const saved = await saveWidgetToSupabase(widget, {
+    recordHistory: false,
+    notifyUpdate: false,
+    suppressErrorMessage: false,
+    preservePosition: true,
+  });
+
+  if (!saved) {
+    widget.data.comments = previousComments;
+    if (input) {
+      input.value = content;
+    }
+    renderPhotoWidgetCommentsSection(widget, options);
+    return;
+  }
   showMessage("comment posted! ♡");
 }
 
@@ -8075,22 +8487,28 @@ async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
     row.style.transform = "translateY(6px) scale(0.98)";
   }
 
+  const previousComments = getPhotoWidgetComments(widget);
   widget.data = {
     ...(widget.data && typeof widget.data === "object" ? widget.data : {}),
-    comments: getPhotoWidgetComments(widget).filter(
+    comments: previousComments.filter(
       (comment) => comment.id !== normalizedCommentId,
     ),
   };
+  renderPhotoWidgetCommentsSection(widget, options);
 
   const saved = await saveWidgetToSupabase(widget, {
     recordHistory: false,
     notifyUpdate: false,
     suppressErrorMessage: false,
+    preservePosition: true,
   });
 
-  if (!saved) return;
+  if (!saved) {
+    widget.data.comments = previousComments;
+    renderPhotoWidgetCommentsSection(widget, options);
+    return;
+  }
 
-  renderPhotoWidgetCommentsSection(widget, options);
   showMessage("comment deleted ♡");
 }
 
@@ -8185,6 +8603,7 @@ function groupPhotoHistoryEntries(entries) {
 }
 
 function renderPhotoHistoryPopup(widget) {
+  widgetPopup?.classList.remove("love-widget-popup");
   widgetPopupCard?.classList.add("photo-history-popup-card");
   const photoHistoryEntries = getCombinedPhotoHistoryEntries();
   widgetPopupTitle.textContent = "pin it history";
@@ -8417,6 +8836,7 @@ function openWidgetHistory(widgetId) {
     return;
   }
 
+  widgetPopup?.classList.remove("love-widget-popup");
   widgetPopupCard?.classList.remove("photo-history-popup-card");
   const historyEntries = getWidgetHistoryEntries(widget);
   widgetPopupTitle.textContent =
@@ -9421,9 +9841,120 @@ function refreshNotificationsFromCurrentData(render = true) {
   });
 }
 
+function isVisualInteractionActive() {
+  return Boolean(
+    dragWidget ||
+      pendingWidgetDrag ||
+      draggingPlacedSticker ||
+      document.body.classList.contains("dragging-widget") ||
+      document.body.classList.contains("sticker-dragging") ||
+      widgetPopup?.classList.contains("open") ||
+      commentsPopup?.classList.contains("open") ||
+      stickerPopup?.classList.contains("open") ||
+      pendingPostLikeIds.size > 0 ||
+      pendingWidgetLikeIds.size > 0 ||
+      commentSaveInFlight ||
+      widgetSaveInFlight,
+  );
+}
+
+function getRealtimeActorUserId(table, payload = {}) {
+  const newRow = payload.new || {};
+  const oldRow = payload.old || {};
+
+  if (table === "profiles") {
+    return String(newRow.id || oldRow.id || "");
+  }
+
+  if (table === "widgets") {
+    const data = newRow.data && typeof newRow.data === "object" ? newRow.data : {};
+    return String(data.lastUpdatedBy || "");
+  }
+
+  return String(newRow.user_id || oldRow.user_id || "");
+}
+
+function markLocalRealtimeTable(table) {
+  recentLocalRealtimeTables.set(table, Date.now() + 4000);
+}
+
+function isOwnRealtimeEcho(table, payload = {}) {
+  const myUserId = currentUser?.id || currentProfile?.id || "";
+  if (!myUserId) return false;
+
+  if (table === "widgets") {
+    const row = payload.new || payload.old || {};
+    const pendingUpdatedAt = pendingLocalWidgetUpdates.get(row.id);
+    return Boolean(
+      pendingUpdatedAt && String(row.updated_at || "") === pendingUpdatedAt,
+    );
+  }
+
+  const localEchoUntil = recentLocalRealtimeTables.get(table) || 0;
+  if (localEchoUntil > Date.now()) {
+    return true;
+  }
+
+  return getRealtimeActorUserId(table, payload) === myUserId;
+}
+
+function handleProfileRealtimeChange(payload = {}) {
+  const incomingProfile = payload.new || payload.old || {};
+  if (!incomingProfile?.id) return;
+
+  upsertKnownProfile(incomingProfile);
+
+  if (currentProfile?.id === incomingProfile.id) {
+    currentProfile = mergeProfileRecords(currentProfile, incomingProfile);
+  }
+
+  applyProfileToTimeline(getKnownProfileById(incomingProfile.id, incomingProfile));
+
+  if (
+    profilePopup?.classList.contains("open") &&
+    activeProfilePopupUserId === incomingProfile.id
+  ) {
+    renderProfilePopup(getKnownProfileById(incomingProfile.id));
+  }
+}
+
+function handleRealtimeChange(table, payload = {}) {
+  if (table === "profiles") {
+    handleProfileRealtimeChange(payload);
+    return;
+  }
+
+  if (isOwnRealtimeEcho(table, payload)) {
+    return;
+  }
+
+  if (isVisualInteractionActive()) {
+    scheduleLiveDataRefresh({
+      includeWidgets: table === "widgets",
+      debounceMs: 1200,
+    });
+    return;
+  }
+
+  scheduleLiveDataRefresh({ includeWidgets: table === "widgets" });
+}
+
 function scheduleLiveDataRefresh(options = {}) {
   if (!currentUser) return;
   if (document.visibilityState === "hidden" && !options.allowHidden) return;
+
+  if (!options.force && isVisualInteractionActive()) {
+    liveRefreshIncludeWidgets =
+      liveRefreshIncludeWidgets || Boolean(options.includeWidgets);
+    if (liveRefreshTimer) {
+      window.clearTimeout(liveRefreshTimer);
+    }
+    liveRefreshTimer = window.setTimeout(
+      runScheduledLiveDataRefresh,
+      Number.isFinite(options.debounceMs) ? options.debounceMs : 1200,
+    );
+    return;
+  }
 
   liveRefreshIncludeWidgets =
     liveRefreshIncludeWidgets || Boolean(options.includeWidgets);
@@ -9444,6 +9975,14 @@ async function runScheduledLiveDataRefresh() {
   liveRefreshTimer = 0;
 
   if (!currentUser) return;
+
+  if (isVisualInteractionActive()) {
+    scheduleLiveDataRefresh({
+      includeWidgets: liveRefreshIncludeWidgets,
+      debounceMs: 1200,
+    });
+    return;
+  }
 
   if (liveRefreshInFlight) {
     liveRefreshQueued = true;
@@ -9498,17 +10037,17 @@ function startLiveUpdates() {
   if (!currentUser || typeof supabaseClient.channel !== "function") return;
 
   const channel = supabaseClient.channel(`our-memories-live:${currentUser.id}`);
-  ["posts", "comments", "likes", "post_stickers"].forEach((table) => {
+  ["posts", "comments", "likes", "post_stickers", "profiles"].forEach((table) => {
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table },
-      () => scheduleLiveDataRefresh({ includeWidgets: false }),
+      (payload) => handleRealtimeChange(table, payload),
     );
   });
   channel.on(
     "postgres_changes",
     { event: "*", schema: "public", table: "widgets" },
-    () => scheduleLiveDataRefresh({ includeWidgets: true }),
+    (payload) => handleRealtimeChange("widgets", payload),
   );
 
   liveUpdatesChannel = channel;
@@ -9533,9 +10072,6 @@ function syncPopupScrollLock() {
 
   document.documentElement.classList.remove("popup-scroll-locked");
   document.body.classList.remove("popup-scroll-locked");
-  if (popupScrollLockTop) {
-    window.scrollTo(0, popupScrollLockTop);
-  }
   popupScrollLockTop = 0;
 }
 
@@ -9767,6 +10303,12 @@ async function loadPlacedStickers() {
 }
 
 async function deletePlacedSticker(stickerId) {
+  const removedSticker = placedStickers.find((item) => item.id === stickerId);
+  placedStickers = placedStickers.filter((item) => item.id !== stickerId);
+  clearPlacedGifSize(stickerId);
+  clearPlacedStickerPosition(stickerId);
+  renderPlacedStickers();
+
   const { error } = await supabaseClient
     .from("post_stickers")
     .delete()
@@ -9775,12 +10317,14 @@ async function deletePlacedSticker(stickerId) {
   if (error) {
     console.error(error);
     showMessage(error.message);
+    if (removedSticker) {
+      placedStickers.push(removedSticker);
+      renderPlacedStickers();
+    }
     return;
   }
 
-  clearPlacedGifSize(stickerId);
-  clearPlacedStickerPosition(stickerId);
-  await loadPlacedStickers();
+  markLocalRealtimeTable("post_stickers");
   showMessage("sticker removed ♡");
 }
 
@@ -10097,7 +10641,7 @@ async function saveProfile() {
       : post,
   );
 
-  renderTimeline();
+  applyProfileToTimeline(currentProfile);
   pfpInput.value = "";
   renderProfilePopup(savedProfile);
 
@@ -10153,7 +10697,7 @@ async function saveInlinePostDisplayName(nextNickname) {
       ),
   );
   showMessage("name updated ♡");
-  await loadPosts();
+  applyProfileToTimeline(savedProfile);
 }
 
 async function saveInlinePostAvatar(file) {
@@ -10197,7 +10741,7 @@ async function saveInlinePostAvatar(file) {
       : post,
   );
 
-  renderTimeline();
+  applyProfileToTimeline(savedProfile);
   pfpInput.value = "";
   showMessage("avatar updated ♡");
 }
@@ -10489,6 +11033,7 @@ async function saveEntry() {
   content = composeEntryContentWithAttachment(content, entryImageUrl);
 
   let error;
+  let savedPost = null;
 
   if (editingPostId) {
     const existingPost = posts.find((item) => item.id === editingPostId);
@@ -10503,16 +11048,24 @@ async function saveEntry() {
       .from("posts")
       .update(updatePayload)
       .eq("id", editingPostId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .select("id, content, created_at, updated_at, user_id")
+      .maybeSingle();
 
     error = updateResult.error;
+    savedPost = updateResult.data;
   } else {
-    const insertResult = await supabaseClient.from("posts").insert({
-      user_id: user.id,
-      content,
-    });
+    const insertResult = await supabaseClient
+      .from("posts")
+      .insert({
+        user_id: user.id,
+        content,
+      })
+      .select("id, content, created_at, user_id")
+      .single();
 
     error = insertResult.error;
+    savedPost = insertResult.data;
   }
 
   if (error) {
@@ -10522,10 +11075,38 @@ async function saveEntry() {
   }
 
   const successMessage = editingPostId ? "entry updated ♡" : "entry posted! <3";
+  if (editingPostId) {
+    markLocalRealtimeTable("posts");
+    const post = posts.find((item) => item.id === editingPostId);
+    if (post) {
+      post.text = savedPost?.content || content;
+      post.isEdited = true;
+      syncPostContent(editingPostId);
+    }
+  } else if (savedPost?.id) {
+    markLocalRealtimeTable("posts");
+    posts = [
+      {
+        id: savedPost.id,
+        userId: savedPost.user_id || user.id,
+        text: savedPost.content || content,
+        created_at: savedPost.created_at || new Date().toISOString(),
+        isEdited: false,
+        author: "posted by you",
+        nickname:
+          currentProfile?.nickname || currentProfile?.username || "memory",
+        avatarUrl: currentProfile?.avatar_url || "",
+        likesCount: 0,
+        likedByMe: false,
+        comments: [],
+      },
+      ...posts,
+    ];
+    renderTimeline();
+  }
   resetEntryPopup();
   entryPopup.classList.remove("open");
   showMessage(successMessage);
-  await loadPosts();
   } finally {
     entrySaveInFlight = false;
     if (saveEntryBtn) saveEntryBtn.disabled = false;
@@ -10571,12 +11152,16 @@ async function confirmDeleteEntry() {
 
 async function deleteEntry(postId) {
   const postEl = document.querySelector(`[data-post-id="${postId}"]`);
+  const previousPosts = posts;
+  const deletedPost = posts.find((post) => post.id === postId);
 
   if (postEl) {
     postEl.style.transition = "opacity 0.25s ease, transform 0.25s ease";
     postEl.style.opacity = "0";
     postEl.style.transform = "translateY(10px)";
   }
+
+  posts = posts.filter((post) => post.id !== postId);
 
   const { error } = await supabaseClient
     .from("posts")
@@ -10586,13 +11171,19 @@ async function deleteEntry(postId) {
   if (error) {
     console.error(error);
     showMessage(error.message);
-    await loadPosts();
+    posts = previousPosts;
+    if (deletedPost || postEl) {
+      renderTimeline();
+    }
     return false;
   }
 
   unmarkPostAsEdited(postId);
+  markLocalRealtimeTable("posts");
+  placedStickers = placedStickers.filter((sticker) => sticker.postId !== postId);
+  postEl?.remove();
+  syncPostCommentButton(postId);
   showMessage("entry deleted ♡");
-  await loadPosts();
   return true;
 }
 
@@ -10630,8 +11221,7 @@ async function toggleLike(postId) {
         });
 
     if (result.error) throw result.error;
-
-    await loadPosts();
+    markLocalRealtimeTable("likes");
   } catch (error) {
     console.error(error);
     post.likedByMe = wasLiked;
@@ -10658,13 +11248,17 @@ async function fetchLatestWidgetRow(widgetId) {
   return data?.[0] || null;
 }
 
-function mergeWidgetFromSavedRow(widget, savedRow) {
+function mergeWidgetFromSavedRow(widget, savedRow, options = {}) {
   if (!widget || !savedRow) return;
+
+  const { preservePosition = false } = options;
 
   widget.title = savedRow.title ?? widget.title;
   widget.side = savedRow.side ?? widget.side;
-  widget.x = savedRow.x ?? widget.x;
-  widget.y = savedRow.y ?? widget.y;
+  if (!preservePosition) {
+    widget.x = savedRow.x ?? widget.x;
+    widget.y = savedRow.y ?? widget.y;
+  }
   widget.data = savedRow.data ?? widget.data;
   widget.content = savedRow.content ?? widget.content;
   widget.updated_at = savedRow.updated_at ?? widget.updated_at;
@@ -10684,41 +11278,38 @@ async function toggleWidgetLike(widgetId) {
   if (!widget || !isLikeableWidget(widget)) return;
 
   let previousLikes = getWidgetLikeUserIds(widget);
-  let previousLikeTimestamps = getWidgetLikeTimestamps(widget);
+  let previousLikeTimestamps = {
+    ...getWidgetLikeTimestamps(widget),
+  };
 
   pendingWidgetLikeIds.add(widgetId);
+  normalizeWidgetLikesData(widget);
+  previousLikes = getWidgetLikeUserIds(widget);
+  previousLikeTimestamps = {
+    ...getWidgetLikeTimestamps(widget),
+  };
+
+  const wasLiked = previousLikes.includes(user.id);
+  widget.data.likes = wasLiked
+    ? previousLikes.filter((likedUserId) => likedUserId !== user.id)
+    : [...previousLikes, user.id];
+  widget.data.likeTimestamps = {
+    ...getWidgetLikeTimestamps(widget),
+  };
+
+  if (wasLiked) {
+    delete widget.data.likeTimestamps[user.id];
+  } else {
+    widget.data.likeTimestamps[user.id] = new Date().toISOString();
+  }
+
+  syncWidgetLikeButton(widgetId);
 
   try {
-    const latestSavedRow = await fetchLatestWidgetRow(widgetId);
-    if (latestSavedRow) {
-      mergeWidgetFromSavedRow(widget, latestSavedRow);
-    }
-
-    normalizeWidgetLikesData(widget);
-    previousLikes = getWidgetLikeUserIds(widget);
-    previousLikeTimestamps = {
-      ...getWidgetLikeTimestamps(widget),
-    };
-
-    const wasLiked = previousLikes.includes(user.id);
-    widget.data.likes = wasLiked
-      ? previousLikes.filter((likedUserId) => likedUserId !== user.id)
-      : [...previousLikes, user.id];
-    widget.data.likeTimestamps = {
-      ...getWidgetLikeTimestamps(widget),
-    };
-
-    if (wasLiked) {
-      delete widget.data.likeTimestamps[user.id];
-    } else {
-      widget.data.likeTimestamps[user.id] = new Date().toISOString();
-    }
-
-    renderWidgets();
-
     const saved = await saveWidgetToSupabase(widget, {
       recordHistory: false,
       suppressErrorMessage: true,
+      preservePosition: true,
     });
 
     if (!saved) {
@@ -10731,7 +11322,7 @@ async function toggleWidgetLike(widgetId) {
       likes: previousLikes,
       likeTimestamps: previousLikeTimestamps,
     };
-    renderWidgets();
+    syncWidgetLikeButton(widgetId);
     showMessage(error.message || "could not update widget like ♡");
   } finally {
     pendingWidgetLikeIds.delete(widgetId);
@@ -10764,33 +11355,34 @@ async function toggleCommentLike(commentId) {
     return;
   }
 
-  if (comment.likedByMe) {
-    const { error } = await supabaseClient
-      .from("likes")
-      .delete()
-      .eq("comment_id", commentId)
-      .eq("user_id", user.id);
+  const wasLiked = Boolean(comment.likedByMe);
+  const previousCount = comment.likesCount || 0;
 
-    if (error) {
-      console.error(error);
-      showMessage(error.message);
-      return;
-    }
-  } else {
-    const { error } = await supabaseClient.from("likes").insert({
-      comment_id: commentId,
-      user_id: user.id,
-    });
+  comment.likedByMe = !wasLiked;
+  comment.likesCount = Math.max(0, previousCount + (wasLiked ? -1 : 1));
+  syncCommentLikeButton(commentId);
 
-    if (error) {
-      console.error(error);
-      showMessage(error.message);
-      return;
-    }
+  try {
+    const result = wasLiked
+      ? await supabaseClient
+          .from("likes")
+          .delete()
+          .eq("comment_id", commentId)
+          .eq("user_id", user.id)
+      : await supabaseClient.from("likes").insert({
+          comment_id: commentId,
+          user_id: user.id,
+        });
+
+    if (result.error) throw result.error;
+    markLocalRealtimeTable("likes");
+  } catch (error) {
+    console.error(error);
+    comment.likedByMe = wasLiked;
+    comment.likesCount = previousCount;
+    syncCommentLikeButton(commentId);
+    showMessage(error.message);
   }
-
-  await loadPosts();
-  renderCommentsList(currentCommentsPostId);
 }
 
 function openCommentsPopup(postId) {
@@ -10956,27 +11548,59 @@ async function saveComment() {
     return;
   }
 
-  const { error } = await supabaseClient.from("comments").insert({
-    post_id: currentCommentsPostId,
-    user_id: user.id,
-    content,
-    parent_comment_id: replyingToCommentId,
-  });
+  const postId = currentCommentsPostId;
+  const parentCommentId = replyingToCommentId;
+  const temporaryCommentId = `local-comment-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+  const optimisticComment = {
+    id: temporaryCommentId,
+    post_id: postId,
+    userId: user.id,
+    text: content,
+    created_at: new Date().toISOString(),
+    parent_comment_id: parentCommentId,
+    nickname: currentProfile?.nickname || currentProfile?.username || "memory",
+    likesCount: 0,
+    likedByMe: false,
+    replies: [],
+  };
 
-  if (error) {
-    console.error(error);
-    showMessage(error.message);
-    return;
-  }
+  addCommentToPost(postId, optimisticComment);
 
   commentInput.value = "";
   replyingToCommentId = null;
   replyingToLabel.style.display = "none";
   replyingToLabel.textContent = "";
-
-  await loadPosts();
-  renderCommentsList(currentCommentsPostId);
+  renderCommentsList(postId);
+  syncPostCommentButton(postId);
   showMessage("comment posted! ♡");
+
+  const { data: savedComment, error } = await supabaseClient
+    .from("comments")
+    .insert({
+      post_id: postId,
+      user_id: user.id,
+      content,
+      parent_comment_id: parentCommentId,
+    })
+    .select("id, created_at")
+    .single();
+
+  if (error) {
+    console.error(error);
+    removeCommentFromPost(postId, temporaryCommentId);
+    renderCommentsList(postId);
+    syncPostCommentButton(postId);
+    showMessage(error.message);
+    return;
+  }
+
+  updateLocalCommentId(postId, temporaryCommentId, savedComment);
+  markLocalRealtimeTable("comments");
+  if (currentCommentsPostId === postId) {
+    renderCommentsList(postId);
+  }
   } finally {
     commentSaveInFlight = false;
     if (saveCommentBtn) saveCommentBtn.disabled = false;
@@ -10984,6 +11608,8 @@ async function saveComment() {
 }
 
 async function deleteComment(commentId) {
+  const postId = currentCommentsPostId;
+  const removal = removeCommentFromPost(postId, commentId);
   const el = document.querySelector(`[data-comment-id="${commentId}"]`);
 
   if (el) {
@@ -10992,23 +11618,29 @@ async function deleteComment(commentId) {
     el.style.transform = "translateY(6px) scale(0.98)";
   }
 
-  setTimeout(async () => {
-    const { error } = await supabaseClient
-      .from("comments")
-      .delete()
-      .eq("id", commentId);
-
-    if (error) {
-      console.error(error);
-      showMessage(error.message);
-      await loadPosts();
-      return;
+  window.setTimeout(() => {
+    if (currentCommentsPostId === postId) {
+      renderCommentsList(postId);
     }
+  }, 160);
+  syncPostCommentButton(postId);
 
-    showMessage("comment deleted ♡");
-    await loadPosts();
-    renderCommentsList(currentCommentsPostId);
-  }, 250);
+  const { error } = await supabaseClient
+    .from("comments")
+    .delete()
+    .eq("id", commentId);
+
+  if (error) {
+    console.error(error);
+    removal?.restore();
+    renderCommentsList(postId);
+    syncPostCommentButton(postId);
+    showMessage(error.message);
+    return;
+  }
+
+  markLocalRealtimeTable("comments");
+  showMessage("comment deleted ♡");
 }
 
 async function logoutUser() {

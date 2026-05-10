@@ -228,6 +228,14 @@ body.popup-scroll-locked {
   animation-iteration-count: infinite;
 }
 
+.fading-emoji-decor {
+  color: rgba(194, 126, 158, 0.34);
+  filter:
+    drop-shadow(0 0 8px rgba(255, 245, 251, 0.76))
+    drop-shadow(0 10px 18px rgba(198, 133, 160, 0.12));
+  transform-origin: center;
+}
+
 .toolbar,
 .post,
 .widget,
@@ -310,10 +318,10 @@ body.popup-scroll-locked {
   left: 50%;
   bottom: calc(22px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
-  width: 78px;
-  height: 78px;
+  width: 76px;
+  height: 58px;
   border: 1px solid rgba(238, 182, 200, 0.9);
-  border-radius: 999px;
+  border-radius: 22px;
   background:
     radial-gradient(
       circle at 30% 25%,
@@ -346,7 +354,7 @@ body.popup-scroll-locked {
   line-height: 1;
   width: 1em;
   height: 1em;
-  transform: translateY(-6px);
+  transform: translateY(-3px);
   pointer-events: none;
 }
 
@@ -647,6 +655,35 @@ h3,
   box-shadow: 0 12px 24px rgba(198, 133, 160, 0.18);
 }
 
+.profile-icon-btn {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.profile-btn-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-btn-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 button:disabled,
 .soft-btn:disabled,
 .post-btn:disabled,
@@ -792,6 +829,13 @@ html[data-theme="dark"] .decor {
 html[data-theme="dark"] .sparkle-decor {
   color: rgba(245, 202, 226, 0.62);
   filter: drop-shadow(0 0 8px rgba(236, 168, 205, 0.24));
+}
+
+html[data-theme="dark"] .fading-emoji-decor {
+  color: rgba(246, 208, 229, 0.46);
+  filter:
+    drop-shadow(0 0 10px rgba(236, 168, 205, 0.28))
+    drop-shadow(0 10px 18px rgba(12, 7, 16, 0.28));
 }
 
 html[data-theme="dark"] .toolbar,
@@ -1940,6 +1984,89 @@ html[data-theme="dark"] .photo-color-trigger {
 
 #widgetPopup .popup-title {
   font-size: 1.05rem;
+}
+
+#widgetPopup.love-widget-popup,
+#widgetPopup.love-widget-popup .popup-card,
+#widgetPopup.love-widget-popup .popup-body,
+#widgetPopup.love-widget-popup #widgetEditorFields {
+  overflow: hidden !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#widgetPopup.love-widget-popup::-webkit-scrollbar,
+#widgetPopup.love-widget-popup::-webkit-scrollbar-button,
+#widgetPopup.love-widget-popup::-webkit-scrollbar-track,
+#widgetPopup.love-widget-popup::-webkit-scrollbar-thumb,
+#widgetPopup.love-widget-popup .popup-card::-webkit-scrollbar,
+#widgetPopup.love-widget-popup .popup-card::-webkit-scrollbar-button,
+#widgetPopup.love-widget-popup .popup-card::-webkit-scrollbar-track,
+#widgetPopup.love-widget-popup .popup-card::-webkit-scrollbar-thumb,
+#widgetPopup.love-widget-popup .popup-body::-webkit-scrollbar,
+#widgetPopup.love-widget-popup .popup-body::-webkit-scrollbar-button,
+#widgetPopup.love-widget-popup .popup-body::-webkit-scrollbar-track,
+#widgetPopup.love-widget-popup .popup-body::-webkit-scrollbar-thumb,
+#widgetPopup.love-widget-popup #widgetEditorFields::-webkit-scrollbar,
+#widgetPopup.love-widget-popup #widgetEditorFields::-webkit-scrollbar-button,
+#widgetPopup.love-widget-popup #widgetEditorFields::-webkit-scrollbar-track,
+#widgetPopup.love-widget-popup #widgetEditorFields::-webkit-scrollbar-thumb {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+#widgetPopup.love-widget-popup .popup-body {
+  min-height: 96px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+}
+
+#widgetPopup.love-widget-popup #widgetEditorFields {
+  width: 100%;
+}
+
+#widgetPopup.love-widget-popup .popup-actions {
+  display: none;
+}
+
+#widgetPopup.love-widget-popup .love-note-text {
+  position: relative;
+  isolation: isolate;
+  max-width: 100%;
+  margin: 0;
+  color: #f6d4e7;
+  display: block;
+  width: fit-content;
+  line-height: 1.55;
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  animation: loveTextBreath 3.2s ease-in-out infinite;
+  transform-origin: left center;
+  will-change: transform, opacity, text-shadow;
+  text-shadow:
+    0 0 6px rgba(255, 244, 251, 0.7),
+    0 0 14px rgba(255, 177, 220, 0.46),
+    0 0 24px rgba(205, 104, 166, 0.24);
+}
+
+#widgetPopup.love-widget-popup .love-note-text::before {
+  content: "";
+  position: absolute;
+  inset: -8px -12px;
+  z-index: -1;
+  border-radius: 999px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 177, 220, 0.12),
+    transparent 70%
+  );
+  filter: blur(2px);
+  opacity: 0.7;
+  animation: loveGlowAura 3.2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 #widgetPopup .popup-input {
@@ -3636,6 +3763,22 @@ body.sticker-repositioning {
 .popup-body {
   padding: 18px;
   overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.popup-body::-webkit-scrollbar,
+.popup [style*="overflow: auto"]::-webkit-scrollbar,
+.popup [style*="overflow:auto"]::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.popup [style*="overflow: auto"],
+.popup [style*="overflow:auto"] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .confirm-popup-card {
@@ -5534,6 +5677,40 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   }
 }
 
+@keyframes loveTextBreath {
+  0%,
+  100% {
+    opacity: 0.84;
+    transform: scale(1);
+    text-shadow:
+      0 0 6px rgba(255, 244, 251, 0.56),
+      0 0 14px rgba(255, 177, 220, 0.34),
+      0 0 24px rgba(205, 104, 166, 0.2);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.035);
+    text-shadow:
+      0 0 10px rgba(255, 244, 251, 0.92),
+      0 0 22px rgba(255, 177, 220, 0.68),
+      0 0 38px rgba(205, 104, 166, 0.42);
+  }
+}
+
+@keyframes loveGlowAura {
+  0%,
+  100% {
+    opacity: 0.34;
+    transform: scaleX(0.96) scaleY(0.9);
+  }
+
+  50% {
+    opacity: 0.86;
+    transform: scaleX(1.08) scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -5598,9 +5775,10 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   }
 
   .floating-entry-btn {
-    width: 72px;
-    height: 72px;
+    width: 70px;
+    height: 54px;
     bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px;
   }
 
   .floating-entry-icon {
@@ -6170,8 +6348,9 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
 
   .floating-entry-btn {
     width: 62px;
-    height: 62px;
+    height: 48px;
     bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px;
   }
 
   .floating-entry-icon {
@@ -6530,13 +6709,13 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
 #profilePopup .profile-stat-label {
   font-size: 0.98rem;
   line-height: 1.2;
-  white-space: normal;
-  overflow-wrap: break-word;
+  white-space: nowrap;
+  overflow-wrap: normal;
   color: var(--text-soft);
 }
 
 #profileJoinedStatLabel {
-  white-space: normal;
+  white-space: nowrap;
 }
 
 #profilePopup .profile-bio-card {
@@ -6754,9 +6933,9 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   }
 
   #profilePopup .profile-stat-label {
-    font-size: 0.58rem;
+    font-size: 0.54rem;
     line-height: 1.12;
-    white-space: normal;
+    white-space: nowrap;
   }
 
   #profilePopup .profile-stat-card {
@@ -6765,6 +6944,7 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
 
   #profileMissYouStatLabel,
   #profileJoinedStatLabel {
-    font-size: 0.54rem;
+    font-size: 0.5rem;
+    white-space: nowrap;
   }
 }
