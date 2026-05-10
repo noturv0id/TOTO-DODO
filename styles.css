@@ -4946,16 +4946,16 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   }
 
   #profilePopup .profile-sheet-header {
-    grid-template-columns: 90px minmax(0, 1fr);
+    grid-template-columns: 74px minmax(0, 1fr);
     min-height: auto;
-    gap: 12px;
+    gap: 10px;
     padding: 4px 0 0;
     border-radius: 0;
   }
 
   #profilePopup .profile-sheet-avatar {
-    width: 82px;
-    height: 82px;
+    width: 74px;
+    height: 74px;
   }
 
   #profilePopup .profile-sheet-name {
@@ -4963,7 +4963,7 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   }
 
   #profilePopup .profile-stats {
-    gap: 8px;
+    gap: 6px;
   }
 
   #profilePopup .profile-popup-actions {
@@ -6713,16 +6713,16 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   }
 
   #profilePopup .profile-sheet-header {
-    grid-template-columns: 90px minmax(0, 1fr);
+    grid-template-columns: 74px minmax(0, 1fr);
     min-height: auto;
-    gap: 12px;
+    gap: 10px;
     padding: 4px 0 0;
     border-radius: 0;
   }
 
   #profilePopup .profile-sheet-avatar {
-    width: 82px;
-    height: 82px;
+    width: 74px;
+    height: 74px;
   }
 
   #profilePopup .profile-sheet-name {
@@ -6730,7 +6730,7 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   }
 
   #profilePopup .profile-stats {
-    gap: 8px;
+    gap: 6px;
   }
 
   #profilePopup .profile-popup-actions {
@@ -6743,10 +6743,21 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   }
 
   #profilePopup .profile-stat-value {
-    font-size: 1.35rem;
+    font-size: 1.2rem;
   }
 
   #profilePopup .profile-stat-label {
-    font-size: 0.72rem;
+    font-size: 0.62rem;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  #profilePopup .profile-stat-card {
+    gap: 2px;
+  }
+
+  #profileMissYouStatLabel,
+  #profileJoinedStatLabel {
+    font-size: 0.58rem;
   }
 }
