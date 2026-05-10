@@ -25,6 +25,8 @@ const RECENT_GIPHY_STICKER_STORAGE_KEY = "recentGiphyStickers";
 const PLACED_GIF_SIZE_STORAGE_KEY = "placedGifStickerSizes";
 const PLACED_STICKER_POSITION_STORAGE_KEY = "placedStickerPositions";
 const PROFILE_BIO_STORAGE_KEY = "profileBioByUser";
+const PROFILE_BIO_WIDGET_ID = "__profile-bios";
+const PROFILE_BIO_WIDGET_TITLE = "profile bios";
 const DEFAULT_GIF_STICKER_SIZE = 72;
 const MIN_GIF_STICKER_SIZE = 44;
 const MAX_GIF_STICKER_SIZE = 200;
@@ -664,6 +666,7 @@ let widgetSaveInFlight = false;
 let commentSaveInFlight = false;
 let profileSaveInFlight = false;
 let profilePresenceHeartbeatId = 0;
+let profileBioColumnSupported = null;
 let profileLastSeenFieldSupported = null;
 let lastPresenceSyncAt = 0;
 let currentCommentsPostId = null;
@@ -675,6 +678,8 @@ let pendingWidgetDrag = null;
 let commentLikesEnabled = true;
 let currentUser = null;
 let entryQuill = null;
+let sharedProfileBios = {};
+let sharedProfileBiosFetchPromise = null;
 const pendingPostLikeIds = new Set();
 const pendingWidgetLikeIds = new Set();
 const pendingLocalWidgetUpdates = new Map();
@@ -2831,21 +2836,141 @@ function saveStoredProfileBio(userId, bio) {
   }
 }
 
+function normalizeSharedProfileBios(value) {
+  const source =
+    value && typeof value === "object" && value.bios && typeof value.bios === "object"
+      ? value.bios
+      : value && typeof value === "object"
+        ? value
+        : {};
+  const normalized = {};
+
+  Object.entries(source).forEach(([userId, bio]) => {
+    const normalizedUserId = String(userId || "").trim();
+    if (!normalizedUserId) return;
+    normalized[normalizedUserId] = String(bio || "");
+  });
+
+  return normalized;
+}
+
+function getSharedProfileBio(userId) {
+  const normalizedUserId = String(userId || "").trim();
+  if (
+    !normalizedUserId ||
+    !Object.prototype.hasOwnProperty.call(sharedProfileBios, normalizedUserId)
+  ) {
+    return null;
+  }
+
+  return String(sharedProfileBios[normalizedUserId] || "");
+}
+
+async function loadSharedProfileBios(options = {}) {
+  const { force = false } = options;
+
+  if (sharedProfileBiosFetchPromise && !force) {
+    return sharedProfileBiosFetchPromise;
+  }
+
+  sharedProfileBiosFetchPromise = (async () => {
+    const { data, error } = await supabaseClient
+      .from("widgets")
+      .select("data")
+      .eq("id", PROFILE_BIO_WIDGET_ID)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      return sharedProfileBios;
+    }
+
+    sharedProfileBios = normalizeSharedProfileBios(data?.data || {});
+    return sharedProfileBios;
+  })();
+
+  try {
+    return await sharedProfileBiosFetchPromise;
+  } finally {
+    sharedProfileBiosFetchPromise = null;
+  }
+}
+
+async function saveSharedProfileBio(userId, bio) {
+  const normalizedUserId = String(userId || "").trim();
+  if (!normalizedUserId) return false;
+
+  await loadSharedProfileBios({ force: true });
+
+  const nextBios = {
+    ...sharedProfileBios,
+    [normalizedUserId]: String(bio || ""),
+  };
+  const now = new Date().toISOString();
+  const payload = {
+    title: PROFILE_BIO_WIDGET_TITLE,
+    side: "left",
+    x: 0,
+    y: 0,
+    data: {
+      bios: nextBios,
+      updatedAt: now,
+      updatedBy: normalizedUserId,
+    },
+    content: null,
+    updated_at: now,
+  };
+
+  const { data: updatedRows, error: updateError } = await supabaseClient
+    .from("widgets")
+    .update(payload)
+    .eq("id", PROFILE_BIO_WIDGET_ID)
+    .select("id");
+
+  if (updateError) {
+    console.error(updateError);
+    return false;
+  }
+
+  if (!updatedRows?.length) {
+    const { error: insertError } = await supabaseClient.from("widgets").insert({
+      id: PROFILE_BIO_WIDGET_ID,
+      ...payload,
+    });
+
+    if (insertError) {
+      console.error(insertError);
+      return false;
+    }
+  }
+
+  sharedProfileBios = nextBios;
+  return true;
+}
+
 function getProfileBio(profile, userId = "", user = currentUser) {
+  const resolvedUserId = userId || profile?.id || "";
+
   if (
     profile &&
     typeof profile === "object" &&
     Object.prototype.hasOwnProperty.call(profile, "bio")
   ) {
-    return String(profile.bio || "").trim();
+    const profileBio = String(profile.bio || "").trim();
+    if (profileBio) return profileBio;
+  }
+
+  const sharedBio = getSharedProfileBio(resolvedUserId);
+  if (sharedBio !== null && sharedBio.trim()) {
+    return sharedBio.trim();
   }
 
   const metadataBio = getProfileBioFromAuthUser(user);
-  if (metadataBio !== null) {
+  if (metadataBio !== null && metadataBio.trim()) {
     return metadataBio.trim();
   }
 
-  const storedBio = getStoredProfileBio(userId || profile?.id || "");
+  const storedBio = getStoredProfileBio(resolvedUserId);
   return storedBio === null ? "" : storedBio.trim();
 }
 
@@ -3529,7 +3654,10 @@ async function refreshProfilePopupFromSupabase(userId) {
   }
 
   const fetchPromise = (async () => {
-    const { data, error } = await fetchProfileById(normalizedUserId);
+    const [{ data, error }] = await Promise.all([
+      fetchProfileById(normalizedUserId),
+      loadSharedProfileBios(),
+    ]);
 
     if (error) {
       console.error(error);
@@ -9868,7 +9996,7 @@ function getRealtimeActorUserId(table, payload = {}) {
 
   if (table === "widgets") {
     const data = newRow.data && typeof newRow.data === "object" ? newRow.data : {};
-    return String(data.lastUpdatedBy || "");
+    return String(data.lastUpdatedBy || data.updatedBy || "");
   }
 
   return String(newRow.user_id || oldRow.user_id || "");
@@ -9921,6 +10049,18 @@ function handleProfileRealtimeChange(payload = {}) {
 function handleRealtimeChange(table, payload = {}) {
   if (table === "profiles") {
     handleProfileRealtimeChange(payload);
+    return;
+  }
+
+  if (
+    table === "widgets" &&
+    String(payload.new?.id || payload.old?.id || "") === PROFILE_BIO_WIDGET_ID
+  ) {
+    void loadSharedProfileBios({ force: true }).then(() => {
+      if (profilePopup?.classList.contains("open") && activeProfilePopupUserId) {
+        renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
+      }
+    });
     return;
   }
 
@@ -10121,6 +10261,9 @@ async function getCurrentUser() {
   } = await supabaseClient.auth.getUser();
 
   currentUser = user || null;
+  if (currentUser) {
+    void loadSharedProfileBios();
+  }
   return currentUser;
 }
 
@@ -10207,6 +10350,8 @@ async function ensureProfile(user, fallbackNickname = "") {
 }
 
 async function loadProfile(user) {
+  await loadSharedProfileBios();
+
   const { data, error } = await supabaseClient
     .from("profiles")
     .select("*")
@@ -10231,8 +10376,12 @@ async function loadProfile(user) {
     }
     upsertKnownProfile(currentProfile);
     nicknameInput.value = currentProfile.nickname || "";
+    const profileBio = getProfileBio(currentProfile, user.id, user);
     if (bioInput) {
-      bioInput.value = getProfileBio(currentProfile, user.id, user);
+      bioInput.value = profileBio;
+    }
+    if (profileBio && getSharedProfileBio(user.id) !== profileBio) {
+      void saveSharedProfileBio(user.id, profileBio);
     }
   }
 
@@ -10525,6 +10674,7 @@ async function updateCurrentUserProfile(profileUpdates = {}) {
     Object.prototype.hasOwnProperty.call(nextProfilePayload, "bio") &&
     String(error.message || "").toLowerCase().includes("bio")
   ) {
+    profileBioColumnSupported = false;
     const { bio, ...fallbackPayload } = nextProfilePayload;
     const fallbackResult = await supabaseClient
       .from("profiles")
@@ -10550,8 +10700,19 @@ async function updateCurrentUserProfile(profileUpdates = {}) {
     return null;
   }
 
+  if (hasBioUpdate && profileBioColumnSupported !== false) {
+    profileBioColumnSupported = true;
+  }
+
   if (hasBioUpdate) {
     await persistProfileBioBackup(user, nextProfilePayload.bio);
+    const sharedBioSaved = await saveSharedProfileBio(
+      user.id,
+      nextProfilePayload.bio,
+    );
+    if (!sharedBioSaved && profileBioColumnSupported === false) {
+      showMessage("bio saved here, but could not sync it for both profiles ♡");
+    }
     savedProfile = {
       ...savedProfile,
       bio: String(nextProfilePayload.bio || ""),
@@ -10852,6 +11013,7 @@ async function loadPosts(options = {}) {
     return;
   }
 
+  await loadSharedProfileBios();
   replaceKnownProfiles(profilesData || []);
 
   let { data: likesData, error: likesError } = likesResult;
