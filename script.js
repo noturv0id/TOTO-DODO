@@ -750,6 +750,16 @@ const widgetEditorFields = document.getElementById("widgetEditorFields");
 const saveWidgetBtn = document.getElementById("saveWidgetBtn");
 const clearWidgetHistoryBtn = document.getElementById("clearWidgetHistoryBtn");
 const widgetPopupCard = widgetPopup?.querySelector(".popup-card") || null;
+const widgetCommentsPopup = document.getElementById("widgetCommentsPopup");
+const closeWidgetCommentsPopup = document.getElementById(
+  "closeWidgetCommentsPopup",
+);
+const widgetCommentsPopupTitle = document.getElementById(
+  "widgetCommentsPopupTitle",
+);
+const widgetCommentsPopupFields = document.getElementById(
+  "widgetCommentsPopupFields",
+);
 const entryPreviewPopup = document.getElementById("entryPreviewPopup");
 const closeEntryPreviewPopup = document.getElementById(
   "closeEntryPreviewPopup",
@@ -2709,6 +2719,21 @@ function isLikeableWidget(widget) {
   );
 }
 
+function isCommentableWidget(widget) {
+  const normalizedId = String(widget?.id || "")
+    .toLowerCase()
+    .trim();
+  const normalizedTitle = String(widget?.title || "").toLowerCase();
+
+  return (
+    normalizedId === "song" ||
+    normalizedId.startsWith("photo-pin") ||
+    normalizedTitle.includes("pinned photo") ||
+    normalizedTitle.includes("pinned") ||
+    normalizedTitle.includes("pin it")
+  );
+}
+
 function getWidgetLikeUserIds(widget) {
   const widgetData =
     widget?.data && typeof widget.data === "object" ? widget.data : {};
@@ -2795,6 +2820,15 @@ function normalizeWidgetLikesData(widget) {
   return true;
 }
 
+function getWidgetCommentCount(widget) {
+  if (!widget || !isCommentableWidget(widget)) return 0;
+
+  return getPhotoWidgetComments(widget).reduce(
+    (total, comment) => total + 1 + (comment.replies || []).length,
+    0,
+  );
+}
+
 function getLikeButtonMarkup(likedByMe, likesCount) {
   return `
     <span class="post-btn-icon" aria-hidden="true">${likedByMe ? "🩷" : "♡"}</span>
@@ -2810,6 +2844,14 @@ function getWidgetLikeButtonMarkup(widget) {
   return `
     <span class="post-btn-icon" aria-hidden="true">${likedByMe ? "🩷" : "♡"}</span>
     <span class="post-btn-count">${likes.length || 0}</span>
+  `;
+}
+
+function getWidgetCommentButtonMarkup(widget) {
+  const commentCount = getWidgetCommentCount(widget);
+  return `
+    <span class="post-btn-icon" aria-hidden="true">💬</span>
+    <span class="post-btn-count">${commentCount || 0}</span>
   `;
 }
 
@@ -2841,6 +2883,43 @@ function getWidgetHeaderLikeButtonMarkup(widget, extraClass = "") {
       ${getWidgetLikeButtonMarkup(widget)}
     </button>
   `;
+}
+
+function getWidgetHeaderCommentButtonMarkup(widget, extraClass = "") {
+  if (!widget || !isCommentableWidget(widget)) return "";
+
+  const commentCount = getWidgetCommentCount(widget);
+  const className = ["widget-header-comment-btn", "widget-comment-btn", extraClass]
+    .filter(Boolean)
+    .join(" ");
+
+  return `
+    <button
+      class="${className}"
+      type="button"
+      data-widget-comment-id="${escapeHtml(widget.id)}"
+      aria-label="open ${commentCount || 0} widget comments"
+    >
+      ${getWidgetCommentButtonMarkup(widget)}
+    </button>
+  `;
+}
+
+function syncWidgetCommentButton(widgetId) {
+  const widget = widgets.find((item) => item.id === widgetId);
+  const buttons = Array.from(
+    document.querySelectorAll(
+      `.widget-comment-btn[data-widget-comment-id="${widgetId}"]`,
+    ),
+  );
+
+  if (!widget || !buttons.length || !isCommentableWidget(widget)) return;
+
+  const commentCount = getWidgetCommentCount(widget);
+  buttons.forEach((btn) => {
+    btn.innerHTML = getWidgetCommentButtonMarkup(widget);
+    btn.setAttribute("aria-label", `open ${commentCount || 0} widget comments`);
+  });
 }
 
 function getWidgetLikeContentSignature(widget) {
@@ -5049,6 +5128,7 @@ function renderWidgets(options = {}) {
             ${isMinimized ? "+" : "–"}
           </button>
           ${!isVirtualWidget ? getWidgetHeaderLikeButtonMarkup(widget) : ""}
+          ${!isVirtualWidget ? getWidgetHeaderCommentButtonMarkup(widget) : ""}
           ${hasHistory && !isVirtualWidget ? `<button class="widget-history-btn" type="button" data-widget-history-id="${widget.id}">🕘</button>` : ""}
           ${
             !isVirtualWidget &&
@@ -5195,6 +5275,23 @@ function renderWidgets(options = {}) {
             event.preventDefault();
             event.stopPropagation();
             await toggleWidgetLike(btn.dataset.widgetLikeId || widget.id);
+          });
+        });
+      }
+
+      if (isCommentableWidget(widget)) {
+        el.querySelectorAll(".widget-comment-btn").forEach((btn) => {
+          ["mousedown", "pointerdown"].forEach((eventName) => {
+            btn.addEventListener(eventName, (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            });
+          });
+
+          btn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openWidgetComments(btn.dataset.widgetCommentId || widget.id);
           });
         });
       }
@@ -5363,7 +5460,6 @@ function openWidgetEditor(widgetId) {
     `;
   } else if (normalizedId === "song") {
     normalizeSongWidget(widget);
-    const songCommentPrefix = `photo-widget-comments-${widget.id}`;
     widgetPopupTitle.textContent = widget.title;
     saveWidgetBtn.style.display = "none";
     setHeaderWidgetSaveVisibility(true);
@@ -5403,10 +5499,6 @@ function openWidgetEditor(widgetId) {
         <input id="widgetFieldSongUri" type="hidden" value="${escapeHtml(widget.data?.spotifyUri || "")}" />
         <input id="widgetFieldSongName" type="hidden" value="${escapeHtml(widget.data?.songName || "")}" />
       </div>
-      ${getPhotoWidgetCommentSectionMarkup(widget, {
-        prefix: songCommentPrefix,
-        title: "comments",
-      })}
     `;
 
     const spotifyUrlInput = document.getElementById("widgetFieldSpotifyUrl");
@@ -5463,10 +5555,6 @@ function openWidgetEditor(widgetId) {
       }
     });
 
-    bindPhotoWidgetCommentSection(widget, {
-      prefix: songCommentPrefix,
-      title: "comments",
-    });
   } else if (normalizedId === "note") {
     normalizeWidgetLikesData(widget);
     widgetPopupTitle.textContent = "⋆𐙚₊smol note˚⊹♡";
@@ -5843,7 +5931,6 @@ function openWidgetEditor(widgetId) {
     }
     normalizeWidgetLikesData(widget);
     normalizePhotoWidgetComments(widget);
-    const photoCommentPrefix = `photo-widget-comments-${widget.id}`;
     const canEditPhoto = canEditPhotoPinWidget(widget);
 
     widgetPopupTitle.textContent =
@@ -5869,18 +5956,9 @@ function openWidgetEditor(widgetId) {
     if (!canEditPhoto) {
       widgetEditorFields.innerHTML = `
         ${getPhotoWidgetCommentPreviewMarkup(widget.data, {
-          showLabel: true,
-        })}
-        ${getPhotoWidgetCommentSectionMarkup(widget, {
-          prefix: photoCommentPrefix,
-          title: "comments",
+          showLabel: false,
         })}
       `;
-
-      bindPhotoWidgetCommentSection(widget, {
-        prefix: photoCommentPrefix,
-        title: "comments",
-      });
       widgetPopup.classList.add("open");
       return;
     }
@@ -5948,10 +6026,6 @@ function openWidgetEditor(widgetId) {
         </div>
 
       </div>
-      ${getPhotoWidgetCommentSectionMarkup(widget, {
-        prefix: photoCommentPrefix,
-        title: "comments",
-      })}
     `;
 
     const photoInput = document.getElementById("photoWidgetInput");
@@ -6119,10 +6193,6 @@ function openWidgetEditor(widgetId) {
       updatePhotoPreview();
     });
 
-    bindPhotoWidgetCommentSection(widget, {
-      prefix: photoCommentPrefix,
-      title: "comments",
-    });
   } else {
     widgetPopupTitle.textContent = widget.title;
     widgetEditorFields.innerHTML = `<div class="small-note">this widget is not editable yet ♡</div>`;
@@ -6131,6 +6201,80 @@ function openWidgetEditor(widgetId) {
   }
 
   widgetPopup.classList.add("open");
+}
+
+function openWidgetComments(widgetId) {
+  const widget = widgets.find((item) => item.id === widgetId);
+  if (
+    !widget ||
+    !isCommentableWidget(widget) ||
+    !widgetCommentsPopup ||
+    !widgetCommentsPopupFields
+  ) {
+    return;
+  }
+
+  normalizeWidgetLikesData(widget);
+  normalizePhotoWidgetComments(widget);
+
+  const prefix = `widget-comments-popup-${widget.id}`;
+  const title =
+    String(widget.id || "").toLowerCase().trim() === "song"
+      ? "now playing comments"
+      : "pin it comments";
+
+  if (widgetCommentsPopupTitle) {
+    widgetCommentsPopupTitle.textContent = `${title} ♡`;
+  }
+
+  widgetPopup?.classList.remove("open", "love-widget-popup");
+  widgetPopupCard?.classList.remove("photo-history-popup-card");
+  if (saveWidgetBtn) {
+    saveWidgetBtn.style.display = "inline-flex";
+  }
+  setHeaderWidgetSaveVisibility(false);
+  setWidgetPopupLikeButton(null);
+  if (clearWidgetHistoryBtn) {
+    clearWidgetHistoryBtn.style.display = "none";
+    delete clearWidgetHistoryBtn.dataset.clearWidgetHistoryMode;
+  }
+
+  widgetCommentsPopupFields.innerHTML = `
+    ${getWidgetCommentPreviewMarkup(getWidgetCommentPreviewSnapshot(widget), {
+      showLabel: false,
+    })}
+    ${getPhotoWidgetCommentSectionMarkup(widget, {
+      prefix,
+      title: "comments",
+    })}
+  `;
+
+  bindPhotoWidgetCommentSection(widget, {
+    prefix,
+    title: "comments",
+  });
+
+  widgetCommentsPopup.classList.add("open");
+
+  window.requestAnimationFrame(() => {
+    const ids = getPhotoWidgetCommentSectionIds(prefix);
+    const input = document.getElementById(ids.inputId);
+    if (input && !input.disabled) {
+      input.focus({ preventScroll: true });
+    }
+  });
+}
+
+function closeWidgetComments() {
+  widgetCommentsPopup?.classList.remove("open");
+  if (widgetCommentsPopupFields) {
+    widgetCommentsPopupFields.innerHTML = "";
+  }
+  Array.from(activePhotoWidgetReplyTargets.keys()).forEach((prefix) => {
+    if (String(prefix).startsWith("widget-comments-popup-")) {
+      activePhotoWidgetReplyTargets.delete(prefix);
+    }
+  });
 }
 
 async function saveWidgetChanges() {
@@ -7876,6 +8020,22 @@ widgetPopup.addEventListener("mousedown", (event) => {
   event.stopPropagation();
 });
 
+closeWidgetCommentsPopup?.addEventListener("click", closeWidgetComments);
+
+widgetCommentsPopup?.addEventListener("click", (event) => {
+  if (event.target === widgetCommentsPopup && !popupPointerStartedInsideCard) {
+    closeWidgetComments();
+  }
+});
+
+widgetCommentsPopup?.addEventListener("pointerdown", (event) => {
+  event.stopPropagation();
+});
+
+widgetCommentsPopup?.addEventListener("mousedown", (event) => {
+  event.stopPropagation();
+});
+
 closeEntryPreviewPopup?.addEventListener("click", () => {
   entryPreviewPopup?.classList.remove("open");
 });
@@ -8468,10 +8628,12 @@ function getSongWidgetCommentPreviewData(source) {
     source?.preview && typeof source.preview === "object" ? source.preview : source;
   return {
     kind: "song",
+    spotifyUrl: String(previewSource?.spotifyUrl || "").trim(),
     coverUrl: String(previewSource?.coverUrl || "").trim(),
     songName: String(previewSource?.songName || "").trim(),
     durationLabel: String(previewSource?.durationLabel || "").trim(),
     caption: String(previewSource?.caption || "").trim(),
+    accent: Math.max(6, Math.min(94, Number(previewSource?.accent) || 38)),
   };
 }
 
@@ -8552,8 +8714,50 @@ function getSongWidgetCommentPreviewMarkup(source, options = {}) {
   const { showLabel = false, compact = false } = options;
   const preview = getSongWidgetCommentPreviewData(source);
   const coverUrl = String(preview.coverUrl || "").trim();
+  const spotifyUrl = String(preview.spotifyUrl || "").trim();
   const songName = escapeHtml(preview.songName || "saved song ♡");
   const caption = escapeHtml(preview.caption || preview.durationLabel || "");
+  const accent = Math.max(6, Math.min(94, Number(preview.accent) || 38));
+
+  if (!compact) {
+    return `
+      <div class="song-widget-comment-preview-card is-full" aria-label="song preview">
+        <div class="song-widget-card${coverUrl ? " has-cover" : ""}">
+          ${
+            coverUrl
+              ? `<img class="song-widget-cover" src="${escapeHtml(coverUrl)}" alt="Spotify cover art" loading="lazy" decoding="async" />`
+              : '<div class="song-widget-art-placeholder">paste a Spotify track link to fill this card ♡</div>'
+          }
+          <div class="song-widget-meta">
+            <div class="song-widget-name">${songName}</div>
+            <div class="song-widget-time">${caption || "--:--"}</div>
+          </div>
+          <div class="song-widget-progress" aria-hidden="true">
+            <span style="width:${accent}%"></span>
+          </div>
+          <div class="song-widget-controls" aria-hidden="true">
+            <span class="song-widget-skip">⏮</span>
+            <span class="song-widget-play">⏸</span>
+            <span class="song-widget-skip">⏭</span>
+          </div>
+          <div class="song-widget-volume" aria-hidden="true">
+            <span class="song-widget-volume-icon">🔈</span>
+            <div class="song-widget-volume-bar"><span style="width:68%"></span></div>
+          </div>
+          ${
+            spotifyUrl
+              ? `<a class="song-widget-link" href="${escapeHtml(spotifyUrl)}" target="_blank" rel="noreferrer noopener">open in spotify</a>`
+              : ""
+          }
+        </div>
+        ${
+          showLabel
+            ? '<div class="photo-widget-comment-preview-label">the song you\'re commenting on ♡</div>'
+            : ""
+        }
+      </div>
+    `;
+  }
 
   return `
     <div class="song-widget-comment-preview-card${compact ? " is-inline" : ""}" aria-label="song preview">
@@ -8593,10 +8797,12 @@ function getWidgetCommentPreviewSnapshot(widget) {
       widget?.data && typeof widget.data === "object" ? widget.data : {};
     return {
       kind: "song",
+      spotifyUrl: String(songData.spotifyUrl || "").trim(),
       coverUrl: String(songData.coverUrl || "").trim(),
       songName: String(songData.songName || "").trim(),
-      durationLabel: "",
+      durationLabel: String(songData.durationLabel || "").trim(),
       caption: String(songData.durationLabel || "").trim(),
+      accent: Math.max(6, Math.min(94, Number(songData.accent) || 38)),
     };
   }
 
@@ -9062,6 +9268,7 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
     activePhotoWidgetReplyTargets.delete(prefix);
   }
   renderPhotoWidgetCommentsSection(widget, options);
+  syncWidgetCommentButton(widget.id);
 
   const saved = await saveWidgetToSupabase(widget, {
     recordHistory: false,
@@ -9079,6 +9286,7 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
       input.value = content;
     }
     renderPhotoWidgetCommentsSection(widget, options);
+    syncWidgetCommentButton(widget.id);
     return;
   }
   showMessage(replyTargetExists ? "reply posted! ♡" : "comment posted! ♡");
@@ -9111,6 +9319,7 @@ async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
       })),
   };
   renderPhotoWidgetCommentsSection(widget, options);
+  syncWidgetCommentButton(widget.id);
 
   const saved = await saveWidgetToSupabase(widget, {
     recordHistory: false,
@@ -9122,6 +9331,7 @@ async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
   if (!saved) {
     widget.data.comments = previousComments;
     renderPhotoWidgetCommentsSection(widget, options);
+    syncWidgetCommentButton(widget.id);
     return;
   }
 
@@ -10115,7 +10325,11 @@ function renderNotifications() {
       if (postId) {
         focusPost(postId, { openComments });
       } else if (widgetId) {
-        focusWidget(widgetId);
+        if (openComments) {
+          openWidgetComments(widgetId);
+        } else {
+          focusWidget(widgetId);
+        }
       }
     });
   });
@@ -10409,7 +10623,7 @@ function buildNotifications({
           type: "widget_comment",
           created_at: createdAt,
           widgetId: widget.id,
-          openComments: false,
+          openComments: true,
           message: `${actorName} commented on ${widgetName}`,
         });
       });
@@ -10468,6 +10682,7 @@ function isVisualInteractionActive() {
       profilePopup?.classList.contains("open") ||
       entryPopup?.classList.contains("open") ||
       widgetPopup?.classList.contains("open") ||
+      widgetCommentsPopup?.classList.contains("open") ||
       commentsPopup?.classList.contains("open") ||
       stickerPopup?.classList.contains("open") ||
       entryPreviewPopup?.classList.contains("open") ||
