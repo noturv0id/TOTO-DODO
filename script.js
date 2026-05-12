@@ -646,11 +646,14 @@ let notificationSourceData = {
   profilesData: [],
 };
 let popupScrollLockTop = 0;
+let popupScrollLockLeft = 0;
+let popupScrollLockBodyStyles = null;
 let activeSticker = null;
 let dragWidget = null;
 let draggingPlacedSticker = null;
 let knownProfiles = [];
 let activeProfilePopupUserId = "";
+let profilePopupEditMode = false;
 const visibleGifStickerControlTimers = new Map();
 const minimizedWidgetIds = new Set();
 const previousMobileWidgetRects = new Map();
@@ -671,6 +674,7 @@ let profileLastSeenFieldSupported = null;
 let lastPresenceSyncAt = 0;
 let currentCommentsPostId = null;
 let replyingToCommentId = null;
+const activePhotoWidgetReplyTargets = new Map();
 let editingWidgetId = null;
 let editingPostId = null;
 let pendingDeletePostId = null;
@@ -857,6 +861,22 @@ function setWidgetPopupLikeButton(widget = null) {
   syncWidgetLikeButton(widget.id);
 }
 
+function markPendingLocalWidgetUpdate(widgetId, updatedAt) {
+  const normalizedWidgetId = String(widgetId || "").trim();
+  const normalizedUpdatedAt = String(updatedAt || "").trim();
+
+  if (!normalizedWidgetId || !normalizedUpdatedAt) return;
+
+  pendingLocalWidgetUpdates.set(normalizedWidgetId, normalizedUpdatedAt);
+  window.setTimeout(() => {
+    if (
+      pendingLocalWidgetUpdates.get(normalizedWidgetId) === normalizedUpdatedAt
+    ) {
+      pendingLocalWidgetUpdates.delete(normalizedWidgetId);
+    }
+  }, 7000);
+}
+
 function isTabbedLayoutActive() {
   return Boolean(macTabbedLayoutMedia?.matches || isMobileLayoutActive());
 }
@@ -971,7 +991,7 @@ function syncMobileViewSwitcherVisibility() {
   }
 
   if (layoutChanged && currentUser) {
-    renderWidgets();
+    renderWidgets({ animateMobileReorder: false });
   }
 }
 
@@ -1085,6 +1105,145 @@ function requestMobileViewSwitcherVisibilitySync() {
     mobileViewSwitcherFrame = 0;
     syncMobileViewSwitcherVisibility();
   });
+}
+
+function getViewportScrollSnapshot() {
+  if (document.body.classList.contains("popup-scroll-locked")) {
+    return null;
+  }
+
+  return {
+    left: window.scrollX || window.pageXOffset || 0,
+    top: window.scrollY || window.pageYOffset || 0,
+  };
+}
+
+function restoreViewportScroll(snapshot) {
+  if (!snapshot || document.body.classList.contains("popup-scroll-locked")) {
+    return;
+  }
+
+  window.scrollTo({
+    left: snapshot.left,
+    top: snapshot.top,
+    behavior: "auto",
+  });
+  lastScrollY = snapshot.top;
+}
+
+function getSkeletonLine(className = "", style = "") {
+  const classes = ["skeleton-line", className].filter(Boolean).join(" ");
+  return `<span class="${classes}" aria-hidden="true" style="${style}"></span>`;
+}
+
+function getWidgetSkeletonMarkup(index = 0) {
+  const lineWidth = index % 2 === 0 ? "72%" : "58%";
+  return `
+    <div class="widget widget-skeleton" aria-hidden="true">
+      <div class="widget-bar skeleton-widget-bar">
+        ${getSkeletonLine("skeleton-title", `width:${lineWidth};`)}
+      </div>
+      <div class="widget-content skeleton-widget-content">
+        ${getSkeletonLine("", "width:86%;")}
+        ${getSkeletonLine("", "width:64%;")}
+        ${getSkeletonLine("skeleton-line-short", "width:42%;")}
+      </div>
+    </div>
+  `;
+}
+
+function renderWidgetSkeletons() {
+  if (!leftZone || !rightZone) return;
+
+  leftZone.innerHTML = [0, 1, 2]
+    .map((index) => {
+      const top = 20 + index * 190;
+      return getWidgetSkeletonMarkup(index).replace(
+        'class="widget widget-skeleton"',
+        `class="widget widget-skeleton" style="left:${index % 2 ? 12 : 8}px;top:${top}px;"`,
+      );
+    })
+    .join("");
+  rightZone.innerHTML = [0, 1, 2]
+    .map((index) => {
+      const top = 34 + index * 190;
+      return getWidgetSkeletonMarkup(index + 3).replace(
+        'class="widget widget-skeleton"',
+        `class="widget widget-skeleton" style="left:${index % 2 ? 18 : 8}px;top:${top}px;"`,
+      );
+    })
+    .join("");
+}
+
+function getPostSkeletonMarkup(index = 0) {
+  const textWidth = index % 2 === 0 ? "92%" : "78%";
+  return `
+    <article class="post post-skeleton" aria-hidden="true">
+      <div class="post-header skeleton-post-header">
+        ${getSkeletonLine("skeleton-title", "width:48%;")}
+        ${getSkeletonLine("skeleton-line-short", "width:72px;")}
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="skeleton-avatar"></span>
+          <div class="skeleton-meta-lines">
+            ${getSkeletonLine("", "width:110px;")}
+            ${getSkeletonLine("skeleton-line-short", "width:72px;")}
+          </div>
+        </div>
+        <div class="skeleton-text-block">
+          ${getSkeletonLine("", `width:${textWidth};`)}
+          ${getSkeletonLine("", "width:86%;")}
+          ${getSkeletonLine("", "width:68%;")}
+        </div>
+        <div class="skeleton-actions">
+          ${getSkeletonLine("skeleton-pill", "width:82px;")}
+          ${getSkeletonLine("skeleton-pill", "width:112px;")}
+          ${getSkeletonLine("skeleton-pill", "width:96px;")}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderTimelineSkeleton(count = 3) {
+  if (!timelineEl) return;
+  timelineEl.innerHTML = Array.from({ length: count }, (_, index) =>
+    getPostSkeletonMarkup(index),
+  ).join("");
+}
+
+function renderNotificationSkeleton() {
+  if (!notificationsList) return;
+  notificationsList.innerHTML = `
+    <div class="notification-skeleton" aria-hidden="true">
+      ${getSkeletonLine("", "width:86%;")}
+      ${getSkeletonLine("skeleton-line-short", "width:54%;")}
+    </div>
+    <div class="notification-skeleton" aria-hidden="true">
+      ${getSkeletonLine("", "width:72%;")}
+      ${getSkeletonLine("skeleton-line-short", "width:46%;")}
+    </div>
+  `;
+}
+
+function renderAppSkeleton(options = {}) {
+  const { timeline = true, widgets = true, notifications = true } = options;
+
+  if (timeline) renderTimelineSkeleton();
+  if (widgets) renderWidgetSkeletons();
+  if (notifications) renderNotificationSkeleton();
+}
+
+function renderCommentsSkeleton() {
+  if (!commentsList) return;
+  commentsList.innerHTML = Array.from({ length: 3 }, (_, index) => `
+    <div class="comment-item comment-skeleton" aria-hidden="true">
+      ${getSkeletonLine("", `width:${index % 2 ? "92px" : "124px"};`)}
+      ${getSkeletonLine("", "width:88%;")}
+      ${getSkeletonLine("skeleton-line-short", "width:58%;")}
+    </div>
+  `).join("");
 }
 
 function isGifSticker(value) {
@@ -2921,6 +3080,8 @@ async function saveSharedProfileBio(userId, bio) {
     updated_at: now,
   };
 
+  markPendingLocalWidgetUpdate(PROFILE_BIO_WIDGET_ID, payload.updated_at);
+
   const { data: updatedRows, error: updateError } = await supabaseClient
     .from("widgets")
     .update(payload)
@@ -3336,27 +3497,49 @@ function renderProfilePopupAvatar(profile) {
   profileSummaryAvatar.textContent = displayName.charAt(0).toUpperCase() || "♡";
 }
 
+function isProfilePopupEditing() {
+  return Boolean(profilePopupEditMode);
+}
+
 function setProfilePopupEditMode(isEditing) {
   const viewingOwnProfile = isCurrentUsersProfile(activeProfilePopupUserId);
+  const shouldEdit = Boolean(viewingOwnProfile && isEditing);
+  const popupBody = profilePopup?.querySelector(".popup-body");
+  const previousPopupScrollTop = popupBody?.scrollTop || 0;
+  const activeElement = document.activeElement;
+  const shouldBlurEditField =
+    !shouldEdit &&
+    activeElement instanceof HTMLElement &&
+    Boolean(profileEditSection?.contains(activeElement));
+
+  profilePopupEditMode = shouldEdit;
+
+  if (shouldBlurEditField) {
+    activeElement.blur();
+  }
 
   if (profileEditSection) {
-    profileEditSection.hidden = !viewingOwnProfile || !isEditing;
+    profileEditSection.hidden = !shouldEdit;
   }
 
   if (editProfileBtn) {
-    editProfileBtn.hidden = !viewingOwnProfile || isEditing;
+    editProfileBtn.hidden = !viewingOwnProfile || shouldEdit;
   }
 
   if (cancelProfileEditBtn) {
-    cancelProfileEditBtn.hidden = !viewingOwnProfile || !isEditing;
+    cancelProfileEditBtn.hidden = !shouldEdit;
   }
 
   if (logoutBtn) {
-    logoutBtn.hidden = !viewingOwnProfile || isEditing;
+    logoutBtn.hidden = !viewingOwnProfile || shouldEdit;
   }
 
   if (saveProfileBtn) {
-    saveProfileBtn.hidden = !viewingOwnProfile || !isEditing;
+    saveProfileBtn.hidden = !shouldEdit;
+  }
+
+  if (popupBody) {
+    popupBody.scrollTop = previousPopupScrollTop;
   }
 }
 
@@ -3371,9 +3554,29 @@ function closeProfileDetailsPopup() {
 function renderProfilePopup(profile, options = {}) {
   const resolvedProfile = profile || {};
   const profileUserId = String(
-    resolvedProfile.id || activeProfilePopupUserId || currentProfile?.id || currentUser?.id || "",
+    resolvedProfile.id ||
+      activeProfilePopupUserId ||
+      currentProfile?.id ||
+      currentUser?.id ||
+      "",
   );
   const isOwnProfile = isCurrentUsersProfile(profileUserId);
+  const hasExplicitEditMode = Object.prototype.hasOwnProperty.call(
+    options,
+    "startEditing",
+  );
+  const shouldEditProfile =
+    isOwnProfile &&
+    (hasExplicitEditMode
+      ? Boolean(options.startEditing)
+      : isProfilePopupEditing());
+  const popupBody = profilePopup?.querySelector(".popup-body");
+  const previousPopupScrollTop = popupBody?.scrollTop || 0;
+  const activeElement = document.activeElement;
+  const shouldRestoreFocus =
+    shouldEditProfile &&
+    activeElement instanceof HTMLElement &&
+    Boolean(profilePopup?.contains(activeElement));
   const displayName = getProfileDisplayName(
     resolvedProfile,
     isOwnProfile ? "you" : "memory",
@@ -3441,22 +3644,34 @@ function renderProfilePopup(profile, options = {}) {
   }
 
   if (isOwnProfile) {
-    if (nicknameInput) {
+    if (nicknameInput && !shouldEditProfile) {
       nicknameInput.value = String(currentProfile?.nickname || resolvedProfile.nickname || "");
     }
-    if (bioInput) {
+    if (bioInput && !shouldEditProfile) {
       bioInput.value = getProfileBio(
         currentProfile || resolvedProfile,
         profileUserId,
         currentUser,
       );
     }
-    if (pfpInput) {
+    if (pfpInput && !shouldEditProfile) {
       pfpInput.value = "";
     }
   }
 
-  setProfilePopupEditMode(Boolean(options.startEditing));
+  setProfilePopupEditMode(shouldEditProfile);
+
+  if (popupBody) {
+    popupBody.scrollTop = previousPopupScrollTop;
+  }
+
+  if (
+    shouldRestoreFocus &&
+    document.contains(activeElement) &&
+    !activeElement.hidden
+  ) {
+    activeElement.focus({ preventScroll: true });
+  }
 }
 
 function applyLocalProfilePresence(userId, lastSeenAt) {
@@ -3943,7 +4158,7 @@ function refreshMissYouWidgetDom(widget) {
   });
 
   if (!matchingWidgets.length) {
-    renderWidgets();
+    renderWidgets({ animateMobileReorder: false });
     return;
   }
 
@@ -3957,7 +4172,7 @@ function refreshMissYouWidgetDom(widget) {
 }
 
 function refreshWidgetContentDom(widget) {
-  if (!widget?.id) return;
+  if (!widget?.id) return false;
 
   const matchingWidgets = Array.from(
     document.querySelectorAll(".widget"),
@@ -3967,7 +4182,7 @@ function refreshWidgetContentDom(widget) {
     return renderedId === widget.id;
   });
 
-  if (!matchingWidgets.length) return;
+  if (!matchingWidgets.length) return false;
 
   matchingWidgets.forEach((widgetEl) => {
     const content = widgetEl.querySelector(".widget-content");
@@ -3995,6 +4210,7 @@ function refreshWidgetContentDom(widget) {
   });
 
   syncWidgetLikeButton(widget.id);
+  return true;
 }
 
 async function queueMissYouWidgetSave() {
@@ -4024,7 +4240,7 @@ async function queueMissYouWidgetSave() {
 }
 
 async function refreshWeatherWidget(options = {}) {
-  const { render = true } = options;
+  const { render = true, animateWidgets = false } = options;
   const widget = getWeatherWidget();
   if (!widget) return;
 
@@ -4079,7 +4295,12 @@ async function refreshWeatherWidget(options = {}) {
   }
 
   if (render) {
-    renderWidgets();
+    const scrollSnapshot = getViewportScrollSnapshot();
+    const updatedInline = refreshWidgetContentDom(widget);
+    if (!updatedInline) {
+      renderWidgets({ animateMobileReorder: animateWidgets });
+    }
+    restoreViewportScroll(scrollSnapshot);
   }
 }
 
@@ -4241,17 +4462,15 @@ function getWidgetContent(widget) {
     const weatherData = widget.data || {};
 
     if (weatherData.status === "error") {
-      return `
-      <div style="display:grid;gap:10px;">
-        <div style="font-size:0.92rem;opacity:0.8;">weather unavailable right now ♡</div>
-      </div>
-    `;
+      return "";
     }
 
     if (weatherData.status !== "ready") {
       return `
-      <div style="display:grid;gap:10px;">
-        <div style="font-size:0.92rem;opacity:0.8;">loading Kuwait and Dammam ♡</div>
+      <div class="widget-inline-skeleton" aria-label="loading weather">
+        ${getSkeletonLine("", "width:74%;")}
+        ${getSkeletonLine("", "width:92%;")}
+        ${getSkeletonLine("skeleton-line-short", "width:54%;")}
       </div>
     `;
     }
@@ -4469,7 +4688,11 @@ function upgradeLegacyAnniversaryLinks(root = document) {
 }
 
 async function loadWidgets(options = {}) {
-  const { render = true } = options;
+  const { render = true, showSkeleton = render } = options;
+  if (showSkeleton) {
+    renderWidgetSkeletons();
+  }
+
   const { data, error } = await supabaseClient
     .from("widgets")
     .select("*")
@@ -4627,12 +4850,14 @@ async function loadWidgets(options = {}) {
   refreshNotificationsFromCurrentData(render);
 
   if (render) {
-    renderWidgets();
+    renderWidgets({ animateMobileReorder: false });
   }
 }
 
-function renderWidgets() {
-  const shouldAnimateMobileReorder = isTabbedLayoutActive();
+function renderWidgets(options = {}) {
+  const { animateMobileReorder = true } = options;
+  const shouldAnimateMobileReorder =
+    animateMobileReorder && isTabbedLayoutActive();
   const prefersReducedMotion = reducedMotionMedia?.matches;
 
   previousMobileWidgetRects.clear();
@@ -5078,7 +5303,7 @@ function toggleWidgetMinimized(widgetId) {
     minimizedWidgetIds.add(widgetId);
   }
 
-  renderWidgets();
+  renderWidgets({ animateMobileReorder: false });
 }
 
 function openWidgetEditor(widgetId) {
@@ -5320,7 +5545,7 @@ function openWidgetEditor(widgetId) {
           notifyUpdate: true,
           preservePosition: true,
         });
-        renderWidgets();
+        renderWidgets({ animateMobileReorder: false });
         openWidgetEditor("dates");
         showMessage("date added ♡");
       });
@@ -5338,7 +5563,7 @@ function openWidgetEditor(widgetId) {
           notifyUpdate: true,
           preservePosition: true,
         });
-        renderWidgets();
+        renderWidgets({ animateMobileReorder: false });
         openWidgetEditor("dates");
         showMessage("date deleted ♡");
       });
@@ -6146,7 +6371,7 @@ async function saveWidgetChanges() {
     notifyUpdate: true,
     preservePosition: true,
   });
-  renderWidgets();
+  renderWidgets({ animateMobileReorder: false });
   widgetPopup.classList.remove("open");
   setWidgetPopupLikeButton(null);
   showMessage("widget updated ♡");
@@ -6185,12 +6410,7 @@ async function saveWidgetToSupabase(widget, options = {}) {
     payload.y = Math.round(widget.y);
   }
 
-  pendingLocalWidgetUpdates.set(widget.id, payload.updated_at);
-  window.setTimeout(() => {
-    if (pendingLocalWidgetUpdates.get(widget.id) === payload.updated_at) {
-      pendingLocalWidgetUpdates.delete(widget.id);
-    }
-  }, 7000);
+  markPendingLocalWidgetUpdate(widget.id, payload.updated_at);
 
   const { data: updatedRows, error: updateError } = await supabaseClient
     .from("widgets")
@@ -8100,6 +8320,45 @@ function createPhotoWidgetCommentId() {
     : `photo-widget-comment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function normalizePhotoWidgetCommentRecord(comment, widget, index = 0) {
+  const id =
+    String(comment?.id || "").trim() ||
+    `photo-widget-comment-${widget?.id || "widget"}-${index}`;
+  const replies = Array.isArray(comment?.replies)
+    ? comment.replies
+        .filter((reply) => reply && typeof reply === "object")
+        .map((reply, replyIndex) => ({
+          id:
+            String(reply.id || "").trim() ||
+            `${id}-reply-${replyIndex}`,
+          userId: String(reply.userId || reply.user_id || "").trim(),
+          actorName: String(
+            reply.actorName || reply.nickname || reply.author || "",
+          ).trim(),
+          text: String(reply.text || reply.content || "").trim(),
+          createdAt: String(reply.createdAt || reply.created_at || "").trim(),
+        }))
+        .filter((reply) => reply.text)
+        .sort(
+          (left, right) =>
+            new Date(left.createdAt || 0).getTime() -
+            new Date(right.createdAt || 0).getTime(),
+        )
+    : [];
+
+  return {
+    id,
+    userId: String(comment?.userId || comment?.user_id || "").trim(),
+    actorName: String(
+      comment?.actorName || comment?.nickname || comment?.author || "",
+    ).trim(),
+    text: String(comment?.text || comment?.content || "").trim(),
+    createdAt: String(comment?.createdAt || comment?.created_at || "").trim(),
+    preview: getWidgetCommentPreviewData(comment),
+    replies,
+  };
+}
+
 function getPhotoWidgetComments(widget) {
   if (!widget?.data || typeof widget.data !== "object") {
     return [];
@@ -8113,18 +8372,9 @@ function getPhotoWidgetComments(widget) {
 
   return rawComments
     .filter((comment) => comment && typeof comment === "object")
-    .map((comment, index) => ({
-      id:
-        String(comment.id || "").trim() ||
-        `photo-widget-comment-${widget.id}-${index}`,
-      userId: String(comment.userId || comment.user_id || "").trim(),
-      actorName: String(
-        comment.actorName || comment.nickname || comment.author || "",
-      ).trim(),
-      text: String(comment.text || comment.content || "").trim(),
-      createdAt: String(comment.createdAt || comment.created_at || "").trim(),
-      preview: getWidgetCommentPreviewData(comment),
-    }))
+    .map((comment, index) =>
+      normalizePhotoWidgetCommentRecord(comment, widget, index),
+    )
     .filter((comment) => comment.text)
     .sort(
       (left, right) =>
@@ -8157,6 +8407,9 @@ function normalizePhotoWidgetComments(widget) {
         String(comment?.actorName || "").trim() === normalizedComment.actorName &&
         String(comment?.text || "").trim() === normalizedComment.text &&
         String(comment?.createdAt || "").trim() === normalizedComment.createdAt &&
+        JSON.stringify(
+          Array.isArray(comment?.replies) ? comment.replies : [],
+        ) === JSON.stringify(normalizedComment.replies) &&
         JSON.stringify(getWidgetCommentPreviewData(comment)) ===
           JSON.stringify(normalizedComment.preview)
       );
@@ -8180,7 +8433,19 @@ function getPhotoWidgetCommentSectionIds(prefix) {
     listId: `${prefix}List`,
     inputId: `${prefix}Input`,
     buttonId: `${prefix}Button`,
+    ownerNoteId: `${prefix}OwnerNote`,
+    replyLabelId: `${prefix}ReplyLabel`,
+    cancelReplyId: `${prefix}CancelReply`,
   };
+}
+
+function isOwnPhotoPinWidget(widget) {
+  return Boolean(isPhotoPinWidget(widget) && canEditPhotoPinWidget(widget));
+}
+
+function canReplyToPhotoWidgetComment(comment) {
+  const currentUserId = currentProfile?.id || currentUser?.id || "";
+  return Boolean(comment?.userId && comment.userId !== currentUserId);
 }
 
 function getPhotoWidgetCommentPreviewData(source) {
@@ -8346,7 +8611,11 @@ function getPhotoWidgetCommentSectionMarkup(widget, options = {}) {
   } = options;
   const comments = getPhotoWidgetComments(widget);
   const ids = getPhotoWidgetCommentSectionIds(prefix);
-  const countLabel = comments.length ? ` (${comments.length})` : "";
+  const commentCount = comments.reduce(
+    (total, comment) => total + 1 + (comment.replies || []).length,
+    0,
+  );
+  const countLabel = commentCount ? ` (${commentCount})` : "";
 
   return `
     <section class="photo-widget-comments-section" data-photo-widget-comments-prefix="${escapeHtml(prefix)}">
@@ -8370,6 +8639,25 @@ function getPhotoWidgetCommentSectionMarkup(widget, options = {}) {
           rows="3"
           maxlength="240"
         ></textarea>
+        <div
+          class="photo-widget-owner-comment-note"
+          id="${escapeHtml(ids.ownerNoteId)}"
+          hidden
+        ></div>
+        <div
+          class="photo-widget-replying-label"
+          id="${escapeHtml(ids.replyLabelId)}"
+          hidden
+        >
+          <span></span>
+          <button
+            class="photo-widget-cancel-reply-btn"
+            id="${escapeHtml(ids.cancelReplyId)}"
+            type="button"
+          >
+            cancel
+          </button>
+        </div>
         <div class="popup-actions photo-widget-comments-actions">
           <button
             class="soft-btn"
@@ -8386,6 +8674,37 @@ function getPhotoWidgetCommentSectionMarkup(widget, options = {}) {
   `;
 }
 
+function syncPhotoWidgetCommentComposer(widget, options = {}) {
+  const { prefix = `photo-widget-comments-${widget?.id || "widget"}` } =
+    options;
+  const ids = getPhotoWidgetCommentSectionIds(prefix);
+  const input = document.getElementById(ids.inputId);
+  const saveBtn = document.getElementById(ids.buttonId);
+  const ownerNoteEl = document.getElementById(ids.ownerNoteId);
+  if (!input || !saveBtn) return;
+
+  const comments = getPhotoWidgetComments(widget);
+  const replyTargetId = activePhotoWidgetReplyTargets.get(prefix) || "";
+  const replyTarget = comments.find((comment) => comment.id === replyTargetId);
+  const ownsPhotoPin = isOwnPhotoPinWidget(widget);
+  const canUseComposer =
+    !ownsPhotoPin || Boolean(replyTarget && canReplyToPhotoWidgetComment(replyTarget));
+
+  input.disabled = !canUseComposer;
+  saveBtn.disabled = !canUseComposer;
+  saveBtn.textContent = replyTarget ? "post reply" : "post comment";
+  input.placeholder = ownsPhotoPin
+    ? canUseComposer
+      ? "write a reply ♡"
+      : "reply to someone else's comment ♡"
+    : "write a comment ♡";
+
+  if (ownerNoteEl) {
+    ownerNoteEl.hidden = true;
+    ownerNoteEl.textContent = "";
+  }
+}
+
 function renderPhotoWidgetCommentsSection(widget, options = {}) {
   const {
     prefix = `photo-widget-comments-${widget?.id || "widget"}`,
@@ -8394,12 +8713,32 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
   const ids = getPhotoWidgetCommentSectionIds(prefix);
   const listEl = document.getElementById(ids.listId);
   const labelEl = document.getElementById(ids.labelId);
+  const replyLabelEl = document.getElementById(ids.replyLabelId);
   if (!listEl) return;
 
   const comments = getPhotoWidgetComments(widget);
   if (labelEl) {
-    labelEl.textContent = `${title}${comments.length ? ` (${comments.length})` : ""}`;
+    const commentCount = comments.reduce(
+      (total, comment) => total + 1 + (comment.replies || []).length,
+      0,
+    );
+    labelEl.textContent = `${title}${commentCount ? ` (${commentCount})` : ""}`;
   }
+
+  const replyTargetId = activePhotoWidgetReplyTargets.get(prefix) || "";
+  const replyTarget = comments.find((comment) => comment.id === replyTargetId);
+  if (replyLabelEl) {
+    replyLabelEl.hidden = !replyTarget;
+    const textEl = replyLabelEl.querySelector("span");
+    if (textEl && replyTarget) {
+      const actorName =
+        replyTarget.actorName ||
+        getProfileDisplayName(getKnownProfileById(replyTarget.userId), "memory");
+      textEl.textContent = `replying to ${actorName} ♡`;
+    }
+  }
+
+  syncPhotoWidgetCommentComposer(widget, options);
 
   if (!comments.length) {
     listEl.innerHTML = `<div class="comment-empty">no comments yet ♡</div>`;
@@ -8425,6 +8764,59 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
       const canDelete =
         comment.userId &&
         comment.userId === (currentProfile?.id || currentUser?.id || "");
+      const canReply = canReplyToPhotoWidgetComment(comment);
+      const repliesHtml = (comment.replies || [])
+        .map((reply) => {
+          const replyActorName = escapeHtml(
+            reply.actorName ||
+              getProfileDisplayName(getKnownProfileById(reply.userId), "memory"),
+          );
+          const canDeleteReply =
+            reply.userId &&
+            reply.userId === (currentProfile?.id || currentUser?.id || "");
+
+          return `
+            <div
+              class="photo-widget-comment-reply"
+              data-photo-widget-comment-row-id="${escapeHtml(reply.id)}"
+            >
+              <div
+                class="comment-name profile-trigger"
+                role="button"
+                tabindex="0"
+                data-photo-widget-comment-profile-id="${escapeHtml(reply.userId)}"
+              >
+                ${replyActorName}
+              </div>
+              <div
+                class="comment-text"
+                data-photo-widget-comment-text-id="${escapeHtml(reply.id)}"
+              ></div>
+              <div
+                class="comment-link-preview-list link-preview-list"
+                data-photo-widget-comment-preview-id="${escapeHtml(reply.id)}"
+                hidden
+              ></div>
+              <div class="photo-widget-comment-footer">
+                <div class="comment-meta">${formatEntryDate(reply.createdAt)}</div>
+                ${
+                  canDeleteReply
+                    ? `
+                      <button
+                        class="photo-widget-delete-reply-btn"
+                        type="button"
+                        data-photo-widget-delete-comment-id="${escapeHtml(reply.id)}"
+                      >
+                        delete
+                      </button>
+                    `
+                    : ""
+                }
+              </div>
+            </div>
+          `;
+        })
+        .join("");
 
       return `
         <div
@@ -8451,7 +8843,21 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
             ></div>
             <div class="photo-widget-comment-footer">
               <div class="comment-meta">${formatEntryDate(comment.createdAt)}</div>
+              ${
+                canReply
+                  ? `
+                    <button
+                      class="photo-widget-reply-btn"
+                      type="button"
+                      data-photo-widget-reply-comment-id="${escapeHtml(comment.id)}"
+                    >
+                      reply
+                    </button>
+                  `
+                  : ""
+              }
             </div>
+            ${repliesHtml ? `<div class="photo-widget-comment-replies">${repliesHtml}</div>` : ""}
           </div>
           ${hasPreview ? getWidgetCommentPreviewMarkup(comment, { compact: true }) : ""}
           ${
@@ -8489,7 +8895,39 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
         comment.text,
       );
     }
+
+    (comment.replies || []).forEach((reply) => {
+      const replyTextEl = listEl.querySelector(
+        `[data-photo-widget-comment-text-id="${reply.id}"]`,
+      );
+      if (replyTextEl) {
+        renderTextWithLinkPreviews(
+          replyTextEl,
+          listEl.querySelector(
+            `[data-photo-widget-comment-preview-id="${reply.id}"]`,
+          ),
+          reply.text,
+        );
+      }
+    });
   });
+
+  listEl
+    .querySelectorAll("[data-photo-widget-reply-comment-id]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const targetCommentId = String(
+          button.dataset.photoWidgetReplyCommentId || "",
+        ).trim();
+        if (!targetCommentId) return;
+
+        activePhotoWidgetReplyTargets.set(prefix, targetCommentId);
+        renderPhotoWidgetCommentsSection(widget, options);
+
+        const input = document.getElementById(ids.inputId);
+        input?.focus();
+      });
+    });
 
   listEl
     .querySelectorAll("[data-photo-widget-delete-comment-id]")
@@ -8528,9 +8966,16 @@ function bindPhotoWidgetCommentSection(widget, options = {}) {
 
   const saveBtn = document.getElementById(ids.buttonId);
   const input = document.getElementById(ids.inputId);
+  const cancelReplyBtn = document.getElementById(ids.cancelReplyId);
 
   saveBtn?.addEventListener("click", async () => {
     await savePhotoWidgetComment(widget.id, options);
+  });
+
+  cancelReplyBtn?.addEventListener("click", () => {
+    activePhotoWidgetReplyTargets.delete(prefix);
+    renderPhotoWidgetCommentsSection(widget, options);
+    input?.focus();
   });
 
   input?.addEventListener("keydown", async (event) => {
@@ -8563,23 +9008,58 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
 
   normalizePhotoWidgetComments(widget);
   const previousComments = getPhotoWidgetComments(widget);
+  const replyTargetId = activePhotoWidgetReplyTargets.get(prefix) || "";
+  const replyTarget = previousComments.find(
+    (comment) => comment.id === replyTargetId,
+  );
+  const replyTargetExists = Boolean(replyTarget);
+  const ownsPhotoPin = isOwnPhotoPinWidget(widget);
+
+  if (ownsPhotoPin && !replyTargetExists) {
+    showMessage("you can only reply to comments on your own pin ♡");
+    return;
+  }
+
+  if (replyTargetExists && !canReplyToPhotoWidgetComment(replyTarget)) {
+    showMessage("you can only reply to someone else's comment ♡");
+    return;
+  }
+
+  const nextComment = {
+    id: createPhotoWidgetCommentId(),
+    userId: user.id,
+    actorName: getProfileDisplayName(currentProfile, "memory"),
+    text: content,
+    createdAt: new Date().toISOString(),
+  };
+  const nextComments = replyTargetExists
+    ? previousComments.map((comment) =>
+        comment.id === replyTargetId
+          ? {
+              ...comment,
+              replies: [...(comment.replies || []), nextComment].slice(-40),
+            }
+          : comment,
+      )
+    : [
+        ...previousComments,
+        {
+          ...nextComment,
+          preview: getWidgetCommentPreviewSnapshot(widget),
+          replies: [],
+        },
+      ].slice(-60);
+
   widget.data = {
     ...(widget.data && typeof widget.data === "object" ? widget.data : {}),
-    comments: [
-      ...previousComments,
-      {
-        id: createPhotoWidgetCommentId(),
-        userId: user.id,
-        actorName: getProfileDisplayName(currentProfile, "memory"),
-        text: content,
-        createdAt: new Date().toISOString(),
-        preview: getWidgetCommentPreviewSnapshot(widget),
-      },
-    ].slice(-60),
+    comments: nextComments,
   };
 
   if (input) {
     input.value = "";
+  }
+  if (replyTargetExists) {
+    activePhotoWidgetReplyTargets.delete(prefix);
   }
   renderPhotoWidgetCommentsSection(widget, options);
 
@@ -8592,13 +9072,16 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
 
   if (!saved) {
     widget.data.comments = previousComments;
+    if (replyTargetExists) {
+      activePhotoWidgetReplyTargets.set(prefix, replyTargetId);
+    }
     if (input) {
       input.value = content;
     }
     renderPhotoWidgetCommentsSection(widget, options);
     return;
   }
-  showMessage("comment posted! ♡");
+  showMessage(replyTargetExists ? "reply posted! ♡" : "comment posted! ♡");
 }
 
 async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
@@ -8618,9 +9101,14 @@ async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
   const previousComments = getPhotoWidgetComments(widget);
   widget.data = {
     ...(widget.data && typeof widget.data === "object" ? widget.data : {}),
-    comments: previousComments.filter(
-      (comment) => comment.id !== normalizedCommentId,
-    ),
+    comments: previousComments
+      .filter((comment) => comment.id !== normalizedCommentId)
+      .map((comment) => ({
+        ...comment,
+        replies: (comment.replies || []).filter(
+          (reply) => reply.id !== normalizedCommentId,
+        ),
+      })),
   };
   renderPhotoWidgetCommentsSection(widget, options);
 
@@ -8852,7 +9340,7 @@ function renderPhotoHistoryPopup(widget) {
           notifyUpdate: false,
           suppressErrorMessage: false,
         });
-        renderWidgets();
+        renderWidgets({ animateMobileReorder: false });
         renderPhotoHistoryPopup(widget);
       });
     });
@@ -9106,7 +9594,7 @@ function openWidgetHistory(widgetId) {
         if (!saved) return;
 
         openWidgetHistory(widget.id);
-        renderWidgets();
+        renderWidgets({ animateMobileReorder: false });
         showMessage("history message deleted ♡");
       });
     });
@@ -9976,13 +10464,20 @@ function isVisualInteractionActive() {
       draggingPlacedSticker ||
       document.body.classList.contains("dragging-widget") ||
       document.body.classList.contains("sticker-dragging") ||
+      authPopup?.classList.contains("open") ||
+      profilePopup?.classList.contains("open") ||
+      entryPopup?.classList.contains("open") ||
       widgetPopup?.classList.contains("open") ||
       commentsPopup?.classList.contains("open") ||
       stickerPopup?.classList.contains("open") ||
+      entryPreviewPopup?.classList.contains("open") ||
+      deleteEntryPopup?.classList.contains("open") ||
       pendingPostLikeIds.size > 0 ||
       pendingWidgetLikeIds.size > 0 ||
+      entrySaveInFlight ||
       commentSaveInFlight ||
-      widgetSaveInFlight,
+      widgetSaveInFlight ||
+      profileSaveInFlight,
   );
 }
 
@@ -10047,6 +10542,10 @@ function handleProfileRealtimeChange(payload = {}) {
 }
 
 function handleRealtimeChange(table, payload = {}) {
+  if (isOwnRealtimeEcho(table, payload)) {
+    return;
+  }
+
   if (table === "profiles") {
     handleProfileRealtimeChange(payload);
     return;
@@ -10061,10 +10560,6 @@ function handleRealtimeChange(table, payload = {}) {
         renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
       }
     });
-    return;
-  }
-
-  if (isOwnRealtimeEcho(table, payload)) {
     return;
   }
 
@@ -10200,8 +10695,22 @@ function syncPopupScrollLock() {
   if (hasOpenPopup) {
     if (!document.body.classList.contains("popup-scroll-locked")) {
       popupScrollLockTop = window.scrollY || window.pageYOffset || 0;
+      popupScrollLockLeft = window.scrollX || window.pageXOffset || 0;
+      popupScrollLockBodyStyles = {
+        position: document.body.style.position,
+        top: document.body.style.top,
+        left: document.body.style.left,
+        right: document.body.style.right,
+        width: document.body.style.width,
+      };
       document.documentElement.classList.add("popup-scroll-locked");
       document.body.classList.add("popup-scroll-locked");
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${popupScrollLockTop}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+      lastScrollY = popupScrollLockTop;
     }
     return;
   }
@@ -10210,9 +10719,27 @@ function syncPopupScrollLock() {
     return;
   }
 
+  const restoredScrollTop = popupScrollLockTop;
+  const restoredScrollLeft = popupScrollLockLeft;
+
   document.documentElement.classList.remove("popup-scroll-locked");
   document.body.classList.remove("popup-scroll-locked");
+  if (popupScrollLockBodyStyles) {
+    document.body.style.position = popupScrollLockBodyStyles.position;
+    document.body.style.top = popupScrollLockBodyStyles.top;
+    document.body.style.left = popupScrollLockBodyStyles.left;
+    document.body.style.right = popupScrollLockBodyStyles.right;
+    document.body.style.width = popupScrollLockBodyStyles.width;
+  }
+  popupScrollLockBodyStyles = null;
   popupScrollLockTop = 0;
+  popupScrollLockLeft = 0;
+  window.scrollTo({
+    left: restoredScrollLeft,
+    top: restoredScrollTop,
+    behavior: "auto",
+  });
+  lastScrollY = restoredScrollTop;
 }
 
 let popupPointerStartedInsideCard = false;
@@ -10268,22 +10795,39 @@ async function getCurrentUser() {
 }
 
 async function refreshUserData(options = {}) {
-  const { includeWidgets = false } = options;
-  renderNotifications();
+  const {
+    includeWidgets = false,
+    preserveScroll = true,
+    showSkeleton = false,
+  } = options;
 
-  const tasks = [loadPosts({ render: false })];
+  if (showSkeleton) {
+    renderAppSkeleton({
+      timeline: true,
+      widgets: includeWidgets,
+      notifications: true,
+    });
+  }
+
+  if (!showSkeleton) {
+    renderNotifications();
+  }
+
+  const tasks = [loadPosts({ render: false, showSkeleton: false })];
 
   if (includeWidgets) {
-    tasks.push(loadWidgets({ render: false }));
+    tasks.push(loadWidgets({ render: false, showSkeleton: false }));
   }
 
   await Promise.all(tasks);
+  const scrollSnapshot = preserveScroll ? getViewportScrollSnapshot() : null;
   renderTimeline();
   renderNotifications();
   if (includeWidgets) {
-    renderWidgets();
+    renderWidgets({ animateMobileReorder: false });
     void refreshWeatherWidget({ render: true });
   }
+  restoreViewportScroll(scrollSnapshot);
 }
 
 profileBtn.addEventListener("click", () => {
@@ -10302,7 +10846,9 @@ if (editProfileBtn) {
 
 if (cancelProfileEditBtn) {
   cancelProfileEditBtn.addEventListener("click", () => {
-    renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
+    renderProfilePopup(getKnownProfileById(activeProfilePopupUserId), {
+      startEditing: false,
+    });
   });
 }
 
@@ -10589,9 +11135,11 @@ async function signUpUser() {
   if (data.user) {
     currentUser = data.user;
     setToolbarAuthState("checking");
+    authPopup.classList.remove("open");
+    renderAppSkeleton();
     await ensureProfile(data.user);
     await loadProfile(data.user);
-    await refreshUserData({ includeWidgets: true });
+    await refreshUserData({ includeWidgets: true, showSkeleton: true });
     setCurrentUser(data.user);
   }
 
@@ -10616,8 +11164,10 @@ async function loginUser() {
   if (data.user) {
     currentUser = data.user;
     setToolbarAuthState("checking");
+    authPopup.classList.remove("open");
+    renderAppSkeleton();
     await loadProfile(data.user);
-    await refreshUserData({ includeWidgets: true });
+    await refreshUserData({ includeWidgets: true, showSkeleton: true });
     setCurrentUser(data.user);
   }
 
@@ -10804,7 +11354,7 @@ async function saveProfile() {
 
   applyProfileToTimeline(currentProfile);
   pfpInput.value = "";
-  renderProfilePopup(savedProfile);
+  renderProfilePopup(savedProfile, { startEditing: false });
 
   showMessage("updated! <3");
   } finally {
@@ -10953,7 +11503,11 @@ function isPostEditedFromTimestamps(post) {
 }
 
 async function loadPosts(options = {}) {
-  const { render = true } = options;
+  const { render = true, showSkeleton = render } = options;
+  if (showSkeleton) {
+    renderTimelineSkeleton();
+  }
+
   const editedPostIds = new Set(getEditedPostIds());
   const [
     { data: postsData, error: postsError },
@@ -11560,7 +12114,12 @@ function openCommentsPopup(postId) {
 function renderCommentsList(postId) {
   const post = posts.find((item) => item.id === postId);
 
-  if (!post || !post.comments || !post.comments.length) {
+  if (!post) {
+    renderCommentsSkeleton();
+    return;
+  }
+
+  if (!post.comments || !post.comments.length) {
     commentsList.innerHTML = `<div class="comment-empty">no comments yet ♡</div>`;
     return;
   }
@@ -11651,7 +12210,7 @@ function renderCommentsList(postId) {
     });
   });
 
-  document.querySelectorAll(".reply-btn").forEach((btn) => {
+  commentsList.querySelectorAll(".reply-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       replyingToCommentId = btn.dataset.commentId;
       replyingToLabel.style.display = "block";
@@ -11660,19 +12219,19 @@ function renderCommentsList(postId) {
     });
   });
 
-  document.querySelectorAll(".comment-like-btn").forEach((btn) => {
+  commentsList.querySelectorAll(".comment-like-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await toggleCommentLike(btn.dataset.commentId);
     });
   });
 
-  document.querySelectorAll(".delete-comment-btn").forEach((btn) => {
+  commentsList.querySelectorAll(".delete-comment-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await deleteComment(btn.dataset.commentId);
     });
   });
 
-  document.querySelectorAll(".delete-reply-btn").forEach((btn) => {
+  commentsList.querySelectorAll(".delete-reply-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await deleteComment(btn.dataset.commentId);
     });
@@ -11845,8 +12404,9 @@ async function checkSession() {
     currentUser = session.user;
     setToolbarAuthState("checking");
     authPopup.classList.remove("open");
+    renderAppSkeleton();
     await loadProfile(session.user);
-    await refreshUserData({ includeWidgets: true });
+    await refreshUserData({ includeWidgets: true, showSkeleton: true });
     setCurrentUser(session.user);
   } else {
     currentProfile = null;

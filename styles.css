@@ -2584,6 +2584,90 @@ html[data-theme="dark"] .photo-color-trigger {
   flex-wrap: wrap;
 }
 
+.photo-widget-owner-comment-note,
+.photo-widget-replying-label {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.photo-widget-owner-comment-note {
+  line-height: 1.35;
+}
+
+.photo-widget-owner-comment-note[hidden] {
+  display: none;
+}
+
+.photo-widget-replying-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.photo-widget-replying-label[hidden] {
+  display: none;
+}
+
+.photo-widget-cancel-reply-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  padding: 2px 0;
+}
+
+.photo-widget-comment-replies {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(216, 165, 185, 0.34);
+}
+
+.photo-widget-comment-reply {
+  display: grid;
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid rgba(216, 165, 185, 0.26);
+  border-radius: 14px;
+  background: rgba(255, 250, 253, 0.22);
+}
+
+.photo-widget-reply-btn {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  box-shadow: none;
+  font-family:
+    "Quicksand", "Noto Sans", "Noto Sans Symbols 2", "Noto Sans Batak",
+    "Segoe UI Symbol", sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.photo-widget-delete-reply-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0;
+}
+
+.photo-widget-reply-btn:hover,
+.photo-widget-delete-reply-btn:hover,
+.photo-widget-cancel-reply-btn:hover {
+  transform: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+}
+
 .comment-item.photo-widget-comment-item .photo-widget-comment-actions {
   position: absolute;
   top: 6px;
@@ -5146,6 +5230,136 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   font-size: 0.88rem;
 }
 
+.skeleton-line,
+.skeleton-avatar {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(246, 214, 226, 0.66),
+    rgba(255, 252, 254, 0.95),
+    rgba(246, 214, 226, 0.66)
+  );
+  background-size: 220% 100%;
+  animation: skeletonShimmer 1.25s ease-in-out infinite;
+}
+
+.skeleton-line {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.skeleton-title {
+  height: 15px;
+}
+
+.skeleton-line-short {
+  height: 10px;
+}
+
+.skeleton-pill {
+  height: 34px;
+}
+
+.skeleton-avatar {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.skeleton-meta-lines,
+.skeleton-text-block,
+.skeleton-widget-content,
+.widget-inline-skeleton,
+.notification-skeleton,
+.comment-skeleton {
+  display: grid;
+  gap: 10px;
+}
+
+.post-skeleton,
+.widget-skeleton {
+  pointer-events: none;
+}
+
+.post-skeleton .post-body {
+  min-height: 220px;
+}
+
+.skeleton-post-header {
+  min-height: 48px;
+}
+
+.skeleton-post-header,
+.skeleton-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skeleton-actions {
+  justify-content: flex-start;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.skeleton-widget-bar {
+  min-height: 42px;
+}
+
+.widget-skeleton {
+  min-height: 148px;
+}
+
+.widget-skeleton .widget-content,
+.widget-inline-skeleton {
+  padding: 16px;
+}
+
+.widget-inline-skeleton {
+  padding: 0;
+}
+
+.notification-skeleton {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.comment-skeleton {
+  min-height: 92px;
+}
+
+html[data-theme="dark"] .skeleton-line,
+html[data-theme="dark"] .skeleton-avatar {
+  background: linear-gradient(
+    90deg,
+    rgba(68, 45, 76, 0.78),
+    rgba(94, 62, 104, 0.92),
+    rgba(68, 45, 76, 0.78)
+  );
+  background-size: 220% 100%;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line,
+  .skeleton-avatar {
+    animation: none;
+  }
+}
+
 .sticker-tabs {
   display: flex;
   gap: 10px;
@@ -6000,20 +6214,25 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     width: 100%;
   }
 
+  .notifications-menu {
+    display: flex;
+    min-width: 0;
+  }
+
   .notifications-btn,
-  .toolbar-actions .soft-btn {
-    min-height: 40px;
-    padding: 9px 8px;
+  .toolbar-actions .theme-toggle,
+  .toolbar-actions .profile-icon-btn {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 8px;
     border-radius: 14px;
     font-size: 0.84rem;
   }
 
   .toolbar-actions .theme-toggle {
-    height: 40px;
-    min-height: 40px;
-    padding: 0;
-    border-radius: 14px;
-    font-size: 0.84rem;
+    display: inline-flex;
   }
 
   .notifications-btn,
@@ -6021,7 +6240,8 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     gap: 6px;
   }
 
-  .notifications-btn {
+  .notifications-btn,
+  .toolbar-actions .profile-icon-btn {
     justify-content: center;
   }
 
