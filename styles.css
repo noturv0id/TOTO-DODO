@@ -1,6 +1,7 @@
 ﻿:root {
   color-scheme: light;
   --app-zoom: 1;
+  --app-text-boost: 1;
   --bg-1: #fff8fb;
   --bg-2: #fff0f6;
   --bg-3: #fffdfd;
@@ -205,6 +206,10 @@ body.popup-scroll-locked {
 }
 
 @media (min-width: 721px) {
+  html {
+    font-size: calc(16px * var(--app-text-boost));
+  }
+
   .page {
     zoom: var(--app-zoom);
   }
@@ -264,6 +269,14 @@ body.popup-scroll-locked {
 .popup-card,
 .notifications-panel {
   contain: layout paint;
+}
+
+@supports (content-visibility: auto) {
+  .post,
+  .post-skeleton {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
+  }
 }
 
 .toolbar {
@@ -1336,9 +1349,10 @@ body.dragging-widget {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 6px;
   background: linear-gradient(180deg, #f5d2df, #f1c4d4);
   color: #704c5c;
-  padding: 10px 72px 10px 14px;
+  padding: 10px 10px 10px 14px;
   font-size: 0.74rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1348,6 +1362,7 @@ body.dragging-widget {
 
 .widget-bar > span {
   flex: 1;
+  min-width: 0;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -2182,7 +2197,10 @@ html[data-theme="dark"] .photo-color-trigger {
   font-size: 0.9rem;
   opacity: 0.75;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    color 0.2s ease;
   padding: 0;
   font-family: inherit;
   height: 20px;
@@ -2206,9 +2224,9 @@ html[data-theme="dark"] .photo-color-trigger {
 
 .widget-header-comment-btn,
 .widget-header-like-btn {
-  gap: 5px;
+  gap: 2px;
   opacity: 0.88;
-  min-width: 34px;
+  min-width: 26px;
   font-size: 0.9rem;
 }
 
@@ -2248,13 +2266,13 @@ html[data-theme="dark"] .photo-color-trigger {
 }
 
 .widget-bar-actions {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
+  position: static;
+  transform: none;
+  flex: 0 0 auto;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
   height: 22px;
 }
 
@@ -3530,7 +3548,11 @@ html[data-theme="dark"] .post-author-name-input {
   font-weight: 600;
   font-size: 0.76rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .reply-btn:hover,
@@ -3554,7 +3576,11 @@ html[data-theme="dark"] .post-author-name-input {
   font-weight: 600;
   font-size: 0.76rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .reorder-wish-btn {
@@ -3762,7 +3788,11 @@ html[data-theme="dark"] .post-author-name-input {
   font-weight: 600;
   font-size: 0.76rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .comment-like-btn:hover {
@@ -5765,7 +5795,11 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   font-weight: 600;
   font-size: 0.76rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .delete-date-btn:hover {
@@ -6360,13 +6394,12 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   }
 
   .widget-bar {
-    padding: 10px 134px 10px 12px;
+    padding: 10px 10px 10px 12px;
     cursor: default;
   }
 
   .widget-bar-actions {
-    right: 12px;
-    gap: 6px;
+    gap: 3px;
   }
 
   .widget-content {

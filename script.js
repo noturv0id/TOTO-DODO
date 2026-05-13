@@ -1057,12 +1057,30 @@ function getStoredAppZoomPreference() {
   }
 }
 
+function getCurrentAppZoom() {
+  return normalizeAppZoom(
+    getComputedStyle(document.documentElement).getPropertyValue("--app-zoom"),
+  );
+}
+
+function getAppTextBoostForZoom(zoom) {
+  const normalizedZoom = normalizeAppZoom(zoom);
+  if (normalizedZoom >= DEFAULT_APP_ZOOM) return 1;
+
+  return Math.min(2.75, Math.pow(1 / normalizedZoom, 0.7));
+}
+
 function setAppZoom(zoom, options = {}) {
   const { persist = false } = options;
   const nextZoom = normalizeAppZoom(zoom);
+  const nextTextBoost = getAppTextBoostForZoom(nextZoom);
   document.documentElement.style.setProperty(
     "--app-zoom",
     nextZoom.toFixed(2),
+  );
+  document.documentElement.style.setProperty(
+    "--app-text-boost",
+    nextTextBoost.toFixed(3),
   );
 
   if (zoomValueLabel) {
@@ -1094,9 +1112,7 @@ function setAppZoom(zoom, options = {}) {
 }
 
 function adjustAppZoom(delta) {
-  const currentZoom = normalizeAppZoom(
-    getComputedStyle(document.documentElement).getPropertyValue("--app-zoom"),
-  );
+  const currentZoom = getCurrentAppZoom();
   setAppZoom(currentZoom + delta, { persist: true });
 }
 
@@ -7877,24 +7893,32 @@ function updateDraggedWidgetPosition() {
     document.querySelector(".page")?.getBoundingClientRect() ||
     document.documentElement.getBoundingClientRect();
   const zoneRect = zone.getBoundingClientRect();
+  const appZoom = getCurrentAppZoom();
+  const toLayoutPx = (visualPx) => visualPx / appZoom;
+  const viewportWidth =
+    document.documentElement.clientWidth || window.innerWidth || pageRect.right;
+  const viewportHeight =
+    window.innerHeight ||
+    document.documentElement.clientHeight ||
+    pageRect.bottom;
   const widgetWidth = element.offsetWidth || 240;
   const widgetHeight = element.offsetHeight || 100;
-  const nextX = originX + (latestClientX - startX);
-  const nextY = originY + (latestClientY - startY);
+  const nextX = originX + toLayoutPx(latestClientX - startX);
+  const nextY = originY + toLayoutPx(latestClientY - startY);
   const gutter = 8;
   const midpoint = pageRect.left + pageRect.width / 2;
   const minX =
     widget.side === "left"
-      ? pageRect.left - zoneRect.left + gutter
-      : midpoint - zoneRect.left + gutter;
+      ? toLayoutPx(0 - zoneRect.left) + gutter
+      : toLayoutPx(midpoint - zoneRect.left) + gutter;
   const maxX =
     widget.side === "left"
-      ? midpoint - zoneRect.left - widgetWidth - gutter
-      : pageRect.right - zoneRect.left - widgetWidth - gutter;
-  const minY = Math.max(pageRect.top - zoneRect.top + gutter, 0);
+      ? toLayoutPx(midpoint - zoneRect.left) - widgetWidth - gutter
+      : toLayoutPx(viewportWidth - zoneRect.left) - widgetWidth - gutter;
+  const minY = Math.max(toLayoutPx(0 - zoneRect.top) + gutter, 0);
   const maxY = Math.max(
     minY,
-    pageRect.bottom - zoneRect.top - widgetHeight - gutter,
+    toLayoutPx(viewportHeight - zoneRect.top) - widgetHeight - gutter,
   );
 
   widget.x = Math.round(Math.max(minX, Math.min(maxX, nextX)));
@@ -8016,7 +8040,22 @@ window.addEventListener("pointerup", async () => {
   pendingWidgetDrag = null;
 
   if (finishedDrag) {
-    await saveWidgetToSupabase(finishedDrag.widget);
+    const positionChanged =
+      finishedDrag.widget.x !== finishedDrag.originX ||
+      finishedDrag.widget.y !== finishedDrag.originY;
+
+    if (positionChanged) {
+      const saved = await saveWidgetToSupabase(finishedDrag.widget, {
+        recordHistory: false,
+      });
+
+      if (!saved) {
+        finishedDrag.widget.x = finishedDrag.originX;
+        finishedDrag.widget.y = finishedDrag.originY;
+        finishedDrag.element.style.left = `${finishedDrag.originX}px`;
+        finishedDrag.element.style.top = `${finishedDrag.originY}px`;
+      }
+    }
   }
 });
 
@@ -10131,6 +10170,20 @@ function withBootTimeout(promise, timeoutMs = 9000) {
       window.setTimeout(resolve, timeoutMs);
     }),
   ]);
+}
+
+function renderBootFallbackShell() {
+  console.warn("App boot timed out before user data finished loading.");
+  currentProfile = null;
+  knownProfiles = [];
+  posts = [];
+  placedStickers = [];
+  notifications = [];
+  setCurrentUser(null);
+  closeProfileDetailsPopup();
+  closeNotificationsPanel();
+  authPopup?.classList.add("open");
+  renderSignedOutShell();
 }
 
 function waitForWindowLoad() {
@@ -12969,8 +13022,19 @@ renderNotifications();
 
 async function initApp() {
   try {
-    await checkSession();
+    const sessionCheckCompleted = await withBootTimeout(
+      checkSession().then(() => true),
+      7000,
+    );
+
+    if (!sessionCheckCompleted && !currentUser) {
+      renderBootFallbackShell();
+    }
+
     await waitForInitialPageReady();
+  } catch (error) {
+    console.error(error);
+    renderBootFallbackShell();
   } finally {
     if (!shouldUseLaunchSplash()) {
       if (launchSplash) {
