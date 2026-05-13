@@ -1,5 +1,6 @@
 ﻿:root {
   color-scheme: light;
+  --app-zoom: 1;
   --bg-1: #fff8fb;
   --bg-2: #fff0f6;
   --bg-3: #fffdfd;
@@ -203,6 +204,21 @@ body.popup-scroll-locked {
     visibility 0.28s ease;
 }
 
+@media (min-width: 721px) {
+  .page {
+    zoom: var(--app-zoom);
+  }
+
+  @supports not (zoom: 1) {
+    .page {
+      width: calc(100% / var(--app-zoom));
+      min-height: calc(100vh / var(--app-zoom));
+      transform: scale(var(--app-zoom));
+      transform-origin: top center;
+    }
+  }
+}
+
 .floating-decor {
   position: absolute;
   inset: 0;
@@ -307,6 +323,62 @@ body.popup-scroll-locked {
 
 .toolbar-actions {
   justify-self: end;
+}
+
+.app-zoom-control {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 4px;
+  border: 1px solid rgba(219, 180, 195, 0.78);
+  border-radius: 18px;
+  background: rgba(255, 252, 254, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.app-zoom-btn,
+.app-zoom-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text);
+  font-family:
+    "Quicksand", "Noto Sans", "Noto Sans Symbols 2", "Noto Sans Batak",
+    "Segoe UI Symbol", sans-serif;
+  font-weight: 800;
+  line-height: 1;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.app-zoom-btn {
+  width: 36px;
+  font-size: 1.1rem;
+}
+
+.app-zoom-value {
+  min-width: 58px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.app-zoom-btn:hover,
+.app-zoom-value:hover {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.app-zoom-btn:disabled {
+  opacity: 0.42;
+  transform: none;
 }
 
 .mobile-view-switcher {
@@ -1007,6 +1079,8 @@ html[data-theme="dark"] .sticker-tab.active {
 
 html[data-theme="dark"] .post-body,
 html[data-theme="dark"] .quote-pill,
+html[data-theme="dark"] .app-zoom-btn:hover,
+html[data-theme="dark"] .app-zoom-value:hover,
 html[data-theme="dark"] .soft-btn:hover,
 html[data-theme="dark"] .notifications-btn:hover,
 html[data-theme="dark"] .notifications-btn[aria-expanded="true"],
@@ -1026,6 +1100,7 @@ html[data-theme="dark"] .post-text a {
 html[data-theme="dark"] .soft-btn,
 html[data-theme="dark"] .notifications-btn,
 html[data-theme="dark"] .theme-toggle,
+html[data-theme="dark"] .app-zoom-control,
 html[data-theme="dark"] .post-btn,
 html[data-theme="dark"] .reply-btn,
 html[data-theme="dark"] .delete-comment-btn,
@@ -6229,6 +6304,10 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .app-zoom-control {
+    display: none;
   }
 
   .notifications-menu,

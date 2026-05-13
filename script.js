@@ -25,8 +25,14 @@ const RECENT_GIPHY_STICKER_STORAGE_KEY = "recentGiphyStickers";
 const PLACED_GIF_SIZE_STORAGE_KEY = "placedGifStickerSizes";
 const PLACED_STICKER_POSITION_STORAGE_KEY = "placedStickerPositions";
 const PROFILE_BIO_STORAGE_KEY = "profileBioByUser";
+const WIDGET_COMMENT_SEEN_STORAGE_KEY = "widgetCommentSeenAtByUser";
 const PROFILE_BIO_WIDGET_ID = "__profile-bios";
 const PROFILE_BIO_WIDGET_TITLE = "profile bios";
+const APP_ZOOM_STORAGE_KEY = "appZoom";
+const DEFAULT_APP_ZOOM = 1;
+const MIN_APP_ZOOM = 0.25;
+const MAX_APP_ZOOM = 2;
+const APP_ZOOM_STEP = 0.05;
 const DEFAULT_GIF_STICKER_SIZE = 72;
 const MIN_GIF_STICKER_SIZE = 44;
 const MAX_GIF_STICKER_SIZE = 200;
@@ -219,6 +225,7 @@ let widgets = [
     y: 610,
     data: {
       countsByUser: {},
+      totalCountsByUser: {},
       lastResetDate: "",
     },
   },
@@ -720,6 +727,10 @@ const notificationsBadge = document.getElementById("notificationsBadge");
 const notificationsPanel = document.getElementById("notificationsPanel");
 const notificationsList = document.getElementById("notificationsList");
 const clearNotificationsBtn = document.getElementById("clearNotificationsBtn");
+const zoomOutBtn = document.getElementById("zoomOutBtn");
+const zoomInBtn = document.getElementById("zoomInBtn");
+const zoomResetBtn = document.getElementById("zoomResetBtn");
+const zoomValueLabel = document.getElementById("zoomValueLabel");
 const themeToggle = document.getElementById("themeToggle");
 const entryPopup = document.getElementById("entryPopup");
 const entryPopupTitle = entryPopup?.querySelector(".popup-title");
@@ -1025,6 +1036,70 @@ function getStoredThemePreference() {
   } catch {
     return "";
   }
+}
+
+function normalizeAppZoom(value) {
+  if (value === null || value === undefined || value === "") {
+    return DEFAULT_APP_ZOOM;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return DEFAULT_APP_ZOOM;
+
+  const steppedValue =
+    Math.round(numericValue / APP_ZOOM_STEP) * APP_ZOOM_STEP;
+  return Math.min(MAX_APP_ZOOM, Math.max(MIN_APP_ZOOM, steppedValue));
+}
+
+function getStoredAppZoomPreference() {
+  try {
+    return normalizeAppZoom(localStorage.getItem(APP_ZOOM_STORAGE_KEY));
+  } catch {
+    return DEFAULT_APP_ZOOM;
+  }
+}
+
+function setAppZoom(zoom, options = {}) {
+  const { persist = false } = options;
+  const nextZoom = normalizeAppZoom(zoom);
+  document.documentElement.style.setProperty(
+    "--app-zoom",
+    nextZoom.toFixed(2),
+  );
+
+  if (zoomValueLabel) {
+    zoomValueLabel.textContent = `${Math.round(nextZoom * 100)}%`;
+  }
+
+  if (zoomOutBtn) {
+    zoomOutBtn.disabled = nextZoom <= MIN_APP_ZOOM;
+    zoomOutBtn.setAttribute("aria-disabled", String(zoomOutBtn.disabled));
+  }
+
+  if (zoomInBtn) {
+    zoomInBtn.disabled = nextZoom >= MAX_APP_ZOOM;
+    zoomInBtn.setAttribute("aria-disabled", String(zoomInBtn.disabled));
+  }
+
+  if (zoomResetBtn) {
+    zoomResetBtn.disabled = nextZoom === DEFAULT_APP_ZOOM;
+    zoomResetBtn.setAttribute("aria-disabled", String(zoomResetBtn.disabled));
+  }
+
+  if (persist) {
+    try {
+      localStorage.setItem(APP_ZOOM_STORAGE_KEY, nextZoom.toFixed(2));
+    } catch (error) {
+      console.error(error);
+    }
+  }
+}
+
+function adjustAppZoom(delta) {
+  const currentZoom = normalizeAppZoom(
+    getComputedStyle(document.documentElement).getPropertyValue("--app-zoom"),
+  );
+  setAppZoom(currentZoom + delta, { persist: true });
 }
 
 function setTheme(theme) {
@@ -2626,16 +2701,11 @@ function normalizeMissYouWidget(widget) {
   if (!widget) return false;
 
   const todayKey = getTodayDateKey();
-  if (!widget.data) {
-    widget.data = {
-      countsByUser: {},
-      totalCountsByUser: {},
-      lastResetDate: todayKey,
-    };
-    return true;
-  }
-
-  let changed = false;
+  let changed =
+    !widget.data ||
+    typeof widget.data !== "object" ||
+    Array.isArray(widget.data);
+  widget.data = changed ? {} : widget.data;
 
   if (
     !widget.data.countsByUser ||
@@ -2679,16 +2749,26 @@ function normalizeMissYouWidget(widget) {
 
   Object.keys(widget.data.countsByUser).forEach((userId) => {
     const count = widget.data.countsByUser[userId];
-    if (!Number.isFinite(count) || count < 0) {
+    const numericCount = Number(count);
+
+    if (!Number.isFinite(numericCount) || numericCount < 0) {
       widget.data.countsByUser[userId] = 0;
+      changed = true;
+    } else if (count !== numericCount) {
+      widget.data.countsByUser[userId] = numericCount;
       changed = true;
     }
   });
 
   Object.keys(widget.data.totalCountsByUser).forEach((userId) => {
     const count = widget.data.totalCountsByUser[userId];
-    if (!Number.isFinite(count) || count < 0) {
+    const numericCount = Number(count);
+
+    if (!Number.isFinite(numericCount) || numericCount < 0) {
       widget.data.totalCountsByUser[userId] = 0;
+      changed = true;
+    } else if (count !== numericCount) {
+      widget.data.totalCountsByUser[userId] = numericCount;
       changed = true;
     }
   });
@@ -2829,6 +2909,116 @@ function getWidgetCommentCount(widget) {
   );
 }
 
+function getWidgetCommentSeenUserId() {
+  return currentUser?.id || currentProfile?.id || "";
+}
+
+function getWidgetCommentCreatedTimestamp(comment) {
+  return new Date(comment?.createdAt || comment?.created_at || "").getTime();
+}
+
+function getWidgetCommentSeenMap() {
+  try {
+    const parsed = JSON.parse(
+      localStorage.getItem(WIDGET_COMMENT_SEEN_STORAGE_KEY) || "{}",
+    );
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function getWidgetCommentSeenAt(widgetId) {
+  const userId = getWidgetCommentSeenUserId();
+  if (!userId || !widgetId) return "";
+
+  const seenMap = getWidgetCommentSeenMap();
+  return String(seenMap[userId]?.[widgetId] || "");
+}
+
+function setWidgetCommentSeenAt(widgetId, seenAt) {
+  const userId = getWidgetCommentSeenUserId();
+  if (!userId || !widgetId || !seenAt) return;
+
+  const seenMap = getWidgetCommentSeenMap();
+  seenMap[userId] = {
+    ...(seenMap[userId] && typeof seenMap[userId] === "object"
+      ? seenMap[userId]
+      : {}),
+    [widgetId]: seenAt,
+  };
+
+  try {
+    localStorage.setItem(
+      WIDGET_COMMENT_SEEN_STORAGE_KEY,
+      JSON.stringify(seenMap),
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function getLatestWidgetCommentCreatedAt(widget) {
+  if (!widget || !isCommentableWidget(widget)) return "";
+
+  let latestTimestamp = 0;
+  let latestCreatedAt = "";
+  getPhotoWidgetComments(widget).forEach((comment) => {
+    [comment, ...(comment.replies || [])].forEach((item) => {
+      const timestamp = getWidgetCommentCreatedTimestamp(item);
+      if (Number.isFinite(timestamp) && timestamp > latestTimestamp) {
+        latestTimestamp = timestamp;
+        latestCreatedAt = String(item?.createdAt || item?.created_at || "");
+      }
+    });
+  });
+
+  return latestCreatedAt;
+}
+
+function getWidgetCommentBaselineTimestamp(widget) {
+  const seenTimestamp = Math.max(
+    getNotificationTimestamp(getWidgetCommentSeenAt(widget?.id || "")),
+    getNotificationTimestamp(getNotificationsSeenAt()),
+  );
+  if (seenTimestamp) return seenTimestamp;
+
+  const latestCreatedAt = getLatestWidgetCommentCreatedAt(widget);
+  const latestTimestamp = getWidgetCommentCreatedTimestamp({
+    createdAt: latestCreatedAt,
+  });
+  return Number.isFinite(latestTimestamp) ? latestTimestamp : 0;
+}
+
+function getUnreadWidgetCommentCount(widget) {
+  if (!widget || !isCommentableWidget(widget)) return 0;
+
+  const userId = getWidgetCommentSeenUserId();
+  if (!userId) return 0;
+
+  const seenTimestamp = getWidgetCommentBaselineTimestamp(widget);
+  return getPhotoWidgetComments(widget).reduce((total, comment) => {
+    return (
+      total +
+      [comment, ...(comment.replies || [])].filter((item) => {
+        const actorId = String(item?.userId || item?.user_id || "");
+        if (!actorId || actorId === userId) return false;
+
+        const createdAt = getWidgetCommentCreatedTimestamp(item);
+        return Number.isFinite(createdAt) && createdAt > seenTimestamp;
+      }).length
+    );
+  }, 0);
+}
+
+function markWidgetCommentsSeen(widget) {
+  const latestCreatedAt = getLatestWidgetCommentCreatedAt(widget);
+  if (!latestCreatedAt) return;
+
+  setWidgetCommentSeenAt(widget.id, latestCreatedAt);
+  syncWidgetCommentButton(widget.id);
+}
+
 function getLikeButtonMarkup(likedByMe, likesCount) {
   return `
     <span class="post-btn-icon" aria-hidden="true">${likedByMe ? "🩷" : "♡"}</span>
@@ -2848,10 +3038,10 @@ function getWidgetLikeButtonMarkup(widget) {
 }
 
 function getWidgetCommentButtonMarkup(widget) {
-  const commentCount = getWidgetCommentCount(widget);
+  const unreadCount = getUnreadWidgetCommentCount(widget);
   return `
     <span class="post-btn-icon" aria-hidden="true">💬</span>
-    <span class="post-btn-count">${commentCount || 0}</span>
+    ${unreadCount > 0 ? `<span class="post-btn-count">${unreadCount}</span>` : ""}
   `;
 }
 
@@ -2888,8 +3078,13 @@ function getWidgetHeaderLikeButtonMarkup(widget, extraClass = "") {
 function getWidgetHeaderCommentButtonMarkup(widget, extraClass = "") {
   if (!widget || !isCommentableWidget(widget)) return "";
 
-  const commentCount = getWidgetCommentCount(widget);
-  const className = ["widget-header-comment-btn", "widget-comment-btn", extraClass]
+  const unreadCount = getUnreadWidgetCommentCount(widget);
+  const className = [
+    "widget-header-comment-btn",
+    "widget-comment-btn",
+    unreadCount > 0 ? "is-unread" : "",
+    extraClass,
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -2898,7 +3093,7 @@ function getWidgetHeaderCommentButtonMarkup(widget, extraClass = "") {
       class="${className}"
       type="button"
       data-widget-comment-id="${escapeHtml(widget.id)}"
-      aria-label="open ${commentCount || 0} widget comments"
+      aria-label="${unreadCount > 0 ? `open ${unreadCount} new widget comments` : "open widget comments"}"
     >
       ${getWidgetCommentButtonMarkup(widget)}
     </button>
@@ -2915,10 +3110,24 @@ function syncWidgetCommentButton(widgetId) {
 
   if (!widget || !buttons.length || !isCommentableWidget(widget)) return;
 
-  const commentCount = getWidgetCommentCount(widget);
   buttons.forEach((btn) => {
+    const unreadCount = getUnreadWidgetCommentCount(widget);
     btn.innerHTML = getWidgetCommentButtonMarkup(widget);
-    btn.setAttribute("aria-label", `open ${commentCount || 0} widget comments`);
+    btn.classList.toggle("is-unread", unreadCount > 0);
+    btn.setAttribute(
+      "aria-label",
+      unreadCount > 0
+        ? `open ${unreadCount} new widget comments`
+        : "open widget comments",
+    );
+  });
+}
+
+function syncWidgetCommentButtons() {
+  widgets.forEach((widget) => {
+    if (isCommentableWidget(widget)) {
+      syncWidgetCommentButton(widget.id);
+    }
   });
 }
 
@@ -3456,13 +3665,18 @@ function getProfileMissYouCount(userId) {
   if (!missYouWidget) return 0;
 
   normalizeMissYouWidget(missYouWidget);
+  const totalCountsByUser =
+    missYouWidget.data?.totalCountsByUser &&
+    typeof missYouWidget.data.totalCountsByUser === "object"
+      ? missYouWidget.data.totalCountsByUser
+      : {};
   const countsByUser =
     missYouWidget.data?.countsByUser &&
     typeof missYouWidget.data.countsByUser === "object"
       ? missYouWidget.data.countsByUser
       : {};
 
-  const total = countsByUser[userId];
+  const total = totalCountsByUser[userId] ?? countsByUser[userId];
   return Number.isFinite(total) && total > 0 ? total : 0;
 }
 
@@ -6216,6 +6430,7 @@ function openWidgetComments(widgetId) {
 
   normalizeWidgetLikesData(widget);
   normalizePhotoWidgetComments(widget);
+  markWidgetCommentsSeen(widget);
 
   const prefix = `widget-comments-popup-${widget.id}`;
   const title =
@@ -10178,6 +10393,7 @@ function markNotificationsRead() {
   const visibleNotifications = getVisibleNotifications();
   if (!visibleNotifications.length) {
     renderNotifications();
+    syncWidgetCommentButtons();
     return;
   }
 
@@ -10186,6 +10402,7 @@ function markNotificationsRead() {
     new Date().toISOString();
   setNotificationsSeenAt(latestCreatedAt);
   renderNotifications();
+  syncWidgetCommentButtons();
 }
 
 function clearNotifications() {
@@ -10201,6 +10418,7 @@ function clearNotifications() {
   setNotificationsClearedAt(latestCreatedAt);
   setNotificationsSeenAt(latestCreatedAt);
   renderNotifications();
+  syncWidgetCommentButtons();
 }
 
 function openNotificationsPanel() {
@@ -12680,6 +12898,17 @@ if (saveProfileBtn) saveProfileBtn.addEventListener("click", saveProfile);
 if (logoutBtn) logoutBtn.addEventListener("click", logoutUser);
 if (saveEntryBtn) saveEntryBtn.addEventListener("click", saveEntry);
 if (saveCommentBtn) saveCommentBtn.addEventListener("click", saveComment);
+if (zoomOutBtn) {
+  zoomOutBtn.addEventListener("click", () => adjustAppZoom(-APP_ZOOM_STEP));
+}
+if (zoomInBtn) {
+  zoomInBtn.addEventListener("click", () => adjustAppZoom(APP_ZOOM_STEP));
+}
+if (zoomResetBtn) {
+  zoomResetBtn.addEventListener("click", () =>
+    setAppZoom(DEFAULT_APP_ZOOM, { persist: true }),
+  );
+}
 if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
 mobileViewButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -12728,6 +12957,7 @@ document.addEventListener(
 );
 
 setTheme(document.documentElement.dataset.theme);
+setAppZoom(getStoredAppZoomPreference());
 window
   .matchMedia?.("(prefers-color-scheme: dark)")
   ?.addEventListener?.("change", syncThemeWithSystemPreference);
