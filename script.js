@@ -26,6 +26,7 @@ const PLACED_GIF_SIZE_STORAGE_KEY = "placedGifStickerSizes";
 const PLACED_STICKER_POSITION_STORAGE_KEY = "placedStickerPositions";
 const PROFILE_BIO_STORAGE_KEY = "profileBioByUser";
 const WIDGET_COMMENT_SEEN_STORAGE_KEY = "widgetCommentSeenAtByUser";
+const WIDGET_LAYOUT_STORAGE_KEY = "widgetLayouts";
 const PROFILE_BIO_WIDGET_ID = "__profile-bios";
 const PROFILE_BIO_WIDGET_TITLE = "profile bios";
 const APP_ZOOM_STORAGE_KEY = "appZoom";
@@ -696,6 +697,7 @@ const pendingWidgetLikeIds = new Set();
 const pendingLocalWidgetUpdates = new Map();
 const pendingLocalProfileFetches = new Map();
 const recentLocalRealtimeTables = new Map();
+const onlineProfileUserIds = new Set();
 
 const floatingDecorEl = document.getElementById("floatingDecor");
 const leftZone = document.getElementById("leftZone");
@@ -894,6 +896,66 @@ function markPendingLocalWidgetUpdate(widgetId, updatedAt) {
       pendingLocalWidgetUpdates.delete(normalizedWidgetId);
     }
   }, 7000);
+}
+
+function getCachedWidgetLayouts() {
+  try {
+    const parsed = JSON.parse(
+      localStorage.getItem(WIDGET_LAYOUT_STORAGE_KEY) || "{}",
+    );
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function cacheWidgetLayout(widget, updatedAt = new Date().toISOString()) {
+  if (!widget?.id) return;
+
+  const layouts = getCachedWidgetLayouts();
+  layouts[widget.id] = {
+    side: widget.side === "right" ? "right" : "left",
+    x: Math.round(Number(widget.x) || 0),
+    y: Math.round(Number(widget.y) || 0),
+    zIndex: Number.isFinite(widget.zIndex) ? widget.zIndex : 1,
+    updatedAt,
+  };
+
+  try {
+    localStorage.setItem(WIDGET_LAYOUT_STORAGE_KEY, JSON.stringify(layouts));
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function applyCachedWidgetLayout(widget, savedUpdatedAt = "") {
+  if (!widget?.id) return;
+
+  const cachedLayout = getCachedWidgetLayouts()[widget.id];
+  if (!cachedLayout || typeof cachedLayout !== "object") return;
+
+  const cachedTime = new Date(cachedLayout.updatedAt || 0).getTime();
+  const savedTime = new Date(savedUpdatedAt || 0).getTime();
+
+  if (savedTime && cachedTime < savedTime) return;
+
+  if (cachedLayout.side === "left" || cachedLayout.side === "right") {
+    widget.side = cachedLayout.side;
+  }
+
+  if (Number.isFinite(cachedLayout.x)) {
+    widget.x = cachedLayout.x;
+  }
+
+  if (Number.isFinite(cachedLayout.y)) {
+    widget.y = cachedLayout.y;
+  }
+
+  if (Number.isFinite(cachedLayout.zIndex)) {
+    widget.zIndex = cachedLayout.zIndex;
+  }
 }
 
 function isTabbedLayoutActive() {
@@ -3745,6 +3807,14 @@ function getProfileLatestActivityTimestamp(userId, profile = null) {
 }
 
 function getProfilePresenceInfo(userId, profile = null) {
+  if (onlineProfileUserIds.has(userId)) {
+    return {
+      state: "active",
+      summary: "active now",
+      timestamp: Date.now(),
+    };
+  }
+
   const latestActivityTimestamp = getProfileLatestActivityTimestamp(
     userId,
     profile,
@@ -5022,6 +5092,7 @@ async function loadWidgets(options = {}) {
       const savedWidget = latestSavedWidgets.get(defaultWidget.id);
 
       if (!savedWidget) {
+        applyCachedWidgetLayout(defaultWidget);
         return defaultWidget;
       }
 
@@ -5035,6 +5106,8 @@ async function loadWidgets(options = {}) {
         content: savedWidget.content ?? defaultWidget.content,
         updated_at: savedWidget.updated_at ?? defaultWidget.updated_at,
       };
+
+      applyCachedWidgetLayout(mergedWidget, savedWidget.updated_at);
 
       const normalizedId = String(mergedWidget.id || "")
         .toLowerCase()
@@ -6781,6 +6854,9 @@ async function saveWidgetToSupabase(widget, options = {}) {
   }
 
   markPendingLocalWidgetUpdate(widget.id, payload.updated_at);
+  if (!preservePosition) {
+    cacheWidgetLayout(widget, payload.updated_at);
+  }
 
   const { data: updatedRows, error: updateError } = await supabaseClient
     .from("widgets")
@@ -8042,6 +8118,7 @@ window.addEventListener("pointerup", async () => {
       finishedDrag.widget.y !== finishedDrag.originY;
 
     if (positionChanged) {
+      cacheWidgetLayout(finishedDrag.widget);
       const saved = await saveWidgetToSupabase(finishedDrag.widget, {
         recordHistory: false,
       });
@@ -8051,6 +8128,7 @@ window.addEventListener("pointerup", async () => {
         finishedDrag.widget.y = finishedDrag.originY;
         finishedDrag.element.style.left = `${finishedDrag.originX}px`;
         finishedDrag.element.style.top = `${finishedDrag.originY}px`;
+        cacheWidgetLayout(finishedDrag.widget);
       }
     }
   }
@@ -11145,6 +11223,28 @@ function stopLiveUpdates() {
     }
     liveUpdatesChannel = null;
   }
+
+  onlineProfileUserIds.clear();
+}
+
+function syncOnlineProfilePresence() {
+  if (!liveUpdatesChannel?.presenceState) return;
+
+  const presenceState = liveUpdatesChannel.presenceState();
+  onlineProfileUserIds.clear();
+
+  Object.values(presenceState || {}).forEach((presences) => {
+    (Array.isArray(presences) ? presences : []).forEach((presence) => {
+      const userId = String(presence?.user_id || "").trim();
+      if (userId) {
+        onlineProfileUserIds.add(userId);
+      }
+    });
+  });
+
+  if (activeProfilePopupUserId) {
+    renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
+  }
 }
 
 function startLiveUpdates() {
@@ -11152,7 +11252,18 @@ function startLiveUpdates() {
 
   if (!currentUser || typeof supabaseClient.channel !== "function") return;
 
-  const channel = supabaseClient.channel(`our-memories-live:${currentUser.id}`);
+  const channel = supabaseClient.channel("our-memories-live", {
+    config: {
+      presence: {
+        key: currentUser.id,
+      },
+    },
+  });
+
+  channel.on("presence", { event: "sync" }, syncOnlineProfilePresence);
+  channel.on("presence", { event: "join" }, syncOnlineProfilePresence);
+  channel.on("presence", { event: "leave" }, syncOnlineProfilePresence);
+
   ["posts", "comments", "likes", "post_stickers", "profiles"].forEach((table) => {
     channel.on(
       "postgres_changes",
@@ -11167,7 +11278,14 @@ function startLiveUpdates() {
   );
 
   liveUpdatesChannel = channel;
-  channel.subscribe();
+  channel.subscribe((status) => {
+    if (status !== "SUBSCRIBED" || !currentUser?.id) return;
+
+    void channel.track({
+      user_id: currentUser.id,
+      online_at: new Date().toISOString(),
+    });
+  });
 }
 
 function syncPopupScrollLock() {

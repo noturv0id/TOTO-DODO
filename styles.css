@@ -6841,7 +6841,7 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
 #profilePopup .profile-sheet-header {
   min-height: auto;
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   justify-items: start;
   align-items: center;
   gap: 24px;
@@ -6854,8 +6854,8 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
 }
 
 #profilePopup .profile-sheet-avatar {
-  width: 116px;
-  height: 116px;
+  width: 104px;
+  height: 104px;
   border: 4px solid var(--card-solid);
   background: var(--card-solid);
   box-shadow: 0 12px 22px rgba(112, 72, 90, 0.18);
@@ -6883,8 +6883,9 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
 }
 
 #profilePopup .profile-stats {
+  container-type: inline-size;
   display: grid;
-  grid-template-columns: repeat(4, minmax(48px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   gap: clamp(6px, 1.6vw, 18px);
   width: 100%;
@@ -6906,21 +6907,30 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
 }
 
 #profilePopup .profile-stat-value {
-  font-size: 1.9rem;
+  font-size: clamp(1.25rem, 4.8cqw, 1.9rem);
   line-height: 1;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--text);
 }
 
 #profilePopup .profile-stat-label {
-  font-size: 0.98rem;
+  font-size: clamp(0.68rem, 2.3cqw, 0.92rem);
   line-height: 1.2;
-  white-space: nowrap;
-  overflow-wrap: normal;
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--text-soft);
 }
 
 #profileJoinedStatLabel {
-  white-space: nowrap;
+  white-space: normal;
+}
+
+#profileMissYouStatLabel {
+  font-size: clamp(0.66rem, 2.15cqw, 0.88rem);
+  white-space: normal;
 }
 
 #profilePopup .profile-bio-card {
@@ -7138,9 +7148,9 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
   }
 
   #profilePopup .profile-stat-label {
-    font-size: 0.54rem;
+    font-size: 0.58rem;
     line-height: 1.12;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   #profilePopup .profile-stat-card {
@@ -7149,7 +7159,7 @@ html[data-theme="dark"] #profilePopup .profile-edit-section .popup-input {
 
   #profileMissYouStatLabel,
   #profileJoinedStatLabel {
-    font-size: 0.5rem;
-    white-space: nowrap;
+    font-size: 0.56rem;
+    white-space: normal;
   }
 }
