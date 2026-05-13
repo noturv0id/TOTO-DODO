@@ -787,9 +787,7 @@ let floatingEntryVisibilityFrame = 0;
 let mobileViewSwitcherFrame = 0;
 const MOBILE_VIEW_STORAGE_KEY = "ourMemoriesMobileView";
 const THEME_STORAGE_KEY = "ourMemoriesTheme";
-const MAC_TABBED_LAYOUT_QUERY = "(min-width: 721px) and (max-width: 1500px)";
 const PHONE_LAYOUT_QUERY = "(max-width: 720px)";
-const macTabbedLayoutMedia = window.matchMedia?.(MAC_TABBED_LAYOUT_QUERY);
 const phoneLayoutMedia = window.matchMedia?.(PHONE_LAYOUT_QUERY);
 const reducedMotionMedia = window.matchMedia?.(
   "(prefers-reduced-motion: reduce)",
@@ -899,7 +897,7 @@ function markPendingLocalWidgetUpdate(widgetId, updatedAt) {
 }
 
 function isTabbedLayoutActive() {
-  return Boolean(macTabbedLayoutMedia?.matches || isMobileLayoutActive());
+  return isMobileLayoutActive();
 }
 
 function isMobileLayoutActive() {
