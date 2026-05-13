@@ -4995,7 +4995,7 @@ function getWidgetContent(widget) {
     >
       <div class="widget-photo-frame">
         <img class="widget-photo-image" src="${photoData.image}" alt="pinned photo" style="${imageStyle}" loading="lazy" decoding="async" />
-        ${overlayText ? `<div class="widget-photo-text" style="left:${textX}%;top:${textY}%;color:${textColor};--photo-text-size:${textSize};">${overlayText}</div>` : ""}
+        ${overlayText ? `<div class="widget-photo-text" style="left:${textX}%;top:${textY}%;color:${textColor};--photo-text-size:${textSize};--photo-text-translate-x:-${textX}%;--photo-text-translate-y:-${textY}%;">${overlayText}</div>` : ""}
       </div>
     </div>
   `;
@@ -6373,6 +6373,8 @@ function openWidgetEditor(widgetId) {
         text.style.left = `${textX}%`;
         text.style.top = `${textY}%`;
         text.style.color = activeTextColor;
+        text.style.setProperty("--photo-text-translate-x", `-${textX}%`);
+        text.style.setProperty("--photo-text-translate-y", `-${textY}%`);
         text.style.setProperty(
           "--photo-text-size",
           String(
@@ -9001,8 +9003,16 @@ function getPhotoWidgetCommentPreviewMarkup(source, options = {}) {
     normalizeHexColor(preview.textColor, "#ffffff"),
   );
   const textSize = Math.max(12, Math.min(46, Number(preview.textSize) || 22));
-  const textX = Math.max(0, Math.min(100, Number(preview.textX) || 50));
-  const textY = Math.max(0, Math.min(100, Number(preview.textY) || 86));
+  const textXValue = Number(preview.textX);
+  const textYValue = Number(preview.textY);
+  const textX = Math.max(
+    0,
+    Math.min(100, Number.isFinite(textXValue) ? textXValue : 50),
+  );
+  const textY = Math.max(
+    0,
+    Math.min(100, Number.isFinite(textYValue) ? textYValue : 86),
+  );
   const rotate = Number(preview.rotate) || 0;
 
   return `
@@ -9021,7 +9031,7 @@ function getPhotoWidgetCommentPreviewMarkup(source, options = {}) {
           />
           ${
             overlayText
-              ? `<div class="photo-widget-comment-preview-text" style="left:${textX}%;top:${textY}%;color:${textColor};--photo-text-size:${textSize};">${overlayText}</div>`
+              ? `<div class="photo-widget-comment-preview-text" style="left:${textX}%;top:${textY}%;color:${textColor};--photo-text-size:${textSize};--photo-text-translate-x:-${textX}%;--photo-text-translate-y:-${textY}%;">${overlayText}</div>`
               : ""
           }
         `
@@ -9799,13 +9809,15 @@ function renderPhotoHistoryPopup(widget) {
                   12,
                   Math.min(46, Number(entry.textSize) || 22),
                 );
+                const textXValue = Number(entry.textX);
+                const textYValue = Number(entry.textY);
                 const textX = Math.max(
                   0,
-                  Math.min(100, Number(entry.textX) || 50),
+                  Math.min(100, Number.isFinite(textXValue) ? textXValue : 50),
                 );
                 const textY = Math.max(
                   0,
-                  Math.min(100, Number(entry.textY) || 86),
+                  Math.min(100, Number.isFinite(textYValue) ? textYValue : 86),
                 );
                 const rotate = Number(entry.rotate) || 0;
 
@@ -9832,7 +9844,7 @@ function renderPhotoHistoryPopup(widget) {
                       />
                       ${
                         overlayText
-                          ? `<div class="photo-history-text" style="left:${textX}%;top:${textY}%;color:${textColor};--photo-text-size:${textSize};">${overlayText}</div>`
+                          ? `<div class="photo-history-text" style="left:${textX}%;top:${textY}%;color:${textColor};--photo-text-size:${textSize};--photo-text-translate-x:-${textX}%;--photo-text-translate-y:-${textY}%;">${overlayText}</div>`
                           : ""
                       }
                     </div>
