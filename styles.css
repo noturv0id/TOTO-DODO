@@ -6361,7 +6361,7 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     align-items: center;
     justify-content: center;
     min-width: 1.2em;
-    font-size: clamp(1.05rem, 5.2vw, 1.35rem);
+    font-size: 1.22rem;
     line-height: 1;
   }
 
