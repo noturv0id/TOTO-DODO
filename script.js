@@ -16,6 +16,7 @@ const WEATHER_WIDGET_LOCATIONS = [
 ];
 const PROFILE_ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 const PROFILE_PRESENCE_HEARTBEAT_MS = 60 * 1000;
+const MISS_YOU_NOTIFICATION_GROUP_MS = 5 * 60 * 1000;
 
 function getAnniversaryWrapperUrl() {
   return `./anniversary-wrapper.html?v=${ANNIVERSARY_WRAPPER_VERSION}`;
@@ -796,6 +797,7 @@ const reducedMotionMedia = window.matchMedia?.(
 );
 const BOOT_SPLASH_MIN_MS = 520;
 const BOOT_SPLASH_FADE_MS = 320;
+const INITIAL_TIMELINE_IMAGE_COUNT = 8;
 const LIVE_REFRESH_DEBOUNCE_MS = 450;
 const bootStartedAt =
   typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -989,6 +991,7 @@ function applyMobileView() {
 
   pageEl.dataset.mobileView = activeMobileView;
   syncMobileViewButtons();
+  syncNewEntryButtonVisibility();
 }
 
 function getStoredMobileView() {
@@ -1214,11 +1217,26 @@ function syncThemeWithSystemPreference(event) {
   setTheme(event.matches ? "dark" : "light");
 }
 
-function updateFloatingEntryButtonVisibility() {
+function syncNewEntryButtonVisibility(scrollHidden = false) {
   if (!newEntryBtn) return;
 
+  const shouldHide =
+    !currentUser ||
+    (isTabbedLayoutActive()
+      ? activeMobileView !== "timeline"
+      : scrollHidden);
+
+  newEntryBtn.classList.toggle("is-hidden", shouldHide);
+}
+
+function updateFloatingEntryButtonVisibility() {
+  const setFloatingControlsHidden = (isHidden) => {
+    mobileViewSwitcher?.classList.toggle("is-hidden", isHidden);
+    syncNewEntryButtonVisibility(isHidden);
+  };
+
   if (!currentUser) {
-    newEntryBtn.classList.add("is-hidden");
+    setFloatingControlsHidden(true);
     return;
   }
 
@@ -1230,13 +1248,13 @@ function updateFloatingEntryButtonVisibility() {
     !entryPopup?.classList.contains("open");
 
   if (shouldHide) {
-    newEntryBtn.classList.add("is-hidden");
+    setFloatingControlsHidden(true);
   } else if (
     scrollDelta < -8 ||
     currentScrollY <= 80 ||
     entryPopup?.classList.contains("open")
   ) {
-    newEntryBtn.classList.remove("is-hidden");
+    setFloatingControlsHidden(false);
   }
 
   lastScrollY = currentScrollY;
@@ -1807,7 +1825,7 @@ function composeEntryContentWithAttachment(content, image) {
 
   const attachmentHtml = `
           <figure class="entry-attachment">
-            <img class="entry-attachment-image" src="${escapeHtml(normalizedImage)}" alt="entry attachment" loading="lazy" decoding="async" />
+            <img class="entry-attachment-image" src="${escapeHtml(normalizedImage)}" alt="entry attachment" loading="eager" decoding="async" fetchpriority="high" />
           </figure>
         `;
 
@@ -1890,6 +1908,23 @@ function getPostDisplayHtml(content) {
   }
 
   return toSafeHtmlFromPlainText(value);
+}
+
+function prioritizeEntryImages(root, options = {}) {
+  const { eager = false } = options;
+  if (!root) return;
+
+  root.querySelectorAll?.(".entry-attachment-image").forEach((image) => {
+    if (!(image instanceof HTMLImageElement)) return;
+
+    image.decoding = "async";
+    if (eager) {
+      image.loading = "eager";
+      image.setAttribute("fetchpriority", "high");
+    } else if (!image.getAttribute("loading")) {
+      image.loading = "lazy";
+    }
+  });
 }
 
 function getUrlsFromPostText(postTextEl) {
@@ -2431,6 +2466,52 @@ function reorderWishlistItem(widget, wishId, direction) {
   return true;
 }
 
+function getDateItemsInDisplayOrder(items = []) {
+  return [...items]
+    .map((item, index) => ({
+      ...item,
+      order: Number.isFinite(item?.order) ? item.order : index,
+    }))
+    .sort((a, b) => a.order - b.order);
+}
+
+function getNextDateOrder(items = []) {
+  return (
+    items.reduce((maxOrder, item, index) => {
+      const itemOrder = Number.isFinite(item?.order) ? item.order : index;
+      return Math.max(maxOrder, itemOrder);
+    }, -1) + 1
+  );
+}
+
+function reorderDateItem(widget, dateId, direction) {
+  if (!widget?.data?.items?.length) return false;
+
+  const items = getDateItemsInDisplayOrder(widget.data.items);
+  const currentIndex = items.findIndex((item) => item.id === dateId);
+  const targetIndex =
+    direction === "up"
+      ? currentIndex - 1
+      : direction === "down"
+        ? currentIndex + 1
+        : currentIndex;
+
+  if (currentIndex === -1 || targetIndex < 0 || targetIndex >= items.length) {
+    return false;
+  }
+
+  [items[currentIndex], items[targetIndex]] = [
+    items[targetIndex],
+    items[currentIndex],
+  ];
+  widget.data.items = items.map((item, index) => ({
+    ...item,
+    order: index,
+  }));
+
+  return true;
+}
+
 function getWishlistEditorRowRects(list) {
   const rects = new Map();
 
@@ -2443,11 +2524,48 @@ function getWishlistEditorRowRects(list) {
   return rects;
 }
 
+function getDateEditorRowRects(list) {
+  const rects = new Map();
+
+  list
+    ?.querySelectorAll?.(".date-edit-item[data-date-id]")
+    .forEach((row) => {
+      rects.set(row.dataset.dateId, row.getBoundingClientRect());
+    });
+
+  return rects;
+}
+
 function animateWishlistEditorRows(list, previousRects) {
   if (!list || !previousRects?.size) return;
 
   list.querySelectorAll(".wishlist-item-row[data-wish-id]").forEach((row) => {
     const previousRect = previousRects.get(row.dataset.wishId);
+    if (!previousRect) return;
+
+    const nextRect = row.getBoundingClientRect();
+    const deltaY = previousRect.top - nextRect.top;
+
+    if (Math.abs(deltaY) < 1) return;
+
+    row.animate(
+      [
+        { transform: `translateY(${deltaY}px)` },
+        { transform: "translateY(0)" },
+      ],
+      {
+        duration: 260,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+    );
+  });
+}
+
+function animateDateEditorRows(list, previousRects) {
+  if (!list || !previousRects?.size) return;
+
+  list.querySelectorAll(".date-edit-item[data-date-id]").forEach((row) => {
+    const previousRect = previousRects.get(row.dataset.dateId);
     if (!previousRect) return;
 
     const nextRect = row.getBoundingClientRect();
@@ -2479,6 +2597,21 @@ function syncWishlistEditorReorderButtons(list) {
       ?.toggleAttribute("disabled", index === 0);
     row
       .querySelector('[data-wish-direction="down"]')
+      ?.toggleAttribute("disabled", index === rows.length - 1);
+  });
+}
+
+function syncDateEditorReorderButtons(list) {
+  const rows = Array.from(
+    list?.querySelectorAll?.(".date-edit-item[data-date-id]") || [],
+  );
+
+  rows.forEach((row, index) => {
+    row
+      .querySelector('[data-date-direction="up"]')
+      ?.toggleAttribute("disabled", index === 0);
+    row
+      .querySelector('[data-date-direction="down"]')
       ?.toggleAttribute("disabled", index === rows.length - 1);
   });
 }
@@ -2555,11 +2688,27 @@ function getMissYouWidget() {
 }
 
 function getTodayDateKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+  return getDateKeyFromDate(new Date());
+}
+
+function getDateKeyFromDate(value) {
+  const date = value instanceof Date ? value : new Date(value || Date.now());
+  if (!Number.isFinite(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getMissYouNotificationWindowKey(value) {
+  const timestamp = new Date(value || Date.now()).getTime();
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return "";
+
+  const windowStart =
+    Math.floor(timestamp / MISS_YOU_NOTIFICATION_GROUP_MS) *
+    MISS_YOU_NOTIFICATION_GROUP_MS;
+  return new Date(windowStart).toISOString();
 }
 
 function parseDisplayDate(value) {
@@ -2841,12 +2990,140 @@ function normalizeMissYouWidget(widget) {
     }
   });
 
+  if (!Array.isArray(widget.data.missYouEvents)) {
+    widget.data.missYouEvents = [];
+    changed = true;
+  } else {
+    const groupedEventsByKey = new Map();
+
+    widget.data.missYouEvents
+      .map((event) => {
+        const createdAt = String(
+          event?.createdAt || event?.created_at || "",
+        ).trim();
+        const actorId = String(event?.actorId || event?.userId || "").trim();
+        const dateKey = String(
+          event?.dateKey || getDateKeyFromDate(createdAt),
+        ).trim();
+        const windowKey = String(
+          event?.windowKey || getMissYouNotificationWindowKey(createdAt),
+        ).trim();
+
+        return {
+          actorId,
+          createdAt,
+          dateKey,
+          windowKey,
+          count: Math.max(1, Number(event?.count) || 1),
+        };
+      })
+      .filter(
+        (event) =>
+          event.actorId &&
+          event.windowKey &&
+          getNotificationTimestamp(event.createdAt),
+      )
+      .forEach((event) => {
+        const groupKey = `${event.actorId}:${event.windowKey}`;
+        const existing = groupedEventsByKey.get(groupKey);
+
+        if (!existing) {
+          groupedEventsByKey.set(groupKey, {
+            id: `miss-you-${event.actorId}-${event.windowKey}`,
+            actorId: event.actorId,
+            createdAt: event.createdAt,
+            dateKey: event.dateKey,
+            windowKey: event.windowKey,
+            count: event.count,
+            eventCount: 1,
+          });
+          return;
+        }
+
+        existing.eventCount += 1;
+        existing.count = Math.max(existing.count, event.count);
+
+        if (
+          getNotificationTimestamp(event.createdAt) >
+          getNotificationTimestamp(existing.createdAt)
+        ) {
+          existing.createdAt = event.createdAt;
+        }
+      });
+
+    const normalizedEvents = [...groupedEventsByKey.values()]
+      .map((event) => ({
+        id: event.id,
+        actorId: event.actorId,
+        createdAt: event.createdAt,
+        dateKey: event.dateKey,
+        windowKey: event.windowKey,
+        count: Math.max(event.count, event.eventCount),
+      }))
+      .sort(
+        (left, right) =>
+          getNotificationTimestamp(left.createdAt) -
+          getNotificationTimestamp(right.createdAt),
+      )
+      .slice(-60);
+
+    if (JSON.stringify(normalizedEvents) !== JSON.stringify(widget.data.missYouEvents)) {
+      widget.data.missYouEvents = normalizedEvents;
+      changed = true;
+    }
+  }
+
   if ("count" in widget.data) {
     delete widget.data.count;
     changed = true;
   }
 
   return changed;
+}
+
+function addMissYouNotificationEvent(widget, actorId, count) {
+  if (!widget?.data || !actorId) return;
+
+  const createdAt = new Date().toISOString();
+  const dateKey = getDateKeyFromDate(createdAt);
+  const windowKey = getMissYouNotificationWindowKey(createdAt);
+  const eventId = `miss-you-${actorId}-${windowKey}`;
+  const existingEvents = Array.isArray(widget.data.missYouEvents)
+    ? widget.data.missYouEvents
+    : [];
+  const existingEvent = existingEvents.find(
+    (event) =>
+      String(event?.actorId || event?.userId || "").trim() === actorId &&
+      String(
+        event?.windowKey ||
+          getMissYouNotificationWindowKey(
+            event?.createdAt || event?.created_at,
+          ),
+      ).trim() ===
+        windowKey,
+  );
+
+  if (existingEvent) {
+    existingEvent.id = eventId;
+    existingEvent.actorId = actorId;
+    existingEvent.createdAt = createdAt;
+    existingEvent.dateKey = dateKey;
+    existingEvent.windowKey = windowKey;
+    existingEvent.count = Math.max(1, Number(existingEvent.count) || 1) + 1;
+    return;
+  }
+
+  widget.data.missYouEvents = [
+    ...existingEvents,
+    {
+      id: eventId,
+      actorId,
+      createdAt,
+      dateKey,
+      windowKey,
+      count: 1,
+    },
+  ].slice(-60);
 }
 
 function isLikeableWidget(widget) {
@@ -3810,10 +4087,11 @@ function getProfilePresenceInfo(userId, profile = null) {
     };
   }
 
-  const latestActivityTimestamp = getProfileLatestActivityTimestamp(
-    userId,
-    profile,
-  );
+  const lastSeenTimestamp = new Date(profile?.last_seen_at || "").getTime();
+  const latestActivityTimestamp =
+    Number.isFinite(lastSeenTimestamp) && lastSeenTimestamp > 0
+      ? lastSeenTimestamp
+      : getProfileLatestActivityTimestamp(userId, profile);
 
   if (!latestActivityTimestamp) {
     return {
@@ -4302,6 +4580,11 @@ async function incrementMissYouWidget() {
   widget.data.totalCountsByUser[activeUserId] =
     (widget.data.totalCountsByUser[activeUserId] || 0) + 1;
   widget.data.lastResetDate = getTodayDateKey();
+  addMissYouNotificationEvent(
+    widget,
+    activeUserId,
+    widget.data.countsByUser[activeUserId],
+  );
 
   refreshMissYouWidgetDom(widget);
   if (activeProfilePopupUserId === activeUserId) {
@@ -4736,7 +5019,7 @@ function getWidgetContent(widget) {
   }
 
   if (isDatesWidget) {
-    const items = widget.data?.items || [];
+    const items = getDateItemsInDisplayOrder(widget.data?.items || []);
 
     if (!items.length) {
       return `<div style="font-size:0.92rem;opacity:0.75;">no important dates yet ♡</div>`;
@@ -4745,28 +5028,7 @@ function getWidgetContent(widget) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const sortedItems = [...items].sort((a, b) => {
-      const aDate = new Date(a.date);
-      const bDate = new Date(b.date);
-
-      aDate.setHours(0, 0, 0, 0);
-      bDate.setHours(0, 0, 0, 0);
-
-      const aDiff = Math.ceil((aDate - today) / (1000 * 60 * 60 * 24));
-      const bDiff = Math.ceil((bDate - today) / (1000 * 60 * 60 * 24));
-
-      const aIsUpcoming = aDiff >= 0;
-      const bIsUpcoming = bDiff >= 0;
-
-      if (aIsUpcoming && !bIsUpcoming) return -1;
-      if (!aIsUpcoming && bIsUpcoming) return 1;
-
-      if (aIsUpcoming && bIsUpcoming) return aDiff - bDiff;
-
-      return Math.abs(aDiff) - Math.abs(bDiff);
-    });
-
-    const html = sortedItems
+    const html = items
       .map((item) => {
         const target = new Date(item.date);
         target.setHours(0, 0, 0, 0);
@@ -5860,7 +6122,7 @@ function openWidgetEditor(widgetId) {
       <textarea class="popup-input" id="widgetFieldText" rows="5" style="resize: vertical; min-height: 110px;">${widget.data?.text || ""}</textarea>
     `;
   } else if (normalizedId === "dates") {
-    const items = widget.data?.items || [];
+    const items = getDateItemsInDisplayOrder(widget.data?.items || []);
 
     widgetPopupTitle.textContent = "⊹ ࣪ ˖important dates⊹ ࣪ ˖";
     saveWidgetBtn.style.display = "none";
@@ -5868,11 +6130,25 @@ function openWidgetEditor(widgetId) {
 
     const itemsHtml = items
       .map(
-        (item) => `
+        (item, index) => `
       <div class="date-edit-item" data-date-id="${item.id}">
         <div style="font-weight:700;margin-bottom:8px;">${item.title}</div>
         <div style="font-size:0.88rem;opacity:0.75;margin-bottom:10px;">${formatDisplayDate(item.date)}</div>
-        <div style="display:flex;justify-content:flex-end;">
+        <div class="date-edit-actions">
+          <button class="reorder-date-btn" type="button" data-date-id="${item.id}" data-date-direction="up" aria-label="move date up" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button class="reorder-date-btn" type="button" data-date-id="${item.id}" data-date-direction="down" aria-label="move date down" ${index === items.length - 1 ? "disabled" : ""}>↓</button>
+          <button
+            class="edit-date-btn"
+            type="button"
+            data-date-id="${item.id}"
+            aria-label="edit ${escapeHtml(item.title)}"
+            title="edit date"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </button>
           <button class="delete-date-btn" type="button" data-date-id="${item.id}">delete</button>
         </div>
       </div>
@@ -5890,21 +6166,32 @@ function openWidgetEditor(widgetId) {
 
         <div class="popup-actions" style="margin-top:4px;">
           <button class="soft-btn" id="addDateBtn" type="button">add date</button>
+          <button class="soft-btn" id="cancelDateEditBtn" type="button" hidden>cancel</button>
         </div>
 
-        <div style="margin-top:8px;display:grid;gap:10px;">
+        <div class="date-editor-list">
           ${itemsHtml || `<div class="small-note">no dates yet ♡</div>`}
         </div>
       </div>
     `;
 
     const addDateBtn = document.getElementById("addDateBtn");
+    const cancelDateEditBtn = document.getElementById("cancelDateEditBtn");
+    const titleInput = document.getElementById("dateTitleInput");
+    const dateInput = document.getElementById("dateValueInput");
+
+    const resetDateForm = () => {
+      if (titleInput) titleInput.value = "";
+      if (dateInput) dateInput.value = "";
+      if (addDateBtn) {
+        addDateBtn.textContent = "add date";
+        delete addDateBtn.dataset.editingDateId;
+      }
+      if (cancelDateEditBtn) cancelDateEditBtn.hidden = true;
+    };
 
     if (addDateBtn) {
       addDateBtn.addEventListener("click", async () => {
-        const titleInput = document.getElementById("dateTitleInput");
-        const dateInput = document.getElementById("dateValueInput");
-
         const title = titleInput.value.trim();
         const date = parseDisplayDate(dateInput.value);
 
@@ -5916,11 +6203,22 @@ function openWidgetEditor(widgetId) {
         if (!widget.data) widget.data = { items: [] };
         if (!widget.data.items) widget.data.items = [];
 
-        widget.data.items.push({
-          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-          title,
-          date,
-        });
+        const editingDateId = addDateBtn.dataset.editingDateId || "";
+        const editingDateItem = widget.data.items.find(
+          (item) => item.id === editingDateId,
+        );
+
+        if (editingDateItem) {
+          editingDateItem.title = title;
+          editingDateItem.date = date;
+        } else {
+          widget.data.items.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+            title,
+            date,
+            order: getNextDateOrder(widget.data.items),
+          });
+        }
 
         await saveWidgetToSupabase(widget, {
           notifyUpdate: true,
@@ -5928,9 +6226,71 @@ function openWidgetEditor(widgetId) {
         });
         renderWidgets({ animateMobileReorder: false });
         openWidgetEditor("dates");
-        showMessage("date added ♡");
+        showMessage(editingDateItem ? "date updated ♡" : "date added ♡");
       });
     }
+
+    if (cancelDateEditBtn) {
+      cancelDateEditBtn.addEventListener("click", resetDateForm);
+    }
+
+    document.querySelectorAll(".edit-date-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dateId = btn.dataset.dateId;
+        const selectedDate = (widget.data.items || []).find(
+          (item) => item.id === dateId,
+        );
+
+        if (!selectedDate) return;
+
+        titleInput.value = selectedDate.title || "";
+        dateInput.value = formatDisplayDate(selectedDate.date);
+        addDateBtn.dataset.editingDateId = selectedDate.id;
+        addDateBtn.textContent = "save date";
+        if (cancelDateEditBtn) cancelDateEditBtn.hidden = false;
+        titleInput.focus();
+      });
+    });
+
+    document.querySelectorAll(".reorder-date-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (btn.hasAttribute("disabled")) return;
+
+        const dateId = btn.dataset.dateId;
+        const direction = btn.dataset.dateDirection;
+        const currentRow = btn.closest(".date-edit-item");
+        const list = currentRow?.closest(".date-editor-list");
+        const swapRow =
+          direction === "up"
+            ? currentRow?.previousElementSibling
+            : currentRow?.nextElementSibling;
+        const previousRects = getDateEditorRowRects(list);
+
+        if (!reorderDateItem(widget, dateId, direction)) return;
+
+        if (
+          list &&
+          currentRow &&
+          swapRow?.classList.contains("date-edit-item")
+        ) {
+          if (direction === "up") {
+            list.insertBefore(currentRow, swapRow);
+          } else {
+            list.insertBefore(swapRow, currentRow);
+          }
+
+          syncDateEditorReorderButtons(list);
+          animateDateEditorRows(list, previousRects);
+        }
+
+        await saveWidgetToSupabase(widget, {
+          notifyUpdate: true,
+          preservePosition: true,
+        });
+        refreshWidgetContentDom(widget);
+        showMessage("dates reordered ♡");
+      });
+    });
 
     document.querySelectorAll(".delete-date-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -7165,11 +7525,12 @@ function renderTimeline() {
     return;
   }
 
-  posts.forEach((post) => {
+  posts.forEach((post, postIndex) => {
     const isOwner = currentProfile && post.userId === currentProfile.id;
     const profileAriaLabel = `open ${post.nickname || "profile"} profile`;
+    const shouldPrioritizePostImages = postIndex < INITIAL_TIMELINE_IMAGE_COUNT;
     const avatarHtml = post.avatarUrl
-      ? `<img class="post-avatar profile-trigger" src="${post.avatarUrl}" alt="${post.nickname || "profile"}" role="button" tabindex="0" aria-label="${escapeHtml(profileAriaLabel)}" title="open profile" loading="lazy" decoding="async" />`
+      ? `<img class="post-avatar profile-trigger" src="${escapeHtml(post.avatarUrl)}" alt="${escapeHtml(post.nickname || "profile")}" role="button" tabindex="0" aria-label="${escapeHtml(profileAriaLabel)}" title="open profile" loading="${shouldPrioritizePostImages ? "eager" : "lazy"}" decoding="async"${shouldPrioritizePostImages ? ' fetchpriority="high"' : ""} />`
       : `<div class="post-avatar profile-trigger" role="button" tabindex="0" aria-label="${escapeHtml(profileAriaLabel)}" title="open profile"></div>`;
 
     const postEl = document.createElement("article");
@@ -7229,6 +7590,7 @@ function renderTimeline() {
 
     const postTextEl = postEl.querySelector(".post-text");
     postTextEl.innerHTML = getPostDisplayHtml(post.text);
+    prioritizeEntryImages(postTextEl, { eager: shouldPrioritizePostImages });
     postTextEl.querySelectorAll("a").forEach((link) => {
       link.target = "_blank";
       link.rel = "noopener noreferrer";
@@ -10167,9 +10529,7 @@ async function openNewEntryComposer() {
 
   resetEntryPopup();
   entryPopup.classList.add("open");
-  if (newEntryBtn) {
-    newEntryBtn.classList.remove("is-hidden");
-  }
+  syncNewEntryButtonVisibility();
   focusEntryComposerToEnd();
 }
 
@@ -10268,18 +10628,8 @@ function renderBootFallbackShell() {
   renderSignedOutShell();
 }
 
-function waitForWindowLoad() {
-  if (document.readyState === "complete") {
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve) => {
-    window.addEventListener("load", resolve, { once: true });
-  });
-}
-
 function waitForImageLoad(image) {
-  if (!image || (image.complete && image.naturalWidth > 0)) {
+  if (!image || image.complete) {
     return Promise.resolve();
   }
 
@@ -10291,11 +10641,22 @@ function waitForImageLoad(image) {
   });
 }
 
+function getInitialTimelineImages() {
+  return Array.from(
+    timelineEl?.querySelectorAll(".post-avatar, .entry-attachment-image") || [],
+  )
+    .filter((image) => image instanceof HTMLImageElement)
+    .slice(0, INITIAL_TIMELINE_IMAGE_COUNT);
+}
+
 async function waitForInitialPageReady() {
   await waitForAnimationFrames(1);
 
   const splashImage = launchSplash?.querySelector("img");
-  const readinessTasks = [waitForImageLoad(splashImage)];
+  const readinessTasks = [
+    waitForImageLoad(splashImage),
+    ...getInitialTimelineImages().map((image) => waitForImageLoad(image)),
+  ];
 
   await withBootTimeout(Promise.allSettled(readinessTasks), 4000);
   await waitForAnimationFrames(1);
@@ -10509,7 +10870,7 @@ function getNotificationTypeLabel(notificationOrType) {
   if (type === "comment_like") return "comment like";
   if (type === "widget_comment") return "comment";
   if (type === "widget_like") return "widget like";
-  if (type === "miss_you") return `${notification.actorPronoun || "they"} misses you`;
+  if (type === "miss_you") return "miss you";
   if (type === "poem") return "poem";
   if (type === "widget_update") return "widget";
   if (type === "sticker") return "sticker";
@@ -10931,8 +11292,80 @@ function buildNotifications({
     const widgetData = getWidgetDataForNotifications(widget);
     const updatedBy = widgetData.lastUpdatedBy || "";
     const lastUpdatedAt = widgetData.lastUpdatedAt || "";
+    const isMissYouWidget = widget?.id === "miss-you";
+    const missYouEvents = Array.isArray(widgetData.missYouEvents)
+      ? widgetData.missYouEvents
+      : [];
 
-    if (updatedBy && updatedBy !== myUserId && lastUpdatedAt) {
+    if (isMissYouWidget && missYouEvents.length) {
+      const groupedMissYouEvents = new Map();
+
+      missYouEvents.forEach((event) => {
+        const actorId = String(event?.actorId || event?.userId || "").trim();
+        const createdAt = String(
+          event?.createdAt || event?.created_at || "",
+        ).trim();
+        const dateKey = String(
+          event?.dateKey || getDateKeyFromDate(createdAt),
+        ).trim();
+        const windowKey = String(
+          event?.windowKey || getMissYouNotificationWindowKey(createdAt),
+        ).trim();
+
+        if (!actorId || actorId === myUserId || !windowKey || !createdAt) return;
+
+        const groupKey = `${actorId}:${windowKey}`;
+        const existing = groupedMissYouEvents.get(groupKey);
+        const count = Math.max(1, Number(event?.count) || 1);
+
+        if (!existing) {
+          groupedMissYouEvents.set(groupKey, {
+            actorId,
+            createdAt,
+            dateKey,
+            windowKey,
+            count,
+            eventCount: 1,
+          });
+          return;
+        }
+
+        existing.eventCount += 1;
+        existing.count = Math.max(existing.count, count);
+
+        if (
+          getNotificationTimestamp(createdAt) >
+          getNotificationTimestamp(existing.createdAt)
+        ) {
+          existing.createdAt = createdAt;
+        }
+      });
+
+      groupedMissYouEvents.forEach((event) => {
+        const actorProfile = profileById.get(event.actorId);
+        const actorName =
+          actorProfile?.nickname || actorProfile?.username || "someone";
+        const count = Math.max(event.count, event.eventCount);
+        const countText = count === 1 ? "" : ` ${count} times`;
+
+        nextNotifications.push({
+          id: `miss-you:${widget.id}:${event.actorId}:${event.windowKey}`,
+          type: "miss_you",
+          actorPronoun: getNotificationActorPronoun(actorProfile),
+          created_at: event.createdAt,
+          widgetId: widget.id,
+          openComments: false,
+          message: `${actorName} missed you${countText}`,
+        });
+      });
+    }
+
+    if (
+      updatedBy &&
+      updatedBy !== myUserId &&
+      lastUpdatedAt &&
+      (!isMissYouWidget || !missYouEvents.length)
+    ) {
       const actorProfile = profileById.get(updatedBy);
       const actorName =
         actorProfile?.nickname || actorProfile?.username || "someone";
@@ -11254,6 +11687,24 @@ function syncOnlineProfilePresence() {
   }
 }
 
+function trackCurrentRealtimePresence() {
+  if (!liveUpdatesChannel || !currentUser?.id) return;
+
+  if (document.visibilityState === "hidden") {
+    void liveUpdatesChannel.untrack?.();
+    onlineProfileUserIds.delete(currentUser.id);
+    if (activeProfilePopupUserId) {
+      renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
+    }
+    return;
+  }
+
+  void liveUpdatesChannel.track?.({
+    user_id: currentUser.id,
+    online_at: new Date().toISOString(),
+  });
+}
+
 function startLiveUpdates() {
   stopLiveUpdates();
 
@@ -11288,10 +11739,7 @@ function startLiveUpdates() {
   channel.subscribe((status) => {
     if (status !== "SUBSCRIBED" || !currentUser?.id) return;
 
-    void channel.track({
-      user_id: currentUser.id,
-      online_at: new Date().toISOString(),
-    });
+    trackCurrentRealtimePresence();
   });
 }
 
@@ -12861,73 +13309,73 @@ async function saveComment() {
   if (saveCommentBtn) saveCommentBtn.disabled = true;
 
   try {
-  const content = commentInput.value.trim();
+    const content = commentInput.value.trim();
 
-  if (!content || !currentCommentsPostId) {
-    showMessage("write something first silly! ♡");
-    return;
-  }
+    if (!content || !currentCommentsPostId) {
+      showMessage("write something first silly! ♡");
+      return;
+    }
 
-  const user = await getCurrentUser();
+    const user = await getCurrentUser();
 
-  if (!user) {
-    showMessage("log in first silly! ♡");
-    return;
-  }
+    if (!user) {
+      showMessage("log in first silly! ♡");
+      return;
+    }
 
-  const postId = currentCommentsPostId;
-  const parentCommentId = replyingToCommentId;
-  const temporaryCommentId = `local-comment-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2)}`;
-  const optimisticComment = {
-    id: temporaryCommentId,
-    post_id: postId,
-    userId: user.id,
-    text: content,
-    created_at: new Date().toISOString(),
-    parent_comment_id: parentCommentId,
-    nickname: currentProfile?.nickname || currentProfile?.username || "memory",
-    likesCount: 0,
-    likedByMe: false,
-    replies: [],
-  };
-
-  addCommentToPost(postId, optimisticComment);
-
-  commentInput.value = "";
-  replyingToCommentId = null;
-  replyingToLabel.style.display = "none";
-  replyingToLabel.textContent = "";
-  renderCommentsList(postId);
-  syncPostCommentButton(postId);
-  showMessage("comment posted! ♡");
-
-  const { data: savedComment, error } = await supabaseClient
-    .from("comments")
-    .insert({
+    const postId = currentCommentsPostId;
+    const parentCommentId = replyingToCommentId;
+    const temporaryCommentId = `local-comment-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+    const optimisticComment = {
+      id: temporaryCommentId,
       post_id: postId,
-      user_id: user.id,
-      content,
+      userId: user.id,
+      text: content,
+      created_at: new Date().toISOString(),
       parent_comment_id: parentCommentId,
-    })
-    .select("id, created_at")
-    .single();
+      nickname: currentProfile?.nickname || currentProfile?.username || "memory",
+      likesCount: 0,
+      likedByMe: false,
+      replies: [],
+    };
 
-  if (error) {
-    console.error(error);
-    removeCommentFromPost(postId, temporaryCommentId);
+    addCommentToPost(postId, optimisticComment);
+
+    commentInput.value = "";
+    replyingToCommentId = null;
+    replyingToLabel.style.display = "none";
+    replyingToLabel.textContent = "";
     renderCommentsList(postId);
     syncPostCommentButton(postId);
-    showMessage(error.message);
-    return;
-  }
+    showMessage("comment posted! ♡");
 
-  updateLocalCommentId(postId, temporaryCommentId, savedComment);
-  markLocalRealtimeTable("comments");
-  if (currentCommentsPostId === postId) {
-    renderCommentsList(postId);
-  }
+    const { data: savedComment, error } = await supabaseClient
+      .from("comments")
+      .insert({
+        post_id: postId,
+        user_id: user.id,
+        content,
+        parent_comment_id: parentCommentId,
+      })
+      .select("id, created_at")
+      .single();
+
+    if (error) {
+      console.error(error);
+      removeCommentFromPost(postId, temporaryCommentId);
+      renderCommentsList(postId);
+      syncPostCommentButton(postId);
+      showMessage(error.message);
+      return;
+    }
+
+    updateLocalCommentId(postId, temporaryCommentId, savedComment);
+    markLocalRealtimeTable("comments");
+    if (currentCommentsPostId === postId) {
+      renderCommentsList(postId);
+    }
   } finally {
     commentSaveInFlight = false;
     if (saveCommentBtn) saveCommentBtn.disabled = false;
@@ -13097,11 +13545,20 @@ window.addEventListener("resize", requestMobileViewSwitcherVisibilitySync, {
 window.addEventListener("focus", () => {
   if (!currentUser) return;
   void touchCurrentUserPresence({ force: true });
+  trackCurrentRealtimePresence();
   scheduleLiveDataRefresh({ includeWidgets: true, debounceMs: 120 });
 });
-document.addEventListener("visibilitychange", () => {
-  if (!currentUser || document.visibilityState !== "visible") return;
+window.addEventListener("pagehide", () => {
+  if (!currentUser) return;
   void touchCurrentUserPresence({ force: true });
+  void liveUpdatesChannel?.untrack?.();
+});
+document.addEventListener("visibilitychange", () => {
+  if (!currentUser) return;
+  void touchCurrentUserPresence({ force: true });
+  trackCurrentRealtimePresence();
+
+  if (document.visibilityState !== "visible") return;
   scheduleLiveDataRefresh({ includeWidgets: true, debounceMs: 120 });
 });
 updateFloatingEntryButtonVisibility();
