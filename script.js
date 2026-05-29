@@ -730,6 +730,7 @@ const notificationsBadge = document.getElementById("notificationsBadge");
 const notificationsPanel = document.getElementById("notificationsPanel");
 const notificationsList = document.getElementById("notificationsList");
 const clearNotificationsBtn = document.getElementById("clearNotificationsBtn");
+const closeNotificationsBtn = document.getElementById("closeNotificationsBtn");
 const zoomOutBtn = document.getElementById("zoomOutBtn");
 const zoomInBtn = document.getElementById("zoomInBtn");
 const zoomResetBtn = document.getElementById("zoomResetBtn");
@@ -795,6 +796,10 @@ const phoneLayoutMedia = window.matchMedia?.(PHONE_LAYOUT_QUERY);
 const reducedMotionMedia = window.matchMedia?.(
   "(prefers-reduced-motion: reduce)",
 );
+const MOBILE_VIEW_ORDER = ["left", "timeline", "right"];
+const MOBILE_SWIPE_MIN_DISTANCE = 56;
+const MOBILE_SWIPE_AXIS_RATIO = 1.35;
+const MOBILE_SWIPE_LOCK_DISTANCE = 14;
 const BOOT_SPLASH_MIN_MS = 520;
 const BOOT_SPLASH_FADE_MS = 320;
 const INITIAL_TIMELINE_IMAGE_COUNT = 8;
@@ -803,6 +808,7 @@ const bootStartedAt =
   typeof performance !== "undefined" ? performance.now() : Date.now();
 let activeMobileView = "timeline";
 let wasTabbedLayoutActive = isTabbedLayoutActive();
+let mobileViewSwipeGesture = null;
 
 function normalizeChromeSymbols() {
   const brandIconsEl = document.querySelector(".brand-icons");
@@ -979,6 +985,141 @@ function getMobileViewSection(view) {
   if (view === "left") return leftZone;
   if (view === "right") return rightZone;
   return timelineEl;
+}
+
+function getAdjacentMobileView(direction) {
+  const currentIndex = MOBILE_VIEW_ORDER.indexOf(activeMobileView);
+  const nextIndex = currentIndex + direction;
+
+  if (
+    currentIndex === -1 ||
+    nextIndex < 0 ||
+    nextIndex >= MOBILE_VIEW_ORDER.length
+  ) {
+    return "";
+  }
+
+  return MOBILE_VIEW_ORDER[nextIndex];
+}
+
+function isHorizontalScrollableElement(el) {
+  if (!el || el === document.body || el === document.documentElement) {
+    return false;
+  }
+
+  const style = window.getComputedStyle(el);
+  const canScrollX = /(auto|scroll)/.test(style.overflowX);
+  return canScrollX && el.scrollWidth > el.clientWidth + 4;
+}
+
+function shouldIgnoreMobileViewSwipe(target) {
+  if (!target?.closest) return false;
+
+  if (
+    target.closest(
+      [
+        ".popup.open",
+        ".notifications-panel",
+        ".mobile-view-switcher",
+        ".sticker-tabs",
+        ".photo-editor-toolbar",
+        ".gif-picker-grid",
+        ".emoji-picker-grid",
+        ".ql-editor",
+        "button",
+        "a[href]",
+        "input",
+        "textarea",
+        "select",
+        "[contenteditable='true']",
+      ].join(","),
+    )
+  ) {
+    return true;
+  }
+
+  let node = target instanceof Element ? target : target.parentElement;
+  while (node && node !== document.body) {
+    if (isHorizontalScrollableElement(node)) return true;
+    node = node.parentElement;
+  }
+
+  return false;
+}
+
+function handleMobileViewSwipeStart(event) {
+  if (
+    !isTabbedLayoutActive() ||
+    event.touches.length !== 1 ||
+    shouldIgnoreMobileViewSwipe(event.target)
+  ) {
+    mobileViewSwipeGesture = null;
+    return;
+  }
+
+  const touch = event.touches[0];
+  mobileViewSwipeGesture = {
+    startX: touch.clientX,
+    startY: touch.clientY,
+    lockedAxis: "",
+  };
+}
+
+function handleMobileViewSwipeMove(event) {
+  if (!mobileViewSwipeGesture || event.touches.length !== 1) return;
+
+  const touch = event.touches[0];
+  const deltaX = touch.clientX - mobileViewSwipeGesture.startX;
+  const deltaY = touch.clientY - mobileViewSwipeGesture.startY;
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+
+  if (!mobileViewSwipeGesture.lockedAxis) {
+    if (
+      absX < MOBILE_SWIPE_LOCK_DISTANCE &&
+      absY < MOBILE_SWIPE_LOCK_DISTANCE
+    ) {
+      return;
+    }
+
+    mobileViewSwipeGesture.lockedAxis =
+      absX > absY * MOBILE_SWIPE_AXIS_RATIO ? "x" : "y";
+  }
+
+  if (mobileViewSwipeGesture.lockedAxis === "x") {
+    event.preventDefault();
+  }
+}
+
+function handleMobileViewSwipeEnd(event) {
+  if (!mobileViewSwipeGesture) return;
+
+  const touch = event.changedTouches?.[0];
+  const gesture = mobileViewSwipeGesture;
+  mobileViewSwipeGesture = null;
+
+  if (!touch || gesture.lockedAxis !== "x" || !isTabbedLayoutActive()) return;
+
+  const deltaX = touch.clientX - gesture.startX;
+  const deltaY = touch.clientY - gesture.startY;
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+
+  if (
+    absX < MOBILE_SWIPE_MIN_DISTANCE ||
+    absX <= absY * MOBILE_SWIPE_AXIS_RATIO
+  ) {
+    return;
+  }
+
+  const nextView = getAdjacentMobileView(deltaX < 0 ? 1 : -1);
+  if (nextView) {
+    setMobileView(nextView);
+  }
+}
+
+function handleMobileViewSwipeCancel() {
+  mobileViewSwipeGesture = null;
 }
 
 function applyMobileView() {
@@ -1173,6 +1314,21 @@ function adjustAppZoom(delta) {
   setAppZoom(currentZoom + delta, { persist: true });
 }
 
+function getThemeToggleIconMarkup(theme) {
+  return theme === "dark"
+    ? `
+      <svg viewBox="0 0 24 24" focusable="false">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56" />
+      </svg>
+    `
+    : `
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a7 7 0 1 0 11 11Z" />
+      </svg>
+    `;
+}
+
 function setTheme(theme) {
   const nextTheme = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = nextTheme;
@@ -1195,7 +1351,7 @@ function setTheme(theme) {
       isDark ? "switch to light mode" : "switch to dark mode",
     );
     const icon = themeToggle.querySelector(".theme-toggle-icon");
-    if (icon) icon.textContent = isDark ? "☀" : "☾";
+    if (icon) icon.innerHTML = getThemeToggleIconMarkup(nextTheme);
   }
 }
 
@@ -2850,6 +3006,7 @@ function normalizeSongWidget(widget) {
     ),
     likes: getWidgetLikeUserIds({ data: rawData }),
     likeTimestamps: getWidgetLikeTimestamps({ data: rawData }),
+    profileLikeCredits: getWidgetProfileLikeCredits({ data: rawData }),
     comments: normalizedComments,
   };
 
@@ -2862,6 +3019,7 @@ function normalizeSongWidget(widget) {
     "accent",
     "likes",
     "likeTimestamps",
+    "profileLikeCredits",
     "comments",
   ];
   const hasLegacyShape =
@@ -3152,6 +3310,9 @@ function isCommentableWidget(widget) {
 
   return (
     normalizedId === "song" ||
+    normalizedId === "note" ||
+    normalizedTitle.includes("little note") ||
+    normalizedTitle.includes("smol note") ||
     normalizedId.startsWith("photo-pin") ||
     normalizedTitle.includes("pinned photo") ||
     normalizedTitle.includes("pinned") ||
@@ -3184,6 +3345,31 @@ function getWidgetLikeTimestamps(widget) {
     : {};
 }
 
+function getWidgetProfileLikeCredits(widget) {
+  const widgetData =
+    widget?.data && typeof widget.data === "object" ? widget.data : {};
+  const rawCredits =
+    widgetData.profileLikeCredits &&
+    typeof widgetData.profileLikeCredits === "object"
+      ? widgetData.profileLikeCredits
+      : {};
+  const credits = {};
+
+  Object.entries(rawCredits).forEach(([userId, count]) => {
+    const normalizedUserId = String(userId || "").trim();
+    const normalizedCount = Math.max(0, Math.floor(Number(count) || 0));
+    if (normalizedUserId && normalizedCount > 0) {
+      credits[normalizedUserId] = normalizedCount;
+    }
+  });
+
+  getWidgetLikeUserIds(widget).forEach((userId) => {
+    credits[userId] = Math.max(credits[userId] || 0, 1);
+  });
+
+  return credits;
+}
+
 function normalizeWidgetLikesData(widget) {
   if (!widget || !isLikeableWidget(widget)) return false;
 
@@ -3196,6 +3382,9 @@ function normalizeWidgetLikesData(widget) {
       : {};
   const normalizedLikeSet = new Set(normalizedLikes);
   const normalizedTimestamps = {};
+  const normalizedProfileLikeCredits = getWidgetProfileLikeCredits({
+    data: rawData,
+  });
 
   Object.entries(rawTimestamps).forEach(([userId, timestamp]) => {
     const normalizedUserId = String(userId || "").trim();
@@ -3225,11 +3414,22 @@ function normalizeWidgetLikesData(widget) {
     rawData.likes.every(
       (userId, index) => String(userId || "").trim() === normalizedLikes[index],
     );
+  const rawProfileLikeCredits =
+    rawData.profileLikeCredits && typeof rawData.profileLikeCredits === "object"
+      ? rawData.profileLikeCredits
+      : {};
+  const profileLikeCreditsAlreadyNormalized =
+    Object.keys(rawProfileLikeCredits).length ===
+      Object.keys(normalizedProfileLikeCredits).length &&
+    Object.entries(normalizedProfileLikeCredits).every(
+      ([userId, count]) => Number(rawProfileLikeCredits[userId]) === count,
+    );
 
   if (
     widget.data === rawData &&
     likesAlreadyNormalized &&
     timestampsAlreadyNormalized &&
+    profileLikeCreditsAlreadyNormalized &&
     !hadLegacyLikesKey
   ) {
     return false;
@@ -3239,6 +3439,7 @@ function normalizeWidgetLikesData(widget) {
     ...rawData,
     likes: normalizedLikes,
     likeTimestamps: normalizedTimestamps,
+    profileLikeCredits: normalizedProfileLikeCredits,
   };
   delete nextData.likedUserIds;
   widget.data = nextData;
@@ -3997,7 +4198,7 @@ function getProfileLikeCount(userId) {
   const widgetLikes = widgets.reduce((total, widget) => {
     if (!isLikeableWidget(widget)) return total;
     normalizeWidgetLikesData(widget);
-    return total + getWidgetLikeUserIds(widget).filter((id) => id === userId).length;
+    return total + (getWidgetProfileLikeCredits(widget)[userId] || 0);
   }, 0);
 
   return postAndCommentLikes + widgetLikes;
@@ -5430,7 +5631,10 @@ async function loadWidgets(options = {}) {
         widgetsNeedingNormalization.push(mergedWidget);
       }
 
-      if (isPhotoPin && normalizePhotoWidgetComments(mergedWidget)) {
+      if (
+        isCommentableWidget(mergedWidget) &&
+        normalizePhotoWidgetComments(mergedWidget)
+      ) {
         widgetsNeedingNormalization.push(mergedWidget);
       }
 
@@ -6873,11 +7077,17 @@ function openWidgetComments(widgetId) {
   normalizePhotoWidgetComments(widget);
   markWidgetCommentsSeen(widget);
 
-  const prefix = `widget-comments-popup-${widget.id}`;
+  const prefix = getWidgetCommentDomPrefix(widget);
+  const normalizedWidgetId = String(widget.id || "").toLowerCase().trim();
+  const normalizedWidgetTitle = String(widget.title || "").toLowerCase();
   const title =
-    String(widget.id || "").toLowerCase().trim() === "song"
+    normalizedWidgetId === "song"
       ? "now playing comments"
-      : "pin it comments";
+      : normalizedWidgetId === "note" ||
+          normalizedWidgetTitle.includes("little note") ||
+          normalizedWidgetTitle.includes("smol note")
+        ? "smol note comments"
+        : "pin it comments";
 
   if (widgetCommentsPopupTitle) {
     widgetCommentsPopupTitle.textContent = `${title} ♡`;
@@ -9166,6 +9376,47 @@ function createPhotoWidgetCommentId() {
     : `photo-widget-comment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function getWidgetCommentLikeUserIds(comment) {
+  const rawLikes = Array.isArray(comment?.likes)
+    ? comment.likes
+    : Array.isArray(comment?.likedUserIds)
+      ? comment.likedUserIds
+      : [];
+
+  return [
+    ...new Set(
+      rawLikes.map((userId) => String(userId || "").trim()).filter(Boolean),
+    ),
+  ];
+}
+
+function getWidgetCommentLikeTimestamps(comment) {
+  return comment?.likeTimestamps && typeof comment.likeTimestamps === "object"
+    ? comment.likeTimestamps
+    : {};
+}
+
+function normalizeWidgetCommentLikeData(comment) {
+  const likes = getWidgetCommentLikeUserIds(comment);
+  const likeSet = new Set(likes);
+  const rawTimestamps = getWidgetCommentLikeTimestamps(comment);
+  const likeTimestamps = {};
+
+  Object.entries(rawTimestamps).forEach(([userId, timestamp]) => {
+    const normalizedUserId = String(userId || "").trim();
+    const normalizedTimestamp = String(timestamp || "").trim();
+    if (
+      normalizedUserId &&
+      normalizedTimestamp &&
+      likeSet.has(normalizedUserId)
+    ) {
+      likeTimestamps[normalizedUserId] = normalizedTimestamp;
+    }
+  });
+
+  return { likes, likeTimestamps };
+}
+
 function normalizePhotoWidgetCommentRecord(comment, widget, index = 0) {
   const id =
     String(comment?.id || "").trim() ||
@@ -9183,6 +9434,7 @@ function normalizePhotoWidgetCommentRecord(comment, widget, index = 0) {
           ).trim(),
           text: String(reply.text || reply.content || "").trim(),
           createdAt: String(reply.createdAt || reply.created_at || "").trim(),
+          ...normalizeWidgetCommentLikeData(reply),
         }))
         .filter((reply) => reply.text)
         .sort(
@@ -9201,6 +9453,7 @@ function normalizePhotoWidgetCommentRecord(comment, widget, index = 0) {
     text: String(comment?.text || comment?.content || "").trim(),
     createdAt: String(comment?.createdAt || comment?.created_at || "").trim(),
     preview: getWidgetCommentPreviewData(comment),
+    ...normalizeWidgetCommentLikeData(comment),
     replies,
   };
 }
@@ -9253,6 +9506,10 @@ function normalizePhotoWidgetComments(widget) {
         String(comment?.actorName || "").trim() === normalizedComment.actorName &&
         String(comment?.text || "").trim() === normalizedComment.text &&
         String(comment?.createdAt || "").trim() === normalizedComment.createdAt &&
+        JSON.stringify(getWidgetCommentLikeUserIds(comment)) ===
+          JSON.stringify(normalizedComment.likes) &&
+        JSON.stringify(getWidgetCommentLikeTimestamps(comment)) ===
+          JSON.stringify(normalizedComment.likeTimestamps) &&
         JSON.stringify(
           Array.isArray(comment?.replies) ? comment.replies : [],
         ) === JSON.stringify(normalizedComment.replies) &&
@@ -9285,13 +9542,17 @@ function getPhotoWidgetCommentSectionIds(prefix) {
   };
 }
 
-function isOwnPhotoPinWidget(widget) {
-  return Boolean(isPhotoPinWidget(widget) && canEditPhotoPinWidget(widget));
+function getWidgetCommentDomPrefix(widget) {
+  const normalizedId = String(widget?.id || "widget")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `widget-comments-popup-${normalizedId || "widget"}`;
 }
 
 function canReplyToPhotoWidgetComment(comment) {
-  const currentUserId = currentProfile?.id || currentUser?.id || "";
-  return Boolean(comment?.userId && comment.userId !== currentUserId);
+  return Boolean(comment?.id && (currentProfile?.id || currentUser?.id));
 }
 
 function getPhotoWidgetCommentPreviewData(source) {
@@ -9323,10 +9584,23 @@ function getSongWidgetCommentPreviewData(source) {
   };
 }
 
+function getNoteWidgetCommentPreviewData(source) {
+  const previewSource =
+    source?.preview && typeof source.preview === "object" ? source.preview : source;
+  return {
+    kind: "note",
+    text: String(previewSource?.text || "").trim(),
+  };
+}
+
 function getWidgetCommentPreviewData(source) {
   const previewSource =
     source?.preview && typeof source.preview === "object" ? source.preview : source;
   const previewKind = String(previewSource?.kind || "").trim().toLowerCase();
+
+  if (previewKind === "note") {
+    return getNoteWidgetCommentPreviewData(source);
+  }
 
   if (previewKind === "song") {
     return getSongWidgetCommentPreviewData(source);
@@ -9472,8 +9746,29 @@ function getSongWidgetCommentPreviewMarkup(source, options = {}) {
   `;
 }
 
+function getNoteWidgetCommentPreviewMarkup(source, options = {}) {
+  const { showLabel = false, compact = false } = options;
+  const preview = getNoteWidgetCommentPreviewData(source);
+  const noteText = escapeHtml(preview.text || "no note yet ♡");
+
+  return `
+    <div class="note-widget-comment-preview-card${compact ? " is-inline" : " is-full"}" aria-label="smol note preview">
+      <div class="note-widget-comment-preview-text">${noteText}</div>
+      ${
+        showLabel
+          ? '<div class="photo-widget-comment-preview-label">the smol note you\'re commenting on ♡</div>'
+          : ""
+      }
+    </div>
+  `;
+}
+
 function getWidgetCommentPreviewMarkup(source, options = {}) {
   const preview = getWidgetCommentPreviewData(source);
+  if (preview.kind === "note") {
+    return getNoteWidgetCommentPreviewMarkup(preview, options);
+  }
+
   if (preview.kind === "song") {
     return getSongWidgetCommentPreviewMarkup(preview, options);
   }
@@ -9497,6 +9792,17 @@ function getWidgetCommentPreviewSnapshot(widget) {
       durationLabel: String(songData.durationLabel || "").trim(),
       caption: String(songData.durationLabel || "").trim(),
       accent: Math.max(6, Math.min(94, Number(songData.accent) || 38)),
+    };
+  }
+
+  if (
+    normalizedId === "note" ||
+    String(widget?.title || "").toLowerCase().includes("little note") ||
+    String(widget?.title || "").toLowerCase().includes("smol note")
+  ) {
+    return {
+      kind: "note",
+      text: String(widget?.data?.text || "").trim(),
     };
   }
 
@@ -9586,18 +9892,12 @@ function syncPhotoWidgetCommentComposer(widget, options = {}) {
   const comments = getPhotoWidgetComments(widget);
   const replyTargetId = activePhotoWidgetReplyTargets.get(prefix) || "";
   const replyTarget = comments.find((comment) => comment.id === replyTargetId);
-  const ownsPhotoPin = isOwnPhotoPinWidget(widget);
-  const canUseComposer =
-    !ownsPhotoPin || Boolean(replyTarget && canReplyToPhotoWidgetComment(replyTarget));
+  const canUseComposer = true;
 
   input.disabled = !canUseComposer;
   saveBtn.disabled = !canUseComposer;
   saveBtn.textContent = replyTarget ? "post reply" : "post comment";
-  input.placeholder = ownsPhotoPin
-    ? canUseComposer
-      ? "write a reply ♡"
-      : "reply to someone else's comment ♡"
-    : "write a comment ♡";
+  input.placeholder = replyTarget ? "write a reply ♡" : "write a comment ♡";
 
   if (ownerNoteEl) {
     ownerNoteEl.hidden = true;
@@ -9660,11 +9960,16 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
                 preview.durationLabel ||
                 preview.caption,
             )
-          : Boolean(preview.image || preview.text);
+          : preview.kind === "note"
+            ? Boolean(preview.text)
+            : Boolean(preview.image || preview.text);
       const canDelete =
         comment.userId &&
         comment.userId === (currentProfile?.id || currentUser?.id || "");
       const canReply = canReplyToPhotoWidgetComment(comment);
+      const likes = getWidgetCommentLikeUserIds(comment);
+      const currentUserId = currentProfile?.id || currentUser?.id || "";
+      const likedByMe = Boolean(currentUserId && likes.includes(currentUserId));
       const repliesHtml = (comment.replies || [])
         .map((reply) => {
           const replyActorName = escapeHtml(
@@ -9674,6 +9979,10 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
           const canDeleteReply =
             reply.userId &&
             reply.userId === (currentProfile?.id || currentUser?.id || "");
+          const replyLikes = getWidgetCommentLikeUserIds(reply);
+          const replyLikedByMe = Boolean(
+            currentUserId && replyLikes.includes(currentUserId),
+          );
 
           return `
             <div
@@ -9699,19 +10008,30 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
               ></div>
               <div class="photo-widget-comment-footer">
                 <div class="comment-meta">${formatEntryDate(reply.createdAt)}</div>
-                ${
-                  canDeleteReply
-                    ? `
-                      <button
-                        class="photo-widget-delete-reply-btn"
+                <div class="photo-widget-comment-action-row">
+                  <button
+                    class="photo-widget-comment-like-btn${replyLikedByMe ? " liked" : ""}"
+                    type="button"
+                    data-photo-widget-like-comment-id="${escapeHtml(reply.id)}"
+                    aria-pressed="${String(replyLikedByMe)}"
+                  >
+                    <span class="photo-widget-comment-like-icon" aria-hidden="true">${replyLikedByMe ? "🩷" : "♡"}</span>
+                    <span class="photo-widget-action-label">${replyLikedByMe ? "liked" : "like"} (${replyLikes.length || 0})</span>
+                  </button>
+                  ${
+                    canDeleteReply
+                      ? `
+                        <button
+                          class="photo-widget-delete-reply-btn"
                         type="button"
                         data-photo-widget-delete-comment-id="${escapeHtml(reply.id)}"
                       >
-                        delete
+                        <span class="photo-widget-action-label">delete</span>
                       </button>
-                    `
-                    : ""
-                }
+                      `
+                      : ""
+                  }
+                </div>
               </div>
             </div>
           `;
@@ -9741,42 +10061,49 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
               data-photo-widget-comment-preview-id="${escapeHtml(comment.id)}"
               hidden
             ></div>
-            <div class="photo-widget-comment-footer">
-              <div class="comment-meta">${formatEntryDate(comment.createdAt)}</div>
-              ${
-                canReply
-                  ? `
-                    <button
-                      class="photo-widget-reply-btn"
-                      type="button"
-                      data-photo-widget-reply-comment-id="${escapeHtml(comment.id)}"
-                    >
-                      reply
-                    </button>
-                  `
-                  : ""
-              }
+              <div class="photo-widget-comment-footer">
+                <div class="comment-meta">${formatEntryDate(comment.createdAt)}</div>
+                <div class="photo-widget-comment-action-row">
+                <button
+                  class="photo-widget-comment-like-btn${likedByMe ? " liked" : ""}"
+                  type="button"
+                  data-photo-widget-like-comment-id="${escapeHtml(comment.id)}"
+                  aria-pressed="${String(likedByMe)}"
+                >
+                  <span class="photo-widget-comment-like-icon" aria-hidden="true">${likedByMe ? "🩷" : "♡"}</span>
+                  <span class="photo-widget-action-label">${likedByMe ? "liked" : "like"} (${likes.length || 0})</span>
+                </button>
+                ${
+                  canReply
+                    ? `
+                      <button
+                        class="photo-widget-reply-btn"
+                        type="button"
+                        data-photo-widget-reply-comment-id="${escapeHtml(comment.id)}"
+                      >
+                        <span class="photo-widget-action-label">reply</span>
+                      </button>
+                    `
+                    : ""
+                }
+                ${
+                  canDelete
+                    ? `
+                      <button
+                        class="photo-widget-delete-comment-btn"
+                        type="button"
+                        data-photo-widget-delete-comment-id="${escapeHtml(comment.id)}"
+                      >
+                        <span class="photo-widget-action-label">delete</span>
+                      </button>
+                    `
+                    : ""
+                }
+              </div>
             </div>
             ${repliesHtml ? `<div class="photo-widget-comment-replies">${repliesHtml}</div>` : ""}
           </div>
           ${hasPreview ? getWidgetCommentPreviewMarkup(comment, { compact: true }) : ""}
-          ${
-            canDelete
-              ? `
-                <div class="comment-actions photo-widget-comment-actions">
-                  <button
-                    class="delete-comment-btn"
-                    type="button"
-                    data-photo-widget-delete-comment-id="${escapeHtml(comment.id)}"
-                    aria-label="delete comment"
-                    title="delete comment"
-                  >
-                    ×
-                  </button>
-                </div>
-              `
-                  : ""
-              }
         </div>
       `;
     })
@@ -9826,6 +10153,18 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
 
         const input = document.getElementById(ids.inputId);
         input?.focus();
+      });
+    });
+
+  listEl
+    .querySelectorAll("[data-photo-widget-like-comment-id]")
+    .forEach((button) => {
+      button.addEventListener("click", async () => {
+        await togglePhotoWidgetCommentLike(
+          widget.id,
+          button.dataset.photoWidgetLikeCommentId,
+          options,
+        );
       });
     });
 
@@ -9913,15 +10252,9 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
     (comment) => comment.id === replyTargetId,
   );
   const replyTargetExists = Boolean(replyTarget);
-  const ownsPhotoPin = isOwnPhotoPinWidget(widget);
-
-  if (ownsPhotoPin && !replyTargetExists) {
-    showMessage("you can only reply to comments on your own pin ♡");
-    return;
-  }
 
   if (replyTargetExists && !canReplyToPhotoWidgetComment(replyTarget)) {
-    showMessage("you can only reply to someone else's comment ♡");
+    showMessage("could not reply to this comment ♡");
     return;
   }
 
@@ -9984,6 +10317,80 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
     return;
   }
   showMessage(replyTargetExists ? "reply posted! ♡" : "comment posted! ♡");
+}
+
+async function togglePhotoWidgetCommentLike(widgetId, commentId, options = {}) {
+  const widget = widgets.find((item) => item.id === widgetId);
+  const normalizedCommentId = String(commentId || "").trim();
+  if (!widget || !normalizedCommentId) return;
+
+  const user = await getCurrentUser();
+  if (!user) {
+    showMessage("please log in first ♡");
+    return;
+  }
+
+  const previousComments = getPhotoWidgetComments(widget);
+  let didFindComment = false;
+  const nextComments = previousComments.map((comment) => {
+    if (comment.id === normalizedCommentId) {
+      didFindComment = true;
+      return toggleWidgetCommentLikeForItem(comment, user.id);
+    }
+
+    return {
+      ...comment,
+      replies: (comment.replies || []).map((reply) => {
+        if (reply.id !== normalizedCommentId) return reply;
+
+        didFindComment = true;
+        return toggleWidgetCommentLikeForItem(reply, user.id);
+      }),
+    };
+  });
+
+  if (!didFindComment) return;
+
+  widget.data = {
+    ...(widget.data && typeof widget.data === "object" ? widget.data : {}),
+    comments: nextComments,
+  };
+  renderPhotoWidgetCommentsSection(widget, options);
+
+  const saved = await saveWidgetToSupabase(widget, {
+    recordHistory: false,
+    notifyUpdate: false,
+    suppressErrorMessage: false,
+    preservePosition: true,
+  });
+
+  if (!saved) {
+    widget.data.comments = previousComments;
+    renderPhotoWidgetCommentsSection(widget, options);
+  }
+}
+
+function toggleWidgetCommentLikeForItem(comment, userId) {
+  const likes = getWidgetCommentLikeUserIds(comment);
+  const likeTimestamps = {
+    ...getWidgetCommentLikeTimestamps(comment),
+  };
+  const isLiked = likes.includes(userId);
+  const nextLikes = isLiked
+    ? likes.filter((likedUserId) => likedUserId !== userId)
+    : [...likes, userId];
+
+  if (isLiked) {
+    delete likeTimestamps[userId];
+  } else {
+    likeTimestamps[userId] = new Date().toISOString();
+  }
+
+  return {
+    ...comment,
+    likes: nextLikes,
+    likeTimestamps,
+  };
 }
 
 async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
@@ -13051,12 +13458,18 @@ async function toggleWidgetLike(widgetId) {
   let previousLikeTimestamps = {
     ...getWidgetLikeTimestamps(widget),
   };
+  let previousProfileLikeCredits = {
+    ...getWidgetProfileLikeCredits(widget),
+  };
 
   pendingWidgetLikeIds.add(widgetId);
   normalizeWidgetLikesData(widget);
   previousLikes = getWidgetLikeUserIds(widget);
   previousLikeTimestamps = {
     ...getWidgetLikeTimestamps(widget),
+  };
+  previousProfileLikeCredits = {
+    ...getWidgetProfileLikeCredits(widget),
   };
 
   const wasLiked = previousLikes.includes(user.id);
@@ -13071,6 +13484,25 @@ async function toggleWidgetLike(widgetId) {
     delete widget.data.likeTimestamps[user.id];
   } else {
     widget.data.likeTimestamps[user.id] = new Date().toISOString();
+  }
+
+  widget.data.profileLikeCredits = {
+    ...previousProfileLikeCredits,
+  };
+
+  if (wasLiked) {
+    const nextCredit = Math.max(
+      0,
+      (Number(widget.data.profileLikeCredits[user.id]) || 0) - 1,
+    );
+    if (nextCredit > 0) {
+      widget.data.profileLikeCredits[user.id] = nextCredit;
+    } else {
+      delete widget.data.profileLikeCredits[user.id];
+    }
+  } else {
+    widget.data.profileLikeCredits[user.id] =
+      (Number(widget.data.profileLikeCredits[user.id]) || 0) + 1;
   }
 
   syncWidgetLikeButton(widgetId);
@@ -13091,6 +13523,7 @@ async function toggleWidgetLike(widgetId) {
       ...(widget.data && typeof widget.data === "object" ? widget.data : {}),
       likes: previousLikes,
       likeTimestamps: previousLikeTimestamps,
+      profileLikeCredits: previousProfileLikeCredits,
     };
     syncWidgetLikeButton(widgetId);
     showMessage(error.message || "could not update widget like ♡");
@@ -13098,6 +13531,9 @@ async function toggleWidgetLike(widgetId) {
     pendingWidgetLikeIds.delete(widgetId);
     syncWidgetLikeButton(widgetId);
     refreshNotificationsFromCurrentData();
+    if (profilePopup?.classList.contains("open") && activeProfilePopupUserId) {
+      renderProfilePopup(getKnownProfileById(activeProfilePopupUserId));
+    }
   }
 }
 
@@ -13496,6 +13932,12 @@ if (clearNotificationsBtn) {
     clearNotifications();
   });
 }
+if (closeNotificationsBtn) {
+  closeNotificationsBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeNotificationsPanel();
+  });
+}
 if (passwordToggleBtn) {
   passwordToggleBtn.addEventListener("click", () => {
     setPasswordVisibility(passwordInput?.type === "password");
@@ -13535,6 +13977,18 @@ mobileViewButtons.forEach((button) => {
   button.addEventListener("click", () => {
     setMobileView(button.dataset.mobileView || "timeline");
   });
+});
+document.addEventListener("touchstart", handleMobileViewSwipeStart, {
+  passive: true,
+});
+document.addEventListener("touchmove", handleMobileViewSwipeMove, {
+  passive: false,
+});
+document.addEventListener("touchend", handleMobileViewSwipeEnd, {
+  passive: true,
+});
+document.addEventListener("touchcancel", handleMobileViewSwipeCancel, {
+  passive: true,
 });
 window.addEventListener("scroll", requestFloatingEntryButtonVisibilityUpdate, {
   passive: true,

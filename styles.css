@@ -818,13 +818,23 @@ button:disabled,
   justify-content: center;
   width: 1.15rem;
   height: 1.15rem;
-  font-size: 1.08rem;
   line-height: 1;
   transform: translateY(0);
 }
 
+.theme-toggle-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .theme-toggle.active .theme-toggle-icon {
-  transform: translateY(-1px);
+  transform: none;
 }
 
 html:not([data-theme="dark"]) .toolbar,
@@ -892,7 +902,8 @@ html:not([data-theme="dark"]) .wishlist-item-row,
 html:not([data-theme="dark"]) .date-edit-item,
 html:not([data-theme="dark"]) .entry-preview-editor-item,
 html:not([data-theme="dark"]) .photo-widget-comment-preview-card.is-inline,
-html:not([data-theme="dark"]) .song-widget-comment-preview-card.is-inline {
+html:not([data-theme="dark"]) .song-widget-comment-preview-card.is-inline,
+html:not([data-theme="dark"]) .note-widget-comment-preview-card.is-inline {
   border-color: var(--line-mid);
 }
 
@@ -1139,6 +1150,19 @@ html[data-theme="dark"] #widgetPopup .popup-input {
   border-color: var(--border-2);
   color: var(--text);
   box-shadow: 0 10px 22px rgba(9, 5, 13, 0.24);
+}
+
+html[data-theme="dark"] .note-widget-comment-preview-card {
+  background: rgba(53, 35, 50, 0.72);
+  border-color: var(--border-2);
+}
+
+html[data-theme="dark"] .photo-widget-comment-like-btn {
+  color: var(--text-soft);
+}
+
+html[data-theme="dark"] .photo-widget-comment-like-btn.liked {
+  color: #f4a4c3;
 }
 
 html[data-theme="dark"] .wishlist-item-row {
@@ -2209,6 +2233,7 @@ html[data-theme="dark"] .photo-color-trigger {
 .widget-header-like-btn,
 .widget-minimize-btn,
 .widget-order-btn {
+  flex: 0 0 auto;
   border: none;
   background: transparent;
   color: #704c5c;
@@ -2221,30 +2246,32 @@ html[data-theme="dark"] .photo-color-trigger {
     color 0.2s ease;
   padding: 0;
   font-family: inherit;
-  height: 20px;
-  min-width: 20px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
+  line-height: 24px;
   vertical-align: middle;
   transform-origin: center;
 }
 
 .widget-minimize-btn {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
 .widget-order-btn {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
 }
 
 .widget-header-comment-btn,
 .widget-header-like-btn {
-  gap: 2px;
+  gap: 3px;
   opacity: 0.88;
-  min-width: 26px;
+  width: auto;
+  min-width: 32px;
   font-size: 0.9rem;
 }
 
@@ -2254,6 +2281,8 @@ html[data-theme="dark"] .photo-color-trigger {
   align-items: center;
   justify-content: center;
   font-size: 1rem;
+  width: 16px;
+  height: 24px;
   line-height: 1;
 }
 
@@ -2263,7 +2292,8 @@ html[data-theme="dark"] .photo-color-trigger {
   align-items: center;
   font-size: 0.88rem;
   font-weight: 700;
-  line-height: 1;
+  height: 24px;
+  line-height: 24px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2290,8 +2320,10 @@ html[data-theme="dark"] .photo-color-trigger {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 22px;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 24px;
+  white-space: nowrap;
 }
 
 .widget-history-list {
@@ -2531,6 +2563,7 @@ html[data-theme="dark"] .photo-color-trigger {
   display: grid;
   gap: 10px;
   margin-top: 18px;
+  min-height: 0;
 }
 
 .photo-widget-comments-label {
@@ -2645,6 +2678,44 @@ html[data-theme="dark"] .photo-color-trigger {
   margin: 0;
 }
 
+.note-widget-comment-preview-card {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 360px);
+  padding: 12px 14px;
+  border: 1px solid rgba(238, 182, 200, 0.58);
+  border-radius: 16px;
+  background: rgba(255, 250, 253, 0.86);
+}
+
+.note-widget-comment-preview-card.is-full {
+  justify-self: center;
+}
+
+.note-widget-comment-preview-card.is-inline {
+  width: 132px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.note-widget-comment-preview-text {
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-widget-comment-preview-card.is-inline .note-widget-comment-preview-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 4;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font-size: 0.72rem;
+}
+
 .song-widget-comment-preview-meta {
   display: grid;
   gap: 3px;
@@ -2691,7 +2762,7 @@ html[data-theme="dark"] .photo-color-trigger {
 .comment-item.photo-widget-comment-item {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 34%);
   grid-template-areas: "content preview";
   align-items: start;
   gap: 12px;
@@ -2714,20 +2785,31 @@ html[data-theme="dark"] .photo-color-trigger {
   margin-bottom: 0;
 }
 
-.comment-item.photo-widget-comment-item .photo-widget-comment-preview-card {
+.comment-item.photo-widget-comment-item .photo-widget-comment-preview-card,
+.comment-item.photo-widget-comment-item .song-widget-comment-preview-card,
+.comment-item.photo-widget-comment-item .note-widget-comment-preview-card {
   grid-area: preview;
   position: static;
   transform: none;
   align-self: start;
   justify-self: end;
+  min-width: 0;
 }
 
 .comment-item.photo-widget-comment-item .photo-widget-comment-footer {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+
+.photo-widget-comment-action-row {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 9px;
   flex-wrap: wrap;
+  line-height: 18px;
+  row-gap: 5px;
 }
 
 .photo-widget-owner-comment-note,
@@ -2781,7 +2863,17 @@ html[data-theme="dark"] .photo-color-trigger {
   background: rgba(255, 250, 253, 0.22);
 }
 
-.photo-widget-reply-btn {
+.photo-widget-reply-btn,
+.photo-widget-comment-like-btn,
+.photo-widget-delete-comment-btn,
+.photo-widget-delete-reply-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 18px;
   min-height: 0;
   padding: 0;
   border: 0;
@@ -2793,25 +2885,45 @@ html[data-theme="dark"] .photo-color-trigger {
     "Segoe UI Symbol", sans-serif;
   font-weight: 700;
   font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.photo-widget-action-label {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.photo-widget-comment-like-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 18px;
+  line-height: 18px;
+  transform: translateY(1px);
 }
 
 .photo-widget-delete-reply-btn {
-  border: 0;
-  background: transparent;
-  color: var(--text-soft);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0;
+  gap: 0;
 }
 
 .photo-widget-reply-btn:hover,
+.photo-widget-comment-like-btn:hover,
+.photo-widget-delete-comment-btn:hover,
 .photo-widget-delete-reply-btn:hover,
 .photo-widget-cancel-reply-btn:hover {
   transform: none;
   background: transparent;
   box-shadow: none;
   color: var(--text);
+}
+
+.photo-widget-comment-like-btn.liked {
+  color: #b94f70;
 }
 
 .comment-item.photo-widget-comment-item .photo-widget-comment-actions {
@@ -2845,13 +2957,42 @@ html[data-theme="dark"] .photo-color-trigger {
 }
 
 .comment-item.photo-widget-comment-item .song-widget-comment-preview-card.is-inline {
-  width: 132px;
+  width: 100%;
   justify-self: end;
+}
+
+.comment-item.photo-widget-comment-item .note-widget-comment-preview-card.is-inline {
+  width: 100%;
+  justify-self: end;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.comment-item.photo-widget-comment-item .song-widget-comment-preview-title,
+.comment-item.photo-widget-comment-item .song-widget-comment-preview-caption {
+  display: block;
+  line-clamp: unset;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.comment-item.photo-widget-comment-item .note-widget-comment-preview-text {
+  display: block;
+  line-clamp: unset;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: left;
 }
 
 .comment-item.photo-widget-comment-item .song-widget-comment-preview-meta {
   text-align: left;
-  padding-right: 30px;
+  padding-right: 0;
 }
 
 .comment-item.photo-widget-comment-item .photo-widget-comment-actions .delete-comment-btn::before,
@@ -2882,8 +3023,14 @@ html[data-theme="dark"] .photo-color-trigger {
 .photo-widget-comments-list {
   display: grid;
   gap: 10px;
-  max-height: 260px;
-  overflow: auto;
+  max-height: min(42vh, 360px);
+  max-height: min(42dvh, 360px);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .photo-widget-comment-input {
@@ -3960,6 +4107,7 @@ html[data-theme="dark"] .post-author-name-input {
   justify-content: center;
   background: rgba(255, 244, 249, 0.58);
   z-index: 200;
+  overflow: hidden;
   transition:
     opacity 0.28s ease,
     visibility 0.28s ease;
@@ -3979,6 +4127,8 @@ body.sticker-repositioning {
   width: 100%;
   max-width: 420px;
   max-height: min(88vh, 720px);
+  max-height: min(88dvh, 720px);
+  min-height: 0;
   background: rgba(255, 253, 254, 0.98);
   border: 1px solid var(--border-2);
   border-radius: 28px;
@@ -4054,10 +4204,16 @@ body.sticker-repositioning {
 }
 
 .popup-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 18px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .popup-body::-webkit-scrollbar,
@@ -4085,6 +4241,22 @@ body.sticker-repositioning {
 #widgetCommentsPopupFields {
   display: grid;
   gap: 16px;
+  min-height: 0;
+}
+
+.comments-list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(42vh, 360px);
+  max-height: min(42dvh, 360px);
+  min-height: 0;
+  margin-bottom: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .confirm-popup-text {
@@ -6361,6 +6533,35 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     font-size: 0.84rem;
   }
 
+  .notifications-btn-icon,
+  .toolbar-actions .theme-toggle-icon,
+  .toolbar-actions .profile-btn-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    transform: none;
+  }
+
+  .notifications-btn-icon svg,
+  .toolbar-actions .theme-toggle-icon svg,
+  .toolbar-actions .profile-btn-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .toolbar-actions .theme-toggle-icon svg {
+    width: 23px;
+    height: 23px;
+    stroke-width: 2.2;
+  }
+
+  .toolbar-actions .profile-btn-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
   .toolbar-actions .theme-toggle {
     display: inline-flex;
   }
@@ -6376,15 +6577,11 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   }
 
   .notifications-btn-icon {
-    display: inline-flex;
+    display: inline-grid;
   }
 
   .notifications-btn-label {
     display: none;
-  }
-
-  .theme-toggle-icon {
-    font-size: 1rem;
   }
 
   .notifications-panel {
@@ -6597,7 +6794,7 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   }
 
   .widget-bar-actions {
-    gap: 3px;
+    gap: 7px;
   }
 
   .widget-content {
@@ -6857,8 +7054,8 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   }
 
   .comment-item.photo-widget-comment-item {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: "content preview action";
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 34%);
+    grid-template-areas: "content preview";
     align-items: center;
     gap: 10px;
   }
