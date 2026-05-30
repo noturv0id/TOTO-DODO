@@ -30,6 +30,7 @@ const WIDGET_COMMENT_SEEN_STORAGE_KEY = "widgetCommentSeenAtByUser";
 const WIDGET_LAYOUT_STORAGE_KEY = "widgetLayouts";
 const PROFILE_BIO_WIDGET_ID = "__profile-bios";
 const PROFILE_BIO_WIDGET_TITLE = "profile bios";
+const PROFILE_DIRECTORY_SELECT = "id, nickname, username, avatar_url, created_at";
 const APP_ZOOM_STORAGE_KEY = "appZoom";
 const DEFAULT_APP_ZOOM = 1;
 const MIN_APP_ZOOM = 0.25;
@@ -678,8 +679,8 @@ let widgetSaveInFlight = false;
 let commentSaveInFlight = false;
 let profileSaveInFlight = false;
 let profilePresenceHeartbeatId = 0;
-let profileBioColumnSupported = null;
-let profileLastSeenFieldSupported = null;
+let profileBioColumnSupported = false;
+let profileLastSeenFieldSupported = false;
 let lastPresenceSyncAt = 0;
 let currentCommentsPostId = null;
 let replyingToCommentId = null;
@@ -797,9 +798,10 @@ const reducedMotionMedia = window.matchMedia?.(
   "(prefers-reduced-motion: reduce)",
 );
 const MOBILE_VIEW_ORDER = ["left", "timeline", "right"];
-const MOBILE_SWIPE_MIN_DISTANCE = 56;
-const MOBILE_SWIPE_AXIS_RATIO = 1.35;
-const MOBILE_SWIPE_LOCK_DISTANCE = 14;
+const MOBILE_SWIPE_MIN_DISTANCE = 44;
+const MOBILE_SWIPE_AXIS_RATIO = 1.12;
+const MOBILE_SWIPE_LOCK_DISTANCE = 10;
+const MOBILE_SWIPE_VERTICAL_LOCK_RATIO = 1.28;
 const BOOT_SPLASH_MIN_MS = 520;
 const BOOT_SPLASH_FADE_MS = 320;
 const INITIAL_TIMELINE_IMAGE_COUNT = 8;
@@ -1074,19 +1076,21 @@ function handleMobileViewSwipeMove(event) {
   const absX = Math.abs(deltaX);
   const absY = Math.abs(deltaY);
 
-  if (!mobileViewSwipeGesture.lockedAxis) {
-    if (
-      absX < MOBILE_SWIPE_LOCK_DISTANCE &&
-      absY < MOBILE_SWIPE_LOCK_DISTANCE
-    ) {
-      return;
-    }
-
-    mobileViewSwipeGesture.lockedAxis =
-      absX > absY * MOBILE_SWIPE_AXIS_RATIO ? "x" : "y";
+  if (
+    mobileViewSwipeGesture.lockedAxis !== "x" &&
+    absX >= MOBILE_SWIPE_LOCK_DISTANCE &&
+    absX > absY * MOBILE_SWIPE_AXIS_RATIO
+  ) {
+    mobileViewSwipeGesture.lockedAxis = "x";
+  } else if (
+    !mobileViewSwipeGesture.lockedAxis &&
+    absY >= MOBILE_SWIPE_LOCK_DISTANCE &&
+    absY > absX * MOBILE_SWIPE_VERTICAL_LOCK_RATIO
+  ) {
+    mobileViewSwipeGesture.lockedAxis = "y";
   }
 
-  if (mobileViewSwipeGesture.lockedAxis === "x") {
+  if (mobileViewSwipeGesture.lockedAxis === "x" && event.cancelable) {
     event.preventDefault();
   }
 }
@@ -1098,7 +1102,7 @@ function handleMobileViewSwipeEnd(event) {
   const gesture = mobileViewSwipeGesture;
   mobileViewSwipeGesture = null;
 
-  if (!touch || gesture.lockedAxis !== "x" || !isTabbedLayoutActive()) return;
+  if (!touch || !isTabbedLayoutActive()) return;
 
   const deltaX = touch.clientX - gesture.startX;
   const deltaY = touch.clientY - gesture.startY;
@@ -1869,6 +1873,42 @@ function toSafeHtmlFromPlainText(text) {
   return sanitizePostHtml(escapeHtml(text).replaceAll("\n", "<br>"));
 }
 
+function isEmptyEntrySpacingNode(node) {
+  if (node?.nodeType === Node.TEXT_NODE) {
+    return !String(node.textContent || "").replace(/\u00a0/g, " ").trim();
+  }
+
+  if (!(node instanceof HTMLElement)) return false;
+  if (node.tagName === "BR") return true;
+  if (!["DIV", "P"].includes(node.tagName)) return false;
+  if (node.querySelector("img, video, audio, iframe, canvas, svg, hr, table")) {
+    return false;
+  }
+
+  return !String(node.textContent || "").replace(/\u00a0/g, " ").trim();
+}
+
+function tightenEntryAttachmentSpacing(html) {
+  const template = document.createElement("template");
+  template.innerHTML = String(html || "");
+
+  template.content.querySelectorAll(".entry-attachment").forEach((attachment) => {
+    let previousNode = attachment.previousSibling;
+    while (previousNode && isEmptyEntrySpacingNode(previousNode)) {
+      previousNode.remove();
+      previousNode = attachment.previousSibling;
+    }
+  });
+
+  return template.innerHTML.trim();
+}
+
+function preparePostHtmlForDisplay(html) {
+  return tightenEntryAttachmentSpacing(
+    reviveLiteralHtmlFragments(sanitizePostHtml(html)),
+  );
+}
+
 function decodeHtmlEntities(value) {
   const textarea = document.createElement("textarea");
   textarea.innerHTML = String(value || "");
@@ -1985,9 +2025,9 @@ function composeEntryContentWithAttachment(content, image) {
           </figure>
         `;
 
-  return normalizedContent
-    ? `${normalizedContent}${attachmentHtml}`
-    : attachmentHtml;
+  return tightenEntryAttachmentSpacing(
+    normalizedContent ? `${normalizedContent}${attachmentHtml}` : attachmentHtml,
+  );
 }
 
 function renderEntryImagePreview(image) {
@@ -2047,11 +2087,11 @@ function getPostDisplayHtml(content) {
     if (containsEscapedHtml) {
       const decodedHtmlValue = decodeStoredHtml(value);
       if (decodedHtmlValue !== value && looksLikeHtml(decodedHtmlValue)) {
-        return reviveLiteralHtmlFragments(sanitizePostHtml(decodedHtmlValue));
+        return preparePostHtmlForDisplay(decodedHtmlValue);
       }
     }
 
-    return reviveLiteralHtmlFragments(sanitizePostHtml(value));
+    return preparePostHtmlForDisplay(value);
   }
 
   if (!/&(?:lt|gt|quot|#39|amp);/i.test(value)) {
@@ -2060,7 +2100,7 @@ function getPostDisplayHtml(content) {
 
   const decodedValue = decodeStoredHtml(value);
   if (decodedValue !== value && looksLikeHtml(decodedValue)) {
-    return reviveLiteralHtmlFragments(sanitizePostHtml(decodedValue));
+    return preparePostHtmlForDisplay(decodedValue);
   }
 
   return toSafeHtmlFromPlainText(value);
@@ -4649,27 +4689,7 @@ function bindProfilePopupTrigger(element, openProfilePopup) {
 }
 
 async function fetchProfilesDirectory() {
-  const selectCandidates = [
-    "id, nickname, username, avatar_url, bio, last_seen_at, created_at",
-    "id, nickname, username, avatar_url, bio, created_at",
-    "id, nickname, username, avatar_url, last_seen_at, created_at",
-    "id, nickname, username, avatar_url, created_at",
-    "id, nickname, username, avatar_url, last_seen_at",
-    "id, nickname, username, avatar_url",
-    "id, nickname, username",
-  ];
-
-  let lastError = null;
-
-  for (const selectClause of selectCandidates) {
-    const result = await supabaseClient.from("profiles").select(selectClause);
-    if (!result.error) {
-      return result;
-    }
-    lastError = result.error;
-  }
-
-  return { data: null, error: lastError };
+  return supabaseClient.from("profiles").select(PROFILE_DIRECTORY_SELECT);
 }
 
 async function fetchProfileById(userId) {
@@ -4678,32 +4698,11 @@ async function fetchProfileById(userId) {
     return { data: null, error: null };
   }
 
-  const selectCandidates = [
-    "id, nickname, username, avatar_url, bio, last_seen_at, created_at",
-    "id, nickname, username, avatar_url, bio, created_at",
-    "id, nickname, username, avatar_url, last_seen_at, created_at",
-    "id, nickname, username, avatar_url, created_at",
-    "id, nickname, username, avatar_url, last_seen_at",
-    "id, nickname, username, avatar_url",
-    "id, nickname, username",
-  ];
-  let lastError = null;
-
-  for (const selectClause of selectCandidates) {
-    const result = await supabaseClient
-      .from("profiles")
-      .select(selectClause)
-      .eq("id", normalizedUserId)
-      .maybeSingle();
-
-    if (!result.error) {
-      return result;
-    }
-
-    lastError = result.error;
-  }
-
-  return { data: null, error: lastError };
+  return supabaseClient
+    .from("profiles")
+    .select(PROFILE_DIRECTORY_SELECT)
+    .eq("id", normalizedUserId)
+    .maybeSingle();
 }
 
 async function refreshProfilePopupFromSupabase(userId) {
@@ -7125,7 +7124,7 @@ function openWidgetComments(widgetId) {
   window.requestAnimationFrame(() => {
     const ids = getPhotoWidgetCommentSectionIds(prefix);
     const input = document.getElementById(ids.inputId);
-    if (input && !input.disabled) {
+    if (input && !input.disabled && !isMobileLayoutActive()) {
       input.focus({ preventScroll: true });
     }
   });
@@ -7510,13 +7509,17 @@ async function toggleWidgetWishlistItem(widgetId, wishId) {
 
 function formatEntryDate(dateString) {
   const date = new Date(dateString);
-  return date.toLocaleString([], {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  if (Number.isNaN(date.getTime())) return "";
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  const hours = date.getHours();
+  const displayHours = hours % 12 || 12;
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const period = hours >= 12 ? "PM" : "AM";
+
+  return `${day}/${month}/${year} ${displayHours}:${minutes} ${period}`;
 }
 
 function getPostLikeButtonMarkup(post) {
@@ -12672,10 +12675,14 @@ async function updateCurrentUserProfile(profileUpdates = {}) {
     profileUpdates,
     "bio",
   );
+  const profileTablePayload =
+    profileBioColumnSupported === false
+      ? (({ bio, ...payload }) => payload)(nextProfilePayload)
+      : nextProfilePayload;
 
   let { data: savedProfile, error } = await supabaseClient
     .from("profiles")
-    .update(nextProfilePayload)
+    .update(profileTablePayload)
     .eq("id", user.id)
     .select()
     .single();
@@ -12918,12 +12925,11 @@ async function saveInlinePostAvatar(file) {
   showMessage("avatar updated ♡");
 }
 
-function getPostsTimelineSelect(includeUpdatedAt = true) {
+function getPostsTimelineSelect() {
   return `
         id,
         content,
         created_at,
-        ${includeUpdatedAt ? "updated_at," : ""}
         user_id,
         profiles (
           nickname,
@@ -12934,24 +12940,10 @@ function getPostsTimelineSelect(includeUpdatedAt = true) {
 }
 
 async function fetchPostsForTimeline() {
-  const queryPosts = (includeUpdatedAt = true) =>
-    supabaseClient
-      .from("posts")
-      .select(getPostsTimelineSelect(includeUpdatedAt))
-      .order("created_at", { ascending: false });
-
-  const result = await queryPosts(true);
-
-  if (
-    !result.error ||
-    !String(result.error.message || "")
-      .toLowerCase()
-      .includes("updated_at")
-  ) {
-    return result;
-  }
-
-  return queryPosts(false);
+  return supabaseClient
+    .from("posts")
+    .select(getPostsTimelineSelect())
+    .order("created_at", { ascending: false });
 }
 
 function isPostEditedFromTimestamps(post) {
@@ -13226,7 +13218,7 @@ async function saveEntry() {
       .update(updatePayload)
       .eq("id", editingPostId)
       .eq("user_id", user.id)
-      .select("id, content, created_at, updated_at, user_id")
+      .select("id, content, created_at, user_id")
       .maybeSingle();
 
     error = updateResult.error;

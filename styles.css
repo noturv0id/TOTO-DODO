@@ -1165,6 +1165,10 @@ html[data-theme="dark"] .photo-widget-comment-like-btn.liked {
   color: #f4a4c3;
 }
 
+html[data-theme="dark"] .photo-widget-comment-reply {
+  background: rgba(58, 37, 54, 0.78);
+}
+
 html[data-theme="dark"] .wishlist-item-row {
   background: rgba(41, 28, 47, 0.94);
   border-color: var(--border-2);
@@ -2268,10 +2272,10 @@ html[data-theme="dark"] .photo-color-trigger {
 
 .widget-header-comment-btn,
 .widget-header-like-btn {
-  gap: 3px;
+  gap: 2px;
   opacity: 0.88;
   width: auto;
-  min-width: 32px;
+  min-width: 24px;
   font-size: 0.9rem;
 }
 
@@ -2321,7 +2325,7 @@ html[data-theme="dark"] .photo-color-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 3px;
   height: 24px;
   white-space: nowrap;
 }
@@ -3023,6 +3027,8 @@ html[data-theme="dark"] .photo-color-trigger {
 .photo-widget-comments-list {
   display: grid;
   gap: 10px;
+  align-content: start;
+  grid-auto-rows: max-content;
   max-height: min(42vh, 360px);
   max-height: min(42dvh, 360px);
   min-height: 0;
@@ -3450,7 +3456,7 @@ html[data-theme="dark"] .post-author-name-input {
 }
 
 .entry-attachment {
-  margin: 8px 0 0;
+  margin: 2px 0 0;
 }
 
 .post-text > :has(+ .entry-attachment) {
@@ -6794,7 +6800,7 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   }
 
   .widget-bar-actions {
-    gap: 7px;
+    gap: 3px;
   }
 
   .widget-content {
@@ -7030,6 +7036,51 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   .popup-body,
   #widgetPopup .popup-body {
     padding: 14px;
+  }
+
+  #widgetCommentsPopup .widget-comments-popup-card {
+    height: calc(100vh - 24px);
+    height: calc(100dvh - 24px);
+  }
+
+  #widgetCommentsPopup .popup-body {
+    display: flex;
+    overflow: hidden;
+  }
+
+  #widgetCommentsPopupFields {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    min-height: 0;
+  }
+
+  #widgetCommentsPopupFields > .photo-widget-comment-preview-card,
+  #widgetCommentsPopupFields > .song-widget-comment-preview-card,
+  #widgetCommentsPopupFields > .note-widget-comment-preview-card {
+    display: none;
+  }
+
+  #widgetCommentsPopup .photo-widget-comments-section {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 0;
+  }
+
+  #widgetCommentsPopup .photo-widget-comments-list {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  #widgetCommentsPopup .photo-widget-comment-input {
+    min-height: 76px;
+    max-height: 96px;
+    resize: none;
   }
 
   .photo-history-grid {
