@@ -802,6 +802,7 @@ const MOBILE_SWIPE_MIN_DISTANCE = 44;
 const MOBILE_SWIPE_AXIS_RATIO = 1.12;
 const MOBILE_SWIPE_LOCK_DISTANCE = 10;
 const MOBILE_SWIPE_VERTICAL_LOCK_RATIO = 1.28;
+const MOBILE_SWIPE_COMMIT_VELOCITY = 0.32;
 const BOOT_SPLASH_MIN_MS = 520;
 const BOOT_SPLASH_FADE_MS = 320;
 const INITIAL_TIMELINE_IMAGE_COUNT = 8;
@@ -1004,6 +1005,14 @@ function getAdjacentMobileView(direction) {
   return MOBILE_VIEW_ORDER[nextIndex];
 }
 
+function persistMobileView() {
+  try {
+    localStorage.setItem(MOBILE_VIEW_STORAGE_KEY, activeMobileView);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function isHorizontalScrollableElement(el) {
   if (!el || el === document.body || el === document.documentElement) {
     return false;
@@ -1063,6 +1072,9 @@ function handleMobileViewSwipeStart(event) {
   mobileViewSwipeGesture = {
     startX: touch.clientX,
     startY: touch.clientY,
+    lastX: touch.clientX,
+    lastTime: event.timeStamp,
+    velocityX: 0,
     lockedAxis: "",
   };
 }
@@ -1075,6 +1087,11 @@ function handleMobileViewSwipeMove(event) {
   const deltaY = touch.clientY - mobileViewSwipeGesture.startY;
   const absX = Math.abs(deltaX);
   const absY = Math.abs(deltaY);
+  const elapsed = Math.max(event.timeStamp - mobileViewSwipeGesture.lastTime, 1);
+  mobileViewSwipeGesture.velocityX =
+    (touch.clientX - mobileViewSwipeGesture.lastX) / elapsed;
+  mobileViewSwipeGesture.lastX = touch.clientX;
+  mobileViewSwipeGesture.lastTime = event.timeStamp;
 
   if (
     mobileViewSwipeGesture.lockedAxis !== "x" &&
@@ -1109,17 +1126,23 @@ function handleMobileViewSwipeEnd(event) {
   const absX = Math.abs(deltaX);
   const absY = Math.abs(deltaY);
 
-  if (
-    absX < MOBILE_SWIPE_MIN_DISTANCE ||
-    absX <= absY * MOBILE_SWIPE_AXIS_RATIO
-  ) {
-    return;
-  }
+  if (gesture.lockedAxis !== "x") return;
 
-  const nextView = getAdjacentMobileView(deltaX < 0 ? 1 : -1);
-  if (nextView) {
-    setMobileView(nextView);
-  }
+  const movingTowardRelease =
+    !gesture.velocityX || Math.sign(gesture.velocityX) === Math.sign(deltaX);
+  const hasCommitVelocity =
+    movingTowardRelease &&
+    Math.abs(gesture.velocityX) >= MOBILE_SWIPE_COMMIT_VELOCITY;
+  const direction = deltaX < 0 ? 1 : -1;
+  const nextView = getAdjacentMobileView(direction);
+  const shouldCommit =
+    Boolean(nextView) &&
+    absX > absY * MOBILE_SWIPE_AXIS_RATIO &&
+    (absX >= MOBILE_SWIPE_MIN_DISTANCE || hasCommitVelocity);
+
+  if (!shouldCommit) return;
+
+  setMobileView(nextView, { swipeDirection: direction });
 }
 
 function handleMobileViewSwipeCancel() {
@@ -1151,8 +1174,11 @@ function getStoredMobileView() {
 }
 
 function setMobileView(nextView, options = {}) {
-  const { persist = true } = options;
+  mobileViewSwipeGesture = null;
+
+  const { persist = true, swipeDirection = 0 } = options;
   const allowedViews = new Set(["timeline", "left", "right"]);
+  const previousMobileView = activeMobileView;
   activeMobileView = allowedViews.has(nextView) ? nextView : "timeline";
 
   [timelineEl, leftZone, rightZone].forEach((section) => {
@@ -1163,37 +1189,32 @@ function setMobileView(nextView, options = {}) {
 
   if (
     isTabbedLayoutActive() &&
+    previousMobileView !== activeMobileView &&
     !reducedMotionMedia?.matches
   ) {
     const activeSection = getMobileViewSection(activeMobileView);
+    const offsetX = swipeDirection ? swipeDirection * 18 : 0;
+    const keyframes = swipeDirection
+      ? [
+          { transform: `translate3d(${offsetX}px, 0, 0)` },
+          { transform: "translate3d(0, 0, 0)" },
+        ]
+      : [
+          { opacity: 0.78, transform: "translate3d(0, 3px, 0)" },
+          { opacity: 1, transform: "translate3d(0, 0, 0)" },
+        ];
+
     activeSection?.animate?.(
-      [
-        { opacity: 0.72, transform: "translate3d(0, 4px, 0)" },
-        { opacity: 1, transform: "translate3d(0, 0, 0)" },
-      ],
+      keyframes,
       {
-        duration: 180,
-        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        duration: swipeDirection ? 200 : 160,
+        easing: "cubic-bezier(0.16, 1, 0.3, 1)",
       },
     );
   }
 
-  requestAnimationFrame(() => {
-    const pageEl = document.querySelector(".page");
-    const visibleSection = getMobileViewSection(pageEl?.dataset.mobileView);
-
-    if (!visibleSection || visibleSection.getBoundingClientRect().height <= 0) {
-      activeMobileView = "timeline";
-      applyMobileView();
-    }
-  });
-
-  if (!persist) return;
-
-  try {
-    localStorage.setItem(MOBILE_VIEW_STORAGE_KEY, activeMobileView);
-  } catch (error) {
-    console.error(error);
+  if (persist) {
+    persistMobileView();
   }
 }
 
@@ -5306,12 +5327,6 @@ function getWidgetContent(widget) {
     `;
     }
 
-    const updatedTime = weatherData.fetchedAt
-      ? new Date(weatherData.fetchedAt).toLocaleTimeString([], {
-          hour: "numeric",
-          minute: "2-digit",
-        })
-      : "";
     const locationHtml = (weatherData.locations || [])
       .map((location) => {
         const conditionLabel = getWeatherDescription(
@@ -5334,7 +5349,6 @@ function getWidgetContent(widget) {
 
     return `
     <div style="display:grid;gap:10px;">
-      ${updatedTime ? `<div style="font-size:0.8rem;opacity:0.68;">updated ${updatedTime}</div>` : ""}
       <div style="display:grid;gap:2px;">${locationHtml}</div>
     </div>
   `;
