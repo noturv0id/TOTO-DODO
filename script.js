@@ -687,7 +687,7 @@ let replyingToCommentId = null;
 const activePhotoWidgetReplyTargets = new Map();
 let editingWidgetId = null;
 let editingPostId = null;
-let pendingDeletePostId = null;
+let pendingConfirmation = null;
 let pendingWidgetDrag = null;
 let commentLikesEnabled = true;
 let currentUser = null;
@@ -750,11 +750,15 @@ const removeEntryImageBtn = document.getElementById("removeEntryImageBtn");
 const saveEntryBtn = document.getElementById("saveEntryBtn");
 const commentsPopup = document.getElementById("commentsPopup");
 const closeCommentsPopup = document.getElementById("closeCommentsPopup");
+const commentsListLabel = document.getElementById("commentsListLabel");
 const commentsList = document.getElementById("commentsList");
 const commentInput = document.getElementById("commentInput");
 const saveCommentBtn = document.getElementById("saveCommentBtn");
 const replyingToLabel = document.getElementById("replyingToLabel");
+const cancelCommentReplyBtn = document.getElementById("cancelCommentReplyBtn");
 const deleteEntryPopup = document.getElementById("deleteEntryPopup");
+const confirmPopupTitle = document.getElementById("confirmPopupTitle");
+const confirmPopupText = document.getElementById("confirmPopupText");
 const cancelDeleteEntryBtn = document.getElementById("cancelDeleteEntryBtn");
 const confirmDeleteEntryBtn = document.getElementById("confirmDeleteEntryBtn");
 const widgetPopup = document.getElementById("widgetPopup");
@@ -1853,6 +1857,118 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+const BREAKUP_EASTER_EGG_PATTERNS = [
+  /\bbreak[\s-]*up\b/i,
+  /\bsplit[\s-]*up\b/i,
+  /\bwe(?:['’]re|\s+are)\s+over\b/i,
+  /\bit(?:['’]s|\s+is)\s+over\b/i,
+  /\bleave\s+(?:me|you)\b/i,
+  /\bleaving\s+you\b/i,
+  /\bdivorc(?:e|ed|ing)\b/i,
+];
+
+const BREAKUP_GUARD_IGNORED_INPUT_TYPES = new Set([
+  "checkbox",
+  "color",
+  "date",
+  "email",
+  "file",
+  "hidden",
+  "month",
+  "number",
+  "password",
+  "radio",
+  "range",
+  "time",
+  "url",
+  "week",
+]);
+
+function hasBreakupWords(value) {
+  const text = String(value || "");
+  return BREAKUP_EASTER_EGG_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function showBreakupEasterEgg() {
+  showMessage("no breakup words allowed here - forever and always only ♡");
+  document.body.classList.add("breakup-easter-egg");
+  window.clearTimeout(showBreakupEasterEgg.timeout);
+  showBreakupEasterEgg.timeout = window.setTimeout(() => {
+    document.body.classList.remove("breakup-easter-egg");
+  }, 520);
+}
+
+function areBreakupWordsAllowed(...values) {
+  if (!values.some((value) => hasBreakupWords(value))) {
+    return true;
+  }
+
+  showBreakupEasterEgg();
+  return false;
+}
+
+function getBreakupGuardEditable(target) {
+  const el = target?.closest?.("input, textarea, [contenteditable='true']");
+  if (!el) return null;
+
+  if (el instanceof HTMLInputElement) {
+    const type = String(el.type || "text").toLowerCase();
+    if (BREAKUP_GUARD_IGNORED_INPUT_TYPES.has(type)) return null;
+  }
+
+  return el;
+}
+
+function getBreakupGuardEditableText(el) {
+  if (!el) return "";
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    return el.value || "";
+  }
+  return el.textContent || "";
+}
+
+function getBreakupGuardNextText(el, insertedText = "") {
+  const value = getBreakupGuardEditableText(el);
+
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    const start = Number.isFinite(el.selectionStart)
+      ? el.selectionStart
+      : value.length;
+    const end = Number.isFinite(el.selectionEnd) ? el.selectionEnd : start;
+    return `${value.slice(0, start)}${insertedText}${value.slice(end)}`;
+  }
+
+  return `${value}${insertedText}`;
+}
+
+function handleBreakupGuardBeforeInput(event) {
+  if (!event.inputType?.startsWith("insert")) return;
+
+  const el = getBreakupGuardEditable(event.target);
+  if (!el) return;
+
+  const insertedText = String(event.data || "");
+  if (!insertedText) return;
+
+  if (hasBreakupWords(getBreakupGuardNextText(el, insertedText))) {
+    event.preventDefault();
+    showBreakupEasterEgg();
+  }
+}
+
+function handleBreakupGuardPaste(event) {
+  const el = getBreakupGuardEditable(event.target);
+  if (!el) return;
+
+  const pastedText = String(event.clipboardData?.getData("text") || "");
+  if (!pastedText) return;
+
+  if (hasBreakupWords(getBreakupGuardNextText(el, pastedText))) {
+    event.preventDefault();
+    showBreakupEasterEgg();
+  }
 }
 
 function normalizeHexColor(value, fallback = "#ffffff") {
@@ -6308,6 +6424,15 @@ function openWidgetEditor(widgetId) {
 
       try {
         const spotifyData = await fetchSpotifyTrackCardData(rawUrl);
+        if (
+          !areBreakupWordsAllowed(
+            spotifyData.songName,
+            spotifyData.durationLabel,
+          )
+        ) {
+          return;
+        }
+
         if (spotifyUrlInput) spotifyUrlInput.value = spotifyData.spotifyUrl;
         if (songUriInput) songUriInput.value = spotifyData.spotifyUri;
         if (songCoverInput) songCoverInput.value = spotifyData.coverUrl;
@@ -6361,10 +6486,7 @@ function openWidgetEditor(widgetId) {
             aria-label="edit ${escapeHtml(item.title)}"
             title="edit date"
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
+            <span aria-hidden="true">✎</span>
           </button>
           <button class="delete-date-btn" type="button" data-date-id="${item.id}">delete</button>
         </div>
@@ -6414,6 +6536,10 @@ function openWidgetEditor(widgetId) {
 
         if (!title || !date) {
           showMessage("add a title and date as dd/mm/yyyy ♡");
+          return;
+        }
+
+        if (!areBreakupWordsAllowed(title)) {
           return;
         }
 
@@ -6510,20 +6636,39 @@ function openWidgetEditor(widgetId) {
     });
 
     document.querySelectorAll(".delete-date-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", () => {
         const dateId = btn.dataset.dateId;
-
-        widget.data.items = (widget.data.items || []).filter(
-          (item) => item.id !== dateId,
+        const deletedDate = (widget.data.items || []).find(
+          (item) => item.id === dateId,
         );
+        const dateTitle = deletedDate?.title || "this date";
 
-        await saveWidgetToSupabase(widget, {
-          notifyUpdate: true,
-          preservePosition: true,
+        openConfirmationDialog({
+          title: "delete date?",
+          message: `${dateTitle} will be removed from important dates.`,
+          confirmLabel: "delete",
+          pendingLabel: "deleting...",
+          onConfirm: async () => {
+            const previousItems = [...(widget.data.items || [])];
+            widget.data.items = previousItems.filter(
+              (item) => item.id !== dateId,
+            );
+
+            const saved = await saveWidgetToSupabase(widget, {
+              notifyUpdate: true,
+              preservePosition: true,
+            });
+
+            if (!saved) {
+              widget.data.items = previousItems;
+              return false;
+            }
+
+            renderWidgets({ animateMobileReorder: false });
+            openWidgetEditor("dates");
+            showMessage("date deleted ♡");
+          },
         });
-        renderWidgets({ animateMobileReorder: false });
-        openWidgetEditor("dates");
-        showMessage("date deleted ♡");
       });
     });
   } else if (normalizedId === "wishlist") {
@@ -6580,6 +6725,10 @@ function openWidgetEditor(widgetId) {
           return;
         }
 
+        if (!areBreakupWordsAllowed(text)) {
+          return;
+        }
+
         if (!widget.data) widget.data = { items: [] };
         if (!widget.data.items) widget.data.items = [];
 
@@ -6601,20 +6750,39 @@ function openWidgetEditor(widgetId) {
     }
 
     document.querySelectorAll(".delete-wish-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", () => {
         const wishId = btn.dataset.wishId;
-
-        widget.data.items = (widget.data.items || []).filter(
-          (item) => item.id !== wishId,
+        const deletedWish = (widget.data.items || []).find(
+          (item) => item.id === wishId,
         );
+        const wishText = deletedWish?.text || "this wishlist item";
 
-        await saveWidgetToSupabase(widget, {
-          notifyUpdate: true,
-          preservePosition: true,
+        openConfirmationDialog({
+          title: "delete wishlist item?",
+          message: `${wishText} will be removed from the wishlist.`,
+          confirmLabel: "delete",
+          pendingLabel: "deleting...",
+          onConfirm: async () => {
+            const previousItems = [...(widget.data.items || [])];
+            widget.data.items = previousItems.filter(
+              (item) => item.id !== wishId,
+            );
+
+            const saved = await saveWidgetToSupabase(widget, {
+              notifyUpdate: true,
+              preservePosition: true,
+            });
+
+            if (!saved) {
+              widget.data.items = previousItems;
+              return false;
+            }
+
+            refreshWidgetContentDom(widget);
+            openWidgetEditor("wishlist");
+            showMessage("wishlist item deleted ♡");
+          },
         });
-        refreshWidgetContentDom(widget);
-        openWidgetEditor("wishlist");
-        showMessage("wishlist item deleted ♡");
       });
     });
 
@@ -6739,6 +6907,33 @@ function openWidgetEditor(widgetId) {
     `;
 
     const entryList = document.getElementById("entryPreviewEditorList");
+    const removeEntryPreviewEditorRow = (row) => {
+      row?.remove();
+      if (
+        entryList &&
+        !entryList.querySelector("[data-entry-preview-editor-item]")
+      ) {
+        entryList.innerHTML = '<div class="small-note">no entries yet ♡</div>';
+      }
+    };
+    const confirmRemoveEntryPreviewEditorRow = (row) => {
+      if (!row) return;
+
+      const entryTitle =
+        row.querySelector("[data-entry-preview-title]")?.value.trim() ||
+        "this entry";
+
+      openConfirmationDialog({
+        title: "delete preview entry?",
+        message: `${entryTitle} will be removed from this widget.`,
+        confirmLabel: "delete",
+        pendingLabel: "deleting...",
+        onConfirm: () => {
+          removeEntryPreviewEditorRow(row);
+          showMessage("entry removed ♡");
+        },
+      });
+    };
     const createEntryEditorRow = (entry = {}) => {
       const row = document.createElement("div");
       row.className = "entry-preview-editor-item";
@@ -6757,14 +6952,7 @@ function openWidgetEditor(widgetId) {
       row
         .querySelector(".delete-entry-preview-widget-entry-btn")
         ?.addEventListener("click", () => {
-          row.remove();
-          if (
-            entryList &&
-            !entryList.querySelector("[data-entry-preview-editor-item]")
-          ) {
-            entryList.innerHTML =
-              '<div class="small-note">no entries yet ♡</div>';
-          }
+          confirmRemoveEntryPreviewEditorRow(row);
         });
       return row;
     };
@@ -6773,11 +6961,9 @@ function openWidgetEditor(widgetId) {
       ?.querySelectorAll(".delete-entry-preview-widget-entry-btn")
       .forEach((btn) => {
         btn.addEventListener("click", () => {
-          btn.closest("[data-entry-preview-editor-item]")?.remove();
-          if (!entryList.querySelector("[data-entry-preview-editor-item]")) {
-            entryList.innerHTML =
-              '<div class="small-note">no entries yet ♡</div>';
-          }
+          confirmRemoveEntryPreviewEditorRow(
+            btn.closest("[data-entry-preview-editor-item]"),
+          );
         });
       });
 
@@ -7032,6 +7218,12 @@ function openWidgetEditor(widgetId) {
       try {
         const imageData = await compressImageFile(file);
         photoImageData.value = imageData;
+        if (textInput) {
+          textInput.value = "";
+        }
+        photoRotation = 0;
+        textX = 50;
+        textY = 86;
         preview.classList.add("has-image");
         preview.innerHTML = `
           <img id="photoEditorPreviewImage" src="${imageData}" alt="photo preview" />
@@ -7056,13 +7248,22 @@ function openWidgetEditor(widgetId) {
     });
 
     clearPhotoBtn?.addEventListener("click", () => {
-      photoImageData.value = "";
-      photoRotation = 0;
-      textX = 50;
-      textY = 86;
-      preview.classList.remove("has-image");
-      preview.innerHTML = "<span>no photo pinned yet</span>";
-      updatePhotoPreview();
+      openConfirmationDialog({
+        title: "clear pinned photo?",
+        message: "the pinned photo and its overlay position will be cleared.",
+        confirmLabel: "clear",
+        pendingLabel: "clearing...",
+        onConfirm: () => {
+          photoImageData.value = "";
+          photoRotation = 0;
+          textX = 50;
+          textY = 86;
+          preview.classList.remove("has-image");
+          preview.innerHTML = "<span>no photo pinned yet</span>";
+          updatePhotoPreview();
+          showMessage("photo cleared ♡");
+        },
+      });
     });
 
   } else {
@@ -7222,25 +7423,36 @@ async function saveWidgetChanges() {
     const rawSpotifyUrl =
       document.getElementById("widgetFieldSpotifyUrl")?.value.trim() || "";
     const normalizedTrack = normalizeSpotifyTrackUrl(rawSpotifyUrl);
+    const durationLabel =
+      document.getElementById("widgetFieldSongDuration")?.value.trim() || "";
+    const songName =
+      document.getElementById("widgetFieldSongName")?.value.trim() || "";
+
+    if (!areBreakupWordsAllowed(songName, durationLabel)) {
+      return;
+    }
+
     widget.data.spotifyUrl = normalizedTrack?.spotifyUrl || "";
     widget.data.spotifyUri = widget.data.spotifyUrl
       ? document.getElementById("widgetFieldSongUri")?.value.trim() ||
         normalizedTrack?.spotifyUri ||
         ""
       : "";
-    widget.data.durationLabel =
-      document.getElementById("widgetFieldSongDuration")?.value.trim() || "";
+    widget.data.durationLabel = durationLabel;
     widget.data.coverUrl =
       document.getElementById("widgetFieldSongCover")?.value.trim() || "";
-    widget.data.songName =
-      document.getElementById("widgetFieldSongName")?.value.trim() || "";
+    widget.data.songName = songName;
     widget.data.accent = Math.max(
       6,
       Math.min(94, Number(widget.data.accent) || 38),
     );
   } else if (editingWidgetId === "note") {
     if (!widget.data) widget.data = {};
-    widget.data.text = document.getElementById("widgetFieldText").value.trim();
+    const noteText = document.getElementById("widgetFieldText").value.trim();
+    if (!areBreakupWordsAllowed(noteText)) {
+      return;
+    }
+    widget.data.text = noteText;
   } else if (editingWidgetId === "entry-preview") {
     if (!isTotoUser()) {
       showMessage("only toto can edit these entries ♡");
@@ -7278,6 +7490,19 @@ async function saveWidgetChanges() {
         };
       })
       .filter((entry) => entry.title || entry.text);
+    const buttonLabel =
+      document.getElementById("entryPreviewFieldButton")?.value.trim() ||
+      "open entries";
+
+    if (
+      !areBreakupWordsAllowed(
+        buttonLabel,
+        ...entries.flatMap((entry) => [entry.title, entry.text]),
+      )
+    ) {
+      return;
+    }
+
     const nextEntriesById = new Map(entries.map((entry) => [entry.id, entry]));
     const addedEntry = entries.find(
       (entry) => !existingEntriesById.has(entry.id),
@@ -7304,9 +7529,7 @@ async function saveWidgetChanges() {
 
     widget.data = {
       ...normalizeEntryPreviewWidgetData(widget),
-      buttonLabel:
-        document.getElementById("entryPreviewFieldButton")?.value.trim() ||
-        "open entries",
+      buttonLabel,
       entries,
       lastPoemAction: poemAction,
       lastPoemTitle: poemActionEntry?.title || "",
@@ -7339,8 +7562,12 @@ async function saveWidgetChanges() {
     widget.data.image =
       document.getElementById("photoWidgetImageData")?.value || "";
     delete widget.data.caption;
-    widget.data.text =
+    const photoText =
       document.getElementById("photoWidgetText")?.value.trim() || "";
+    if (!areBreakupWordsAllowed(photoText)) {
+      return;
+    }
+    widget.data.text = photoText;
     widget.data.textColor = normalizeHexColor(
       document.getElementById("photoTextColor")?.value,
       "#ffffff",
@@ -7536,6 +7763,23 @@ function formatEntryDate(dateString) {
   return `${day}/${month}/${year} ${displayHours}:${minutes} ${period}`;
 }
 
+function getCommentCreatedTimestamp(comment) {
+  const timestamp = new Date(
+    comment?.createdAt || comment?.created_at || "",
+  ).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function compareCommentsNewestFirst(left, right) {
+  return getCommentCreatedTimestamp(right) - getCommentCreatedTimestamp(left);
+}
+
+function getCommentsNewestFirst(comments = []) {
+  return [...(Array.isArray(comments) ? comments : [])].sort(
+    compareCommentsNewestFirst,
+  );
+}
+
 function getPostLikeButtonMarkup(post) {
   return getLikeButtonMarkup(post.likedByMe, post.likesCount || 0);
 }
@@ -7594,7 +7838,21 @@ function syncCommentLikeButton(commentId) {
 
   if (!comment || !button) return;
 
-  button.textContent = `${comment.likedByMe ? "🩷 liked" : "♡ like"} (${comment.likesCount || 0})`;
+  const likedByMe = Boolean(comment.likedByMe);
+  const likeCount = comment.likesCount || 0;
+  button.classList.toggle("liked", likedByMe);
+  button.setAttribute("aria-pressed", String(likedByMe));
+
+  const iconEl = button.querySelector(".photo-widget-comment-like-icon");
+  const labelEl = button.querySelector(".photo-widget-action-label");
+
+  if (iconEl && labelEl) {
+    iconEl.textContent = likedByMe ? "🩷" : "♡";
+    labelEl.textContent = `${likedByMe ? "liked" : "like"} (${likeCount})`;
+    return;
+  }
+
+  button.textContent = `${likedByMe ? "🩷 liked" : "♡ like"} (${likeCount})`;
 }
 
 function addCommentToPost(postId, comment) {
@@ -7612,11 +7870,13 @@ function addCommentToPost(postId, comment) {
 
     parent.replies = Array.isArray(parent.replies) ? parent.replies : [];
     parent.replies.push(comment);
+    parent.replies.sort(compareCommentsNewestFirst);
   } else {
     post.comments.push({
       ...comment,
       replies: Array.isArray(comment.replies) ? comment.replies : [],
     });
+    post.comments.sort(compareCommentsNewestFirst);
   }
 
   return true;
@@ -8230,6 +8490,10 @@ async function handleStickerDrop(event, postId) {
     return;
   }
 
+  if (!isGifSticker(droppedSticker) && !areBreakupWordsAllowed(droppedSticker)) {
+    return;
+  }
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -8443,10 +8707,10 @@ function renderPlacedStickers() {
         undoBtn.className = "sticker-undo-btn";
         undoBtn.type = "button";
         undoBtn.textContent = "undo";
-        undoBtn.addEventListener("click", async (event) => {
+        undoBtn.addEventListener("click", (event) => {
           event.stopPropagation();
           hideGifStickerControls(item.id);
-          await deletePlacedSticker(item.id);
+          openDeletePlacedStickerConfirmation(item.id);
         });
         controlRow.appendChild(undoBtn);
       } else {
@@ -8454,10 +8718,10 @@ function renderPlacedStickers() {
         undoBtn.className = "sticker-undo-btn";
         undoBtn.type = "button";
         undoBtn.textContent = "undo";
-        undoBtn.addEventListener("click", async (event) => {
+        undoBtn.addEventListener("click", (event) => {
           event.stopPropagation();
           hideGifStickerControls(item.id);
-          await deletePlacedSticker(item.id);
+          openDeletePlacedStickerConfirmation(item.id);
         });
         controlRow.appendChild(undoBtn);
       }
@@ -8861,11 +9125,20 @@ if (entryImageInput) {
 
 if (removeEntryImageBtn) {
   removeEntryImageBtn.addEventListener("click", () => {
-    if (entryImageInput) {
-      entryImageInput.value = "";
-    }
+    openConfirmationDialog({
+      title: "remove image?",
+      message: "this image will be removed from the entry draft.",
+      confirmLabel: "remove",
+      pendingLabel: "removing...",
+      onConfirm: () => {
+        if (entryImageInput) {
+          entryImageInput.value = "";
+        }
 
-    renderEntryImagePreview("");
+        renderEntryImagePreview("");
+        showMessage("image removed ♡");
+      },
+    });
   });
 }
 
@@ -8879,14 +9152,22 @@ entryPopup.addEventListener("click", (event) => {
 closeCommentsPopup.addEventListener("click", () => {
   commentsPopup.classList.remove("open");
   replyingToCommentId = null;
-  replyingToLabel.style.display = "none";
-  replyingToLabel.textContent = "";
+  syncEntryCommentComposer(null);
 });
 
 commentsPopup.addEventListener("click", (event) => {
   if (event.target === commentsPopup && !popupPointerStartedInsideCard) {
     commentsPopup.classList.remove("open");
+    replyingToCommentId = null;
+    syncEntryCommentComposer(null);
   }
+});
+
+cancelCommentReplyBtn?.addEventListener("click", () => {
+  replyingToCommentId = null;
+  const post = posts.find((item) => item.id === currentCommentsPostId);
+  syncEntryCommentComposer(post);
+  commentInput?.focus();
 });
 
 cancelDeleteEntryBtn?.addEventListener("click", closeDeleteEntryConfirmation);
@@ -8988,40 +9269,94 @@ if (widgetPopupLikeBtn) {
   });
 }
 if (clearWidgetHistoryBtn) {
-  clearWidgetHistoryBtn.addEventListener("click", async () => {
+  clearWidgetHistoryBtn.addEventListener("click", () => {
     const widgetId = clearWidgetHistoryBtn.dataset.clearWidgetHistoryId;
     const historyMode = clearWidgetHistoryBtn.dataset.clearWidgetHistoryMode;
     const widget = widgets.find((item) => item.id === widgetId);
     if (!widget) return;
 
-    const confirmText =
-      historyMode === "photo-combined"
-        ? "Clear history for both pin it widgets?"
-        : `Clear history for ${widget.title}?`;
-    const shouldClear = window.confirm(confirmText);
-    if (!shouldClear) return;
+    openConfirmationDialog({
+      title: "clear history?",
+      message:
+        historyMode === "photo-combined"
+          ? "history for both pin it widgets will be cleared."
+          : `${widget.title} history will be cleared.`,
+      confirmLabel: "clear",
+      pendingLabel: "clearing...",
+      onConfirm: async () => {
+        if (historyMode === "photo-combined") {
+          const photoWidgets = getAllPhotoPinWidgets();
+          const previousData = new Map(
+            photoWidgets.map((photoWidget) => [
+              photoWidget.id,
+              {
+                ...(photoWidget.data &&
+                typeof photoWidget.data === "object"
+                  ? photoWidget.data
+                  : {}),
+              },
+            ]),
+          );
+          const previousStoredHistory = new Map(
+            photoWidgets.map((photoWidget) => [
+              photoWidget.id,
+              localStorage.getItem(`widgetHistory:${photoWidget.id}`),
+            ]),
+          );
 
-    if (historyMode === "photo-combined") {
-      const photoWidgets = getAllPhotoPinWidgets();
-      for (const photoWidget of photoWidgets) {
-        clearWidgetHistory(photoWidget.id);
-        await saveWidgetToSupabase(photoWidget, {
-          recordHistory: false,
-          suppressErrorMessage: false,
-          notifyUpdate: false,
-        });
-      }
-    } else {
-      clearWidgetHistory(widget.id);
-      await saveWidgetToSupabase(widget, {
-        recordHistory: false,
-        suppressErrorMessage: false,
-        notifyUpdate: false,
-      });
-    }
+          for (const photoWidget of photoWidgets) {
+            clearWidgetHistory(photoWidget.id);
+            const saved = await saveWidgetToSupabase(photoWidget, {
+              recordHistory: false,
+              suppressErrorMessage: false,
+              notifyUpdate: false,
+            });
 
-    openWidgetHistory(widget.id);
-    showMessage("history cleared ♡");
+            if (!saved) {
+              photoWidgets.forEach((item) => {
+                if (previousData.has(item.id)) {
+                  item.data = previousData.get(item.id);
+                }
+                const previousStored = previousStoredHistory.get(item.id);
+                if (previousStored === null) {
+                  localStorage.removeItem(`widgetHistory:${item.id}`);
+                } else {
+                  localStorage.setItem(`widgetHistory:${item.id}`, previousStored);
+                }
+              });
+              return false;
+            }
+          }
+        } else {
+          const previousData = {
+            ...(widget.data && typeof widget.data === "object"
+              ? widget.data
+              : {}),
+          };
+          const storageKey = `widgetHistory:${widget.id}`;
+          const previousStoredHistory = localStorage.getItem(storageKey);
+          clearWidgetHistory(widget.id);
+          const saved = await saveWidgetToSupabase(widget, {
+            recordHistory: false,
+            suppressErrorMessage: false,
+            notifyUpdate: false,
+          });
+
+          if (!saved) {
+            widget.data = previousData;
+            if (previousStoredHistory === null) {
+              localStorage.removeItem(storageKey);
+            } else {
+              localStorage.setItem(storageKey, previousStoredHistory);
+            }
+            return false;
+          }
+        }
+
+        openWidgetHistory(widget.id);
+        showMessage("history cleared ♡");
+      },
+    });
   });
 }
 
@@ -9454,11 +9789,7 @@ function normalizePhotoWidgetCommentRecord(comment, widget, index = 0) {
           ...normalizeWidgetCommentLikeData(reply),
         }))
         .filter((reply) => reply.text)
-        .sort(
-          (left, right) =>
-            new Date(left.createdAt || 0).getTime() -
-            new Date(right.createdAt || 0).getTime(),
-        )
+        .sort(compareCommentsNewestFirst)
     : [];
 
   return {
@@ -9492,11 +9823,7 @@ function getPhotoWidgetComments(widget) {
       normalizePhotoWidgetCommentRecord(comment, widget, index),
     )
     .filter((comment) => comment.text)
-    .sort(
-      (left, right) =>
-        new Date(left.createdAt || 0).getTime() -
-        new Date(right.createdAt || 0).getTime(),
-    );
+    .sort(compareCommentsNewestFirst);
 }
 
 function normalizePhotoWidgetComments(widget) {
@@ -9987,7 +10314,7 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
       const likes = getWidgetCommentLikeUserIds(comment);
       const currentUserId = currentProfile?.id || currentUser?.id || "";
       const likedByMe = Boolean(currentUserId && likes.includes(currentUserId));
-      const repliesHtml = (comment.replies || [])
+      const repliesHtml = getCommentsNewestFirst(comment.replies)
         .map((reply) => {
           const replyActorName = escapeHtml(
             reply.actorName ||
@@ -10140,7 +10467,7 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
       );
     }
 
-    (comment.replies || []).forEach((reply) => {
+    getCommentsNewestFirst(comment.replies).forEach((reply) => {
       const replyTextEl = listEl.querySelector(
         `[data-photo-widget-comment-text-id="${reply.id}"]`,
       );
@@ -10188,11 +10515,12 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
   listEl
     .querySelectorAll("[data-photo-widget-delete-comment-id]")
     .forEach((button) => {
-      button.addEventListener("click", async () => {
-        await deletePhotoWidgetComment(
+      button.addEventListener("click", () => {
+        openDeletePhotoWidgetCommentConfirmation(
           widget.id,
           button.dataset.photoWidgetDeleteCommentId,
           options,
+          button.classList.contains("photo-widget-delete-reply-btn"),
         );
       });
     });
@@ -10256,6 +10584,10 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
     return;
   }
 
+  if (!areBreakupWordsAllowed(content)) {
+    return;
+  }
+
   const user = await getCurrentUser();
   if (!user) {
     showMessage("please log in first ♡");
@@ -10287,18 +10619,21 @@ async function savePhotoWidgetComment(widgetId, options = {}) {
         comment.id === replyTargetId
           ? {
               ...comment,
-              replies: [...(comment.replies || []), nextComment].slice(-40),
+              replies: getCommentsNewestFirst([
+                ...(comment.replies || []),
+                nextComment,
+              ]).slice(0, 40),
             }
           : comment,
       )
-    : [
+    : getCommentsNewestFirst([
         ...previousComments,
         {
           ...nextComment,
           preview: getWidgetCommentPreviewSnapshot(widget),
           replies: [],
         },
-      ].slice(-60);
+      ]).slice(0, 60);
 
   widget.data = {
     ...(widget.data && typeof widget.data === "object" ? widget.data : {}),
@@ -10410,10 +10745,27 @@ function toggleWidgetCommentLikeForItem(comment, userId) {
   };
 }
 
+function openDeletePhotoWidgetCommentConfirmation(
+  widgetId,
+  commentId,
+  options = {},
+  isReply = false,
+) {
+  if (!widgetId || !commentId) return;
+
+  openConfirmationDialog({
+    title: isReply ? "delete reply?" : "delete comment?",
+    message: `this ${isReply ? "reply" : "comment"} will be deleted forever.`,
+    confirmLabel: "delete",
+    pendingLabel: "deleting...",
+    onConfirm: () => deletePhotoWidgetComment(widgetId, commentId, options),
+  });
+}
+
 async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
   const widget = widgets.find((item) => item.id === widgetId);
   const normalizedCommentId = String(commentId || "").trim();
-  if (!widget || !normalizedCommentId) return;
+  if (!widget || !normalizedCommentId) return false;
 
   const row = document.querySelector(
     `[data-photo-widget-comment-row-id="${normalizedCommentId}"]`,
@@ -10450,10 +10802,11 @@ async function deletePhotoWidgetComment(widgetId, commentId, options = {}) {
     widget.data.comments = previousComments;
     renderPhotoWidgetCommentsSection(widget, options);
     syncWidgetCommentButton(widget.id);
-    return;
+    return false;
   }
 
   showMessage("comment deleted ♡");
+  return true;
 }
 
 function getPhotoHistorySnapshotSignature(entry) {
@@ -10648,7 +11001,7 @@ function renderPhotoHistoryPopup(widget) {
   widgetEditorFields
     .querySelectorAll("[data-photo-history-delete-id]")
     .forEach((button) => {
-      button.addEventListener("click", async () => {
+      button.addEventListener("click", () => {
         const entryId = String(button.dataset.photoHistoryDeleteId || "").trim();
         const sourceWidgetId = String(
           button.dataset.photoHistorySourceWidgetId || "",
@@ -10656,22 +11009,40 @@ function renderPhotoHistoryPopup(widget) {
         const sourceWidget = widgets.find((item) => item.id === sourceWidgetId);
         if (!entryId || !sourceWidget) return;
 
-        sourceWidget.data = {
-          ...(sourceWidget.data && typeof sourceWidget.data === "object"
-            ? sourceWidget.data
-            : {}),
-          photoHistory: getPhotoHistoryEntries(sourceWidget).filter(
-            (entry) => entry?.id !== entryId,
-          ),
-        };
+        openConfirmationDialog({
+          title: "delete pinned photo?",
+          message: "this pinned photo will be removed from history.",
+          confirmLabel: "delete",
+          pendingLabel: "deleting...",
+          onConfirm: async () => {
+            const previousData = {
+              ...(sourceWidget.data && typeof sourceWidget.data === "object"
+                ? sourceWidget.data
+                : {}),
+            };
+            sourceWidget.data = {
+              ...previousData,
+              photoHistory: getPhotoHistoryEntries(sourceWidget).filter(
+                (entry) => entry?.id !== entryId,
+              ),
+            };
 
-        await saveWidgetToSupabase(sourceWidget, {
-          recordHistory: false,
-          notifyUpdate: false,
-          suppressErrorMessage: false,
+            const saved = await saveWidgetToSupabase(sourceWidget, {
+              recordHistory: false,
+              notifyUpdate: false,
+              suppressErrorMessage: false,
+            });
+
+            if (!saved) {
+              sourceWidget.data = previousData;
+              return false;
+            }
+
+            renderWidgets({ animateMobileReorder: false });
+            renderPhotoHistoryPopup(widget);
+            showMessage("pinned photo deleted ♡");
+          },
         });
-        renderWidgets({ animateMobileReorder: false });
-        renderPhotoHistoryPopup(widget);
       });
     });
 
@@ -10903,29 +11274,49 @@ function openWidgetHistory(widgetId) {
   widgetEditorFields
     .querySelectorAll("[data-widget-history-delete-entry]")
     .forEach((button) => {
-      button.addEventListener("click", async () => {
+      button.addEventListener("click", () => {
         const targetEntry = parseWidgetHistoryEntryTarget(
           button.dataset.widgetHistoryDeleteEntry,
         );
         if (!targetEntry) return;
 
-        const shouldDelete = window.confirm("Delete this history message?");
-        if (!shouldDelete) return;
+        openConfirmationDialog({
+          title: "delete history message?",
+          message: "this history message will be deleted.",
+          confirmLabel: "delete",
+          pendingLabel: "deleting...",
+          onConfirm: async () => {
+            const previousData = {
+              ...(widget.data && typeof widget.data === "object"
+                ? widget.data
+                : {}),
+            };
+            const storageKey = `widgetHistory:${widget.id}`;
+            const previousStoredHistory = localStorage.getItem(storageKey);
+            const removed = removeWidgetHistoryEntry(widget.id, targetEntry);
+            if (!removed) return;
 
-        const removed = removeWidgetHistoryEntry(widget.id, targetEntry);
-        if (!removed) return;
+            const saved = await saveWidgetToSupabase(widget, {
+              recordHistory: false,
+              notifyUpdate: false,
+              suppressErrorMessage: false,
+            });
 
-        const saved = await saveWidgetToSupabase(widget, {
-          recordHistory: false,
-          notifyUpdate: false,
-          suppressErrorMessage: false,
+            if (!saved) {
+              widget.data = previousData;
+              if (previousStoredHistory === null) {
+                localStorage.removeItem(storageKey);
+              } else {
+                localStorage.setItem(storageKey, previousStoredHistory);
+              }
+              return false;
+            }
+
+            openWidgetHistory(widget.id);
+            renderWidgets({ animateMobileReorder: false });
+            showMessage("history message deleted ♡");
+          },
         });
-
-        if (!saved) return;
-
-        openWidgetHistory(widget.id);
-        renderWidgets({ animateMobileReorder: false });
-        showMessage("history message deleted ♡");
       });
     });
 
@@ -12475,7 +12866,21 @@ async function loadPlacedStickers() {
   }
 }
 
+function openDeletePlacedStickerConfirmation(stickerId) {
+  if (!stickerId) return;
+
+  openConfirmationDialog({
+    title: "remove sticker?",
+    message: "this sticker will be removed from the entry.",
+    confirmLabel: "remove",
+    pendingLabel: "removing...",
+    onConfirm: () => deletePlacedSticker(stickerId),
+  });
+}
+
 async function deletePlacedSticker(stickerId) {
+  if (!stickerId) return false;
+
   const removedSticker = placedStickers.find((item) => item.id === stickerId);
   placedStickers = placedStickers.filter((item) => item.id !== stickerId);
   clearPlacedGifSize(stickerId);
@@ -12494,11 +12899,12 @@ async function deletePlacedSticker(stickerId) {
       placedStickers.push(removedSticker);
       renderPlacedStickers();
     }
-    return;
+    return false;
   }
 
   markLocalRealtimeTable("post_stickers");
   showMessage("sticker removed ♡");
+  return true;
 }
 
 async function updatePlacedStickerPosition(stickerId, x, y) {
@@ -12789,6 +13195,10 @@ async function saveProfile() {
   const bio = String(bioInput?.value || "").trim();
   const file = pfpInput.files[0];
 
+  if (!areBreakupWordsAllowed(nickname, bio)) {
+    return;
+  }
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -12846,6 +13256,10 @@ async function saveProfile() {
 }
 
 async function saveInlinePostDisplayName(nextNickname) {
+  if (!areBreakupWordsAllowed(nextNickname)) {
+    return;
+  }
+
   const user = await getCurrentUser();
 
   if (!user) {
@@ -13000,7 +13414,7 @@ async function loadPosts(options = {}) {
         )
       `,
       )
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: false }),
     supabaseClient
       .from("post_stickers")
       .select("id, post_id, user_id, emoji, x, y, created_at"),
@@ -13112,8 +13526,9 @@ async function loadPosts(options = {}) {
       .filter((comment) => !comment.parent_comment_id)
       .map((comment) => ({
         ...comment,
-        replies: repliesByParentId.get(comment.id) || [],
-      }));
+        replies: getCommentsNewestFirst(repliesByParentId.get(comment.id) || []),
+      }))
+      .sort(compareCommentsNewestFirst);
 
     return {
       id: row.id,
@@ -13186,6 +13601,10 @@ async function saveEntry() {
   } else {
     plainText = String(entryContentFallback?.value || "").trim();
     content = toSafeHtmlFromPlainText(plainText);
+  }
+
+  if (!areBreakupWordsAllowed(plainText)) {
+    return;
   }
 
   const attachedImage = String(entryImageData?.value || "").trim();
@@ -13296,22 +13715,40 @@ async function saveEntry() {
   }
 }
 
-function openDeleteEntryConfirmation(postId) {
-  if (!postId || !deleteEntryPopup) return;
+function openConfirmationDialog(options = {}) {
+  const {
+    title = "are you sure?",
+    message = "this cannot be undone.",
+    confirmLabel = "delete",
+    pendingLabel = "deleting...",
+    onConfirm,
+  } = options;
 
-  pendingDeletePostId = postId;
+  if (typeof onConfirm !== "function") return;
+
+  pendingConfirmation = {
+    onConfirm,
+    confirmLabel,
+    pendingLabel,
+  };
+
+  if (confirmPopupTitle) {
+    confirmPopupTitle.textContent = title;
+  }
+  if (confirmPopupText) {
+    confirmPopupText.textContent = message;
+  }
   if (confirmDeleteEntryBtn) {
     confirmDeleteEntryBtn.disabled = false;
-    confirmDeleteEntryBtn.textContent = "delete";
+    confirmDeleteEntryBtn.textContent = confirmLabel;
   }
-  deleteEntryPopup.classList.add("open");
+  deleteEntryPopup?.classList.add("open");
 }
 
 function closeDeleteEntryConfirmation() {
-  pendingDeletePostId = null;
-  if (deleteEntryPopup) {
-    deleteEntryPopup.classList.remove("open");
-  }
+  pendingConfirmation = null;
+  deleteEntryPopup?.classList.remove("open");
+
   if (confirmDeleteEntryBtn) {
     confirmDeleteEntryBtn.disabled = false;
     confirmDeleteEntryBtn.textContent = "delete";
@@ -13319,18 +13756,41 @@ function closeDeleteEntryConfirmation() {
 }
 
 async function confirmDeleteEntry() {
-  const postId = pendingDeletePostId;
-  if (!postId || !confirmDeleteEntryBtn) return;
+  if (!pendingConfirmation || !confirmDeleteEntryBtn) return;
 
+  const { onConfirm, pendingLabel } = pendingConfirmation;
   confirmDeleteEntryBtn.disabled = true;
-  confirmDeleteEntryBtn.textContent = "deleting...";
-  const deleted = await deleteEntry(postId);
-  if (deleted) {
+  confirmDeleteEntryBtn.textContent = pendingLabel;
+
+  try {
+    const confirmed = await onConfirm();
+    if (confirmed === false) {
+      confirmDeleteEntryBtn.disabled = false;
+      confirmDeleteEntryBtn.textContent =
+        pendingConfirmation?.confirmLabel || "delete";
+      return;
+    }
+
     closeDeleteEntryConfirmation();
-  } else {
+  } catch (error) {
+    console.error(error);
+    showMessage(error.message || "could not complete that action");
     confirmDeleteEntryBtn.disabled = false;
-    confirmDeleteEntryBtn.textContent = "delete";
+    confirmDeleteEntryBtn.textContent =
+      pendingConfirmation?.confirmLabel || "delete";
   }
+}
+
+function openDeleteEntryConfirmation(postId) {
+  if (!postId) return;
+
+  openConfirmationDialog({
+    title: "delete entry?",
+    message: "this entry will be deleted forever.",
+    confirmLabel: "delete",
+    pendingLabel: "deleting...",
+    onConfirm: () => deleteEntry(postId),
+  });
 }
 
 async function deleteEntry(postId) {
@@ -13600,11 +14060,55 @@ async function toggleCommentLike(commentId) {
 function openCommentsPopup(postId) {
   currentCommentsPostId = postId;
   replyingToCommentId = null;
-  replyingToLabel.style.display = "none";
-  replyingToLabel.textContent = "";
   commentInput.value = "";
   renderCommentsList(postId);
   commentsPopup.classList.add("open");
+}
+
+function getEntryCommentDisplayName(comment) {
+  return comment?.nickname || "memory";
+}
+
+function getEntryCommentCreatedAt(comment) {
+  return comment?.created_at || comment?.createdAt || "";
+}
+
+function getEntryReplyTarget(post) {
+  if (!post || !replyingToCommentId) return null;
+
+  return (post.comments || []).find(
+    (comment) => comment.id === replyingToCommentId,
+  );
+}
+
+function syncEntryCommentComposer(post) {
+  let replyTarget = getEntryReplyTarget(post);
+  const replyTextEl = replyingToLabel?.querySelector("span");
+
+  if (!replyTarget && replyingToCommentId) {
+    replyingToCommentId = null;
+    replyTarget = null;
+  }
+
+  if (replyingToLabel) {
+    replyingToLabel.hidden = !replyTarget;
+
+    if (replyTextEl) {
+      replyTextEl.textContent = replyTarget
+        ? `replying to ${getEntryCommentDisplayName(replyTarget)} ♡`
+        : "";
+    }
+  }
+
+  if (commentInput) {
+    commentInput.placeholder = replyTarget
+      ? "write a reply ♡"
+      : "write a comment ♡";
+  }
+
+  if (saveCommentBtn) {
+    saveCommentBtn.textContent = replyTarget ? "post reply" : "post comment";
+  }
 }
 
 function renderCommentsList(postId) {
@@ -13616,33 +14120,80 @@ function renderCommentsList(postId) {
   }
 
   if (!post.comments || !post.comments.length) {
+    if (commentsListLabel) {
+      commentsListLabel.textContent = "comments";
+    }
+    syncEntryCommentComposer(post);
     commentsList.innerHTML = `<div class="comment-empty">no comments yet ♡</div>`;
     return;
   }
 
-  commentsList.innerHTML = post.comments
-    .map((comment) => {
-      const repliesHtml = (comment.replies || [])
-        .map((reply) => {
-          return `
-        <div class="comment-reply" data-comment-id="${reply.id}">
-          <div class="comment-name profile-trigger" role="button" tabindex="0" data-comment-profile-id="${reply.userId}">${reply.nickname || "memory"}</div>
-          <div class="comment-text" data-comment-text-id="${reply.id}"></div>
-          <div class="comment-link-preview-list link-preview-list" data-comment-preview-id="${reply.id}" hidden></div>
+  const commentCount = getPostCommentCount(post);
+  if (commentsListLabel) {
+    commentsListLabel.textContent = `comments${commentCount ? ` (${commentCount})` : ""}`;
+  }
+  syncEntryCommentComposer(post);
 
-          <div class="comment-actions">
-            <button class="comment-like-btn" type="button" data-comment-id="${reply.id}">
-              ${reply.likedByMe ? "🩷 liked" : "♡ like"} (${reply.likesCount || 0})
-            </button>
-            ${
-              reply.userId === currentProfile?.id
-                ? `
-              <button class="delete-reply-btn" type="button" data-comment-id="${reply.id}">
-                delete
+  const sortedComments = getCommentsNewestFirst(post.comments);
+
+  commentsList.innerHTML = sortedComments
+    .map((comment) => {
+      const actorName = escapeHtml(getEntryCommentDisplayName(comment));
+      const commentId = escapeHtml(comment.id);
+      const commentUserId = escapeHtml(comment.userId || "");
+      const createdAt = formatEntryDate(getEntryCommentCreatedAt(comment));
+      const likedByMe = Boolean(comment.likedByMe);
+      const likesCount = comment.likesCount || 0;
+      const canDelete = comment.userId === currentProfile?.id;
+      const repliesHtml = getCommentsNewestFirst(comment.replies)
+        .map((reply) => {
+          const replyActorName = escapeHtml(getEntryCommentDisplayName(reply));
+          const replyId = escapeHtml(reply.id);
+          const replyUserId = escapeHtml(reply.userId || "");
+          const replyCreatedAt = formatEntryDate(getEntryCommentCreatedAt(reply));
+          const replyLikedByMe = Boolean(reply.likedByMe);
+          const replyLikesCount = reply.likesCount || 0;
+          const canDeleteReply = reply.userId === currentProfile?.id;
+
+          return `
+        <div class="photo-widget-comment-reply entry-comment-reply" data-comment-id="${replyId}">
+          <div
+            class="comment-name profile-trigger"
+            role="button"
+            tabindex="0"
+            data-comment-profile-id="${replyUserId}"
+          >
+            ${replyActorName}
+          </div>
+          <div class="comment-text" data-comment-text-id="${replyId}"></div>
+          <div class="comment-link-preview-list link-preview-list" data-comment-preview-id="${replyId}" hidden></div>
+
+          <div class="photo-widget-comment-footer">
+            <div class="comment-meta">${replyCreatedAt}</div>
+            <div class="photo-widget-comment-action-row">
+              <button
+                class="comment-like-btn photo-widget-comment-like-btn${replyLikedByMe ? " liked" : ""}"
+                type="button"
+                data-comment-id="${replyId}"
+                aria-pressed="${String(replyLikedByMe)}"
+              >
+                <span class="photo-widget-comment-like-icon" aria-hidden="true">${replyLikedByMe ? "🩷" : "♡"}</span>
+                <span class="photo-widget-action-label">${replyLikedByMe ? "liked" : "like"} (${replyLikesCount})</span>
+              </button>
+              ${
+                canDeleteReply
+                  ? `
+              <button
+                class="delete-reply-btn photo-widget-delete-reply-btn"
+                type="button"
+                data-comment-id="${replyId}"
+              >
+                <span class="photo-widget-action-label">delete</span>
               </button>
             `
-                : ""
-            }
+                  : ""
+              }
+            </div>
           </div>
         </div>
       `;
@@ -13650,37 +14201,62 @@ function renderCommentsList(postId) {
         .join("");
 
       return `
-      <div class="comment-item" data-comment-id="${comment.id}">
-        <div class="comment-name profile-trigger" role="button" tabindex="0" data-comment-profile-id="${comment.userId}">${comment.nickname || "memory"}</div>
-        <div class="comment-text" data-comment-text-id="${comment.id}"></div>
-        <div class="comment-link-preview-list link-preview-list" data-comment-preview-id="${comment.id}" hidden></div>
+      <div class="comment-item photo-widget-comment-item entry-comment-item" data-comment-id="${commentId}">
+        <div class="photo-widget-comment-content">
+          <div
+            class="comment-name profile-trigger"
+            role="button"
+            tabindex="0"
+            data-comment-profile-id="${commentUserId}"
+          >
+            ${actorName}
+          </div>
+          <div class="comment-text" data-comment-text-id="${commentId}"></div>
+          <div class="comment-link-preview-list link-preview-list" data-comment-preview-id="${commentId}" hidden></div>
 
-        <div class="comment-actions">
-          <button class="comment-like-btn" type="button" data-comment-id="${comment.id}">
-            ${comment.likedByMe ? "🩷 liked" : "♡ like"} (${comment.likesCount || 0})
-          </button>
-          <button class="reply-btn" type="button" data-comment-id="${comment.id}">
-            reply
-          </button>
+          <div class="photo-widget-comment-footer">
+            <div class="comment-meta">${createdAt}</div>
+            <div class="photo-widget-comment-action-row">
+              <button
+                class="comment-like-btn photo-widget-comment-like-btn${likedByMe ? " liked" : ""}"
+                type="button"
+                data-comment-id="${commentId}"
+                aria-pressed="${String(likedByMe)}"
+              >
+                <span class="photo-widget-comment-like-icon" aria-hidden="true">${likedByMe ? "🩷" : "♡"}</span>
+                <span class="photo-widget-action-label">${likedByMe ? "liked" : "like"} (${likesCount})</span>
+              </button>
+              <button
+                class="reply-btn photo-widget-reply-btn"
+                type="button"
+                data-comment-id="${commentId}"
+              >
+                <span class="photo-widget-action-label">reply</span>
+              </button>
+              ${
+                canDelete
+                  ? `
+              <button
+                class="delete-comment-btn photo-widget-delete-comment-btn"
+                type="button"
+                data-comment-id="${commentId}"
+              >
+                <span class="photo-widget-action-label">delete</span>
+              </button>
+            `
+                  : ""
+              }
+            </div>
+          </div>
 
-          ${
-            comment.userId === currentProfile?.id
-              ? `
-            <button class="delete-comment-btn" type="button" data-comment-id="${comment.id}">
-              delete
-            </button>
-          `
-              : ""
-          }
+          ${repliesHtml ? `<div class="photo-widget-comment-replies">${repliesHtml}</div>` : ""}
         </div>
-
-        ${repliesHtml}
       </div>
     `;
     })
     .join("");
 
-  post.comments.forEach((comment) => {
+  sortedComments.forEach((comment) => {
     const commentTextEl = commentsList.querySelector(
       `[data-comment-text-id="${comment.id}"]`,
     );
@@ -13692,7 +14268,7 @@ function renderCommentsList(postId) {
       );
     }
 
-    (comment.replies || []).forEach((reply) => {
+    getCommentsNewestFirst(comment.replies).forEach((reply) => {
       const replyTextEl = commentsList.querySelector(
         `[data-comment-text-id="${reply.id}"]`,
       );
@@ -13709,8 +14285,7 @@ function renderCommentsList(postId) {
   commentsList.querySelectorAll(".reply-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       replyingToCommentId = btn.dataset.commentId;
-      replyingToLabel.style.display = "block";
-      replyingToLabel.textContent = "replying to a comment ♡";
+      syncEntryCommentComposer(post);
       commentInput.focus();
     });
   });
@@ -13722,14 +14297,14 @@ function renderCommentsList(postId) {
   });
 
   commentsList.querySelectorAll(".delete-comment-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      await deleteComment(btn.dataset.commentId);
+    btn.addEventListener("click", () => {
+      openDeleteCommentConfirmation(btn.dataset.commentId, false);
     });
   });
 
   commentsList.querySelectorAll(".delete-reply-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      await deleteComment(btn.dataset.commentId);
+    btn.addEventListener("click", () => {
+      openDeleteCommentConfirmation(btn.dataset.commentId, true);
     });
   });
 
@@ -13745,6 +14320,18 @@ function renderCommentsList(postId) {
   });
 }
 
+function openDeleteCommentConfirmation(commentId, isReply = false) {
+  if (!commentId) return;
+
+  openConfirmationDialog({
+    title: isReply ? "delete reply?" : "delete comment?",
+    message: `this ${isReply ? "reply" : "comment"} will be deleted forever.`,
+    confirmLabel: "delete",
+    pendingLabel: "deleting...",
+    onConfirm: () => deleteComment(commentId),
+  });
+}
+
 async function saveComment() {
   if (commentSaveInFlight) return;
   commentSaveInFlight = true;
@@ -13755,6 +14342,10 @@ async function saveComment() {
 
     if (!content || !currentCommentsPostId) {
       showMessage("write something first silly! ♡");
+      return;
+    }
+
+    if (!areBreakupWordsAllowed(content)) {
       return;
     }
 
@@ -13787,8 +14378,6 @@ async function saveComment() {
 
     commentInput.value = "";
     replyingToCommentId = null;
-    replyingToLabel.style.display = "none";
-    replyingToLabel.textContent = "";
     renderCommentsList(postId);
     syncPostCommentButton(postId);
     showMessage("comment posted! ♡");
@@ -13826,6 +14415,8 @@ async function saveComment() {
 
 async function deleteComment(commentId) {
   const postId = currentCommentsPostId;
+  if (!postId || !commentId) return false;
+
   const removal = removeCommentFromPost(postId, commentId);
   const el = document.querySelector(`[data-comment-id="${commentId}"]`);
 
@@ -13853,11 +14444,12 @@ async function deleteComment(commentId) {
     renderCommentsList(postId);
     syncPostCommentButton(postId);
     showMessage(error.message);
-    return;
+    return false;
   }
 
   markLocalRealtimeTable("comments");
   showMessage("comment deleted ♡");
+  return true;
 }
 
 async function logoutUser() {
@@ -13935,7 +14527,16 @@ if (notificationsBtn) {
 if (clearNotificationsBtn) {
   clearNotificationsBtn.addEventListener("click", (event) => {
     event.stopPropagation();
-    clearNotifications();
+    openConfirmationDialog({
+      title: "clear notifications?",
+      message: "visible notifications will be cleared from your inbox.",
+      confirmLabel: "clear",
+      pendingLabel: "clearing...",
+      onConfirm: () => {
+        clearNotifications();
+        showMessage("notifications cleared ♡");
+      },
+    });
   });
 }
 if (closeNotificationsBtn) {
@@ -13996,6 +14597,8 @@ document.addEventListener("touchend", handleMobileViewSwipeEnd, {
 document.addEventListener("touchcancel", handleMobileViewSwipeCancel, {
   passive: true,
 });
+document.addEventListener("beforeinput", handleBreakupGuardBeforeInput, true);
+document.addEventListener("paste", handleBreakupGuardPaste, true);
 window.addEventListener("scroll", requestFloatingEntryButtonVisibilityUpdate, {
   passive: true,
 });

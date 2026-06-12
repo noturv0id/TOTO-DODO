@@ -441,7 +441,7 @@
     </div>
 
     <div class="popup" id="commentsPopup">
-      <div class="popup-card">
+      <div class="popup-card entry-comments-popup-card">
         <div class="popup-header">
           <h3 class="popup-title">comments ♡</h3>
           <button class="soft-btn" id="closeCommentsPopup" type="button">
@@ -449,26 +449,45 @@
           </button>
         </div>
         <div class="popup-body">
-          <div class="comments-list-scroll" id="commentsList"></div>
+          <section class="photo-widget-comments-section entry-comments-section">
+            <label
+              class="popup-label photo-widget-comments-label"
+              id="commentsListLabel"
+              for="commentInput"
+              >comments</label
+            >
+            <div
+              class="comments-list-scroll photo-widget-comments-list"
+              id="commentsList"
+            ></div>
 
-          <div
-            id="replyingToLabel"
-            class="small-note"
-            style="display: none"
-          ></div>
-          <label class="popup-label">leave a smol note?</label>
-          <textarea
-            class="popup-input"
-            id="commentInput"
-            rows="4"
-            style="resize: vertical; min-height: 96px"
-          ></textarea>
+            <textarea
+              class="popup-input photo-widget-comment-input"
+              id="commentInput"
+              rows="3"
+            ></textarea>
 
-          <div class="popup-actions">
-            <button class="soft-btn" id="saveCommentBtn" type="button">
-              post comment
-            </button>
-          </div>
+            <div
+              id="replyingToLabel"
+              class="photo-widget-replying-label"
+              hidden
+            >
+              <span></span>
+              <button
+                class="photo-widget-cancel-reply-btn"
+                id="cancelCommentReplyBtn"
+                type="button"
+              >
+                cancel
+              </button>
+            </div>
+
+            <div class="popup-actions photo-widget-comments-actions">
+              <button class="soft-btn" id="saveCommentBtn" type="button">
+                post comment
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -476,10 +495,12 @@
     <div class="popup" id="deleteEntryPopup">
       <div class="popup-card confirm-popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">delete entry?</h3>
+          <h3 class="popup-title" id="confirmPopupTitle">delete entry?</h3>
         </div>
         <div class="popup-body">
-          <p class="confirm-popup-text">this entry will be deleted forever.</p>
+          <p class="confirm-popup-text" id="confirmPopupText">
+            this entry will be deleted forever.
+          </p>
           <div class="popup-actions confirm-popup-actions">
             <button class="soft-btn" id="cancelDeleteEntryBtn" type="button">
               cancel
@@ -686,18 +707,39 @@
       </div>
     </div>
 
-    <div class="popup open" id="authPopup">
+    <div class="popup" id="authPopup">
       <div class="popup-card">
         <div class="popup-header">
           <h3 class="popup-title">welcome back ♡</h3>
         </div>
         <div class="popup-body">
-          <label class="popup-label">email</label>
-          <input class="popup-input" id="emailInput" type="email" />
+          <label class="popup-label" for="emailInput">email</label>
+          <input
+            class="popup-input"
+            id="emailInput"
+            name="email"
+            type="email"
+            autocomplete="username"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+          />
 
-          <label class="popup-label" style="margin-top: 12px">password</label>
+          <label
+            class="popup-label"
+            for="passwordInput"
+            style="margin-top: 12px"
+          >
+            password
+          </label>
           <div class="password-input-wrap">
-            <input class="popup-input" id="passwordInput" type="password" />
+            <input
+              class="popup-input"
+              id="passwordInput"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+            />
             <button
               class="password-toggle-btn"
               id="passwordToggleBtn"

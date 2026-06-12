@@ -3847,6 +3847,12 @@ html[data-theme="dark"] .post-author-name-input {
   align-items: center;
   justify-content: center;
   padding: 0;
+  font-family:
+    "Quicksand", "Noto Sans", "Noto Sans Symbols 2", "Noto Sans Batak",
+    "Segoe UI Symbol", sans-serif;
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1;
   cursor: pointer;
   transition:
     transform 0.2s ease,
@@ -3855,14 +3861,8 @@ html[data-theme="dark"] .post-author-name-input {
     border-color 0.2s ease;
 }
 
-.edit-date-btn svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.edit-date-btn span {
+  transform: translateY(-1px);
 }
 
 .edit-date-btn:hover {
@@ -4240,7 +4240,15 @@ body.sticker-repositioning {
   max-width: min(92vw, 420px);
 }
 
+#deleteEntryPopup {
+  z-index: 260;
+}
+
 .widget-comments-popup-card {
+  max-width: min(92vw, 560px);
+}
+
+.entry-comments-popup-card {
   max-width: min(92vw, 560px);
 }
 
@@ -4263,6 +4271,41 @@ body.sticker-repositioning {
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
+}
+
+#commentsPopup .popup-body {
+  display: flex;
+  overflow: hidden;
+}
+
+#commentsPopup .entry-comments-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 0;
+}
+
+#commentsPopup .comments-list-scroll {
+  display: grid;
+  gap: 10px;
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+
+#commentsPopup .photo-widget-comment-input {
+  resize: vertical;
+}
+
+.comment-item.entry-comment-item {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "content";
+}
+
+.comment-item.entry-comment-item .photo-widget-comment-content {
+  grid-area: content;
+}
+
+.entry-comment-reply .comment-meta {
+  margin-bottom: 0;
 }
 
 .confirm-popup-text {
@@ -6129,6 +6172,11 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   animation: bubblePop 0.25s ease;
 }
 
+body.breakup-easter-egg .page,
+body.breakup-easter-egg .popup-card {
+  animation: breakupNope 0.48s ease;
+}
+
 .tinted-corner-badge {
   position: fixed;
   left: env(safe-area-inset-left, 0px);
@@ -6244,6 +6292,29 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes breakupNope {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  18% {
+    transform: translateX(-4px);
+  }
+
+  36% {
+    transform: translateX(4px);
+  }
+
+  54% {
+    transform: translateX(-3px);
+  }
+
+  72% {
+    transform: translateX(3px);
   }
 }
 
@@ -7031,12 +7102,14 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     padding: 14px;
   }
 
-  #widgetCommentsPopup .widget-comments-popup-card {
+  #widgetCommentsPopup .widget-comments-popup-card,
+  #commentsPopup .entry-comments-popup-card {
     height: calc(100vh - 24px);
     height: calc(100dvh - 24px);
   }
 
-  #widgetCommentsPopup .popup-body {
+  #widgetCommentsPopup .popup-body,
+  #commentsPopup .popup-body {
     display: flex;
     overflow: hidden;
   }
@@ -7056,7 +7129,8 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     display: none;
   }
 
-  #widgetCommentsPopup .photo-widget-comments-section {
+  #widgetCommentsPopup .photo-widget-comments-section,
+  #commentsPopup .entry-comments-section {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
@@ -7064,13 +7138,15 @@ html[data-theme="dark"] .typed-sticker-preview:focus-visible {
     margin-top: 0;
   }
 
-  #widgetCommentsPopup .photo-widget-comments-list {
+  #widgetCommentsPopup .photo-widget-comments-list,
+  #commentsPopup .comments-list-scroll {
     flex: 1 1 auto;
     max-height: none;
     min-height: 0;
   }
 
-  #widgetCommentsPopup .photo-widget-comment-input {
+  #widgetCommentsPopup .photo-widget-comment-input,
+  #commentsPopup .photo-widget-comment-input {
     min-height: 76px;
     max-height: 96px;
     resize: none;
