@@ -3637,7 +3637,7 @@ function getWidgetCommentSeenUserId() {
 }
 
 function getWidgetCommentCreatedTimestamp(comment) {
-  return new Date(comment?.createdAt || comment?.created_at || "").getTime();
+  return getCommentCreatedTimestamp(comment);
 }
 
 function getWidgetCommentSeenMap() {
@@ -3760,10 +3760,21 @@ function getWidgetLikeButtonMarkup(widget) {
   `;
 }
 
+function getCommentIconMarkup() {
+  return `
+    <span class="post-btn-icon comment-btn-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false">
+        <path d="M7.8 18.6 4 21l1.1-4.3A7.7 7.7 0 0 1 3 11.5C3 6.8 7 3 12 3s9 3.8 9 8.5S17 20 12 20a9.8 9.8 0 0 1-4.2-1.4Z" />
+        <path d="M8 10.3h8M8 13.5h5.4" />
+      </svg>
+    </span>
+  `;
+}
+
 function getWidgetCommentButtonMarkup(widget) {
   const unreadCount = getUnreadWidgetCommentCount(widget);
   return `
-    <span class="post-btn-icon" aria-hidden="true">💬</span>
+    ${getCommentIconMarkup()}
     ${unreadCount > 0 ? `<span class="post-btn-count">${unreadCount}</span>` : ""}
   `;
 }
@@ -7765,7 +7776,13 @@ function formatEntryDate(dateString) {
 
 function getCommentCreatedTimestamp(comment) {
   const timestamp = new Date(
-    comment?.createdAt || comment?.created_at || "",
+    comment?.createdAt ||
+      comment?.created_at ||
+      comment?.created ||
+      comment?.timestamp ||
+      comment?.savedAt ||
+      comment?.date ||
+      "",
   ).getTime();
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
@@ -8054,7 +8071,7 @@ function renderTimeline() {
             data-post-id="${post.id}"
             aria-label="open comments"
           >
-            <span class="post-btn-icon" aria-hidden="true">💬</span>
+            ${getCommentIconMarkup()}
             <span class="post-btn-label">comments</span>
             <span class="post-btn-count">(${getPostCommentCount(post)})</span>
           </button>
@@ -10159,7 +10176,7 @@ function getPhotoWidgetCommentSectionMarkup(widget, options = {}) {
     title = "comments",
     includeInput = true,
   } = options;
-  const comments = getPhotoWidgetComments(widget);
+  const comments = getCommentsNewestFirst(getPhotoWidgetComments(widget));
   const ids = getPhotoWidgetCommentSectionIds(prefix);
   const commentCount = comments.reduce(
     (total, comment) => total + 1 + (comment.replies || []).length,
@@ -10289,7 +10306,9 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
     return;
   }
 
-  listEl.innerHTML = comments
+  const sortedComments = getCommentsNewestFirst(comments);
+
+  listEl.innerHTML = sortedComments
     .map((comment) => {
       const actorName = escapeHtml(
         comment.actorName ||
@@ -10453,7 +10472,7 @@ function renderPhotoWidgetCommentsSection(widget, options = {}) {
     })
     .join("");
 
-  comments.forEach((comment) => {
+  sortedComments.forEach((comment) => {
     const textEl = listEl.querySelector(
       `[data-photo-widget-comment-text-id="${comment.id}"]`,
     );

@@ -2327,6 +2327,7 @@ html[data-theme="dark"] .photo-color-trigger {
   justify-content: flex-end;
   gap: 3px;
   height: 24px;
+  flex-wrap: nowrap;
   white-space: nowrap;
 }
 
@@ -3711,6 +3712,17 @@ html[data-theme="dark"] .post-author-name-input {
 
 .post-btn-icon {
   display: none;
+}
+
+.post-btn-icon svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .like-btn.liked {
@@ -6859,12 +6871,54 @@ body.breakup-easter-egg .popup-card {
   }
 
   .widget-bar {
+    gap: 8px;
     padding: 10px 10px 10px 12px;
     cursor: default;
   }
 
   .widget-bar-actions {
+    flex: 0 0 auto;
     gap: 3px;
+    min-width: max-content;
+  }
+
+  .widget-bar-actions > button {
+    flex: 0 0 26px;
+    width: 26px;
+    min-width: 26px;
+    height: 22px;
+    position: relative;
+  }
+
+  .widget-bar-actions .widget-header-comment-btn,
+  .widget-bar-actions .widget-header-like-btn {
+    flex-basis: 26px;
+    width: 26px;
+    min-width: 26px;
+    gap: 0;
+  }
+
+  .widget-bar-actions .widget-header-comment-btn .post-btn-icon,
+  .widget-bar-actions .widget-header-like-btn .post-btn-icon {
+    width: 100%;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.88rem;
+  }
+
+  .widget-bar-actions .widget-header-comment-btn .post-btn-count,
+  .widget-bar-actions .widget-header-like-btn .post-btn-count {
+    position: absolute;
+    top: 1px;
+    right: 0;
+    min-width: 0.8em;
+    height: 0.8em;
+    justify-content: center;
+    font-size: 0.58rem;
+    line-height: 0.8em;
+    pointer-events: none;
   }
 
   .widget-content {
@@ -6951,7 +7005,9 @@ body.breakup-easter-egg .popup-card {
   }
 
   .post-btn-icon {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 0.94rem;
     line-height: 1;
   }
