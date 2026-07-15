@@ -17,8 +17,11 @@ const WEATHER_WIDGET_LOCATIONS = [
 const PROFILE_ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 const PROFILE_PRESENCE_HEARTBEAT_MS = 60 * 1000;
 const MISS_YOU_NOTIFICATION_GROUP_MS = 5 * 60 * 1000;
-const BOOT_SESSION_TIMEOUT_MS = 7000;
+const BOOT_SESSION_TIMEOUT_MS = 15000;
+const DATA_REFRESH_TIMEOUT_MS = 12000;
 const BOOT_RECOVERY_MESSAGE = "loading got stuck - please log in again ♡";
+const DATA_REFRESH_TIMEOUT_MESSAGE =
+  "loading is taking too long - showing what is ready ♡";
 
 function getAnniversaryWrapperUrl() {
   return `./anniversary-wrapper.html?v=${ANNIVERSARY_WRAPPER_VERSION}`;
@@ -5675,7 +5678,10 @@ async function loadWidgets(options = {}) {
   if (error) {
     console.error(error);
     showMessage(error.message);
-    return;
+    if (render) {
+      renderWidgets({ animateMobileReorder: false });
+    }
+    return false;
   }
 
   if (data && data.length) {
@@ -5832,6 +5838,8 @@ async function loadWidgets(options = {}) {
   if (render) {
     renderWidgets({ animateMobileReorder: false });
   }
+
+  return true;
 }
 
 function renderWidgets(options = {}) {
@@ -12687,6 +12695,23 @@ async function getCurrentUser() {
   return currentUser;
 }
 
+function renderCurrentUserDataState(includeWidgets, scrollSnapshot = null) {
+  renderTimeline();
+  renderNotifications();
+  if (includeWidgets) {
+    renderWidgets({ animateMobileReorder: false });
+    void refreshWeatherWidget({ render: true });
+  }
+  restoreViewportScroll(scrollSnapshot);
+}
+
+function reportSettledTaskErrors(results = []) {
+  results.forEach((result) => {
+    if (result?.status !== "rejected") return;
+    console.error(result.reason);
+  });
+}
+
 async function refreshUserData(options = {}) {
   const {
     includeWidgets = false,
@@ -12712,15 +12737,25 @@ async function refreshUserData(options = {}) {
     tasks.push(loadWidgets({ render: false, showSkeleton: false }));
   }
 
-  await Promise.all(tasks);
   const scrollSnapshot = preserveScroll ? getViewportScrollSnapshot() : null;
-  renderTimeline();
-  renderNotifications();
-  if (includeWidgets) {
-    renderWidgets({ animateMobileReorder: false });
-    void refreshWeatherWidget({ render: true });
+  const dataRefreshPromise = Promise.allSettled(tasks);
+  const settledResults = await withBootTimeout(
+    dataRefreshPromise,
+    DATA_REFRESH_TIMEOUT_MS,
+  );
+
+  if (!settledResults) {
+    console.warn("User data load timed out before all requests finished.");
+    showMessage(DATA_REFRESH_TIMEOUT_MESSAGE);
+    void dataRefreshPromise.then((lateResults) => {
+      reportSettledTaskErrors(lateResults);
+      renderCurrentUserDataState(includeWidgets);
+    });
+  } else {
+    reportSettledTaskErrors(settledResults);
   }
-  restoreViewportScroll(scrollSnapshot);
+
+  renderCurrentUserDataState(includeWidgets, scrollSnapshot);
 }
 
 profileBtn.addEventListener("click", () => {
@@ -12825,6 +12860,18 @@ async function loadProfile(user) {
   }
 
   return currentProfile;
+}
+
+async function loadProfileForSession(user) {
+  const profile = await withBootTimeout(loadProfile(user), DATA_REFRESH_TIMEOUT_MS);
+
+  if (profile === undefined) {
+    console.warn("Profile load timed out before app data finished loading.");
+    showMessage(DATA_REFRESH_TIMEOUT_MESSAGE);
+    return null;
+  }
+
+  return profile;
 }
 
 async function loadPlacedStickers() {
@@ -13041,18 +13088,35 @@ async function signUpUser() {
   }
 
   if (data.user) {
-    currentUser = data.user;
-    setToolbarAuthState("checking");
-    authPopup.classList.remove("open");
-    renderAppSkeleton();
-    await ensureProfile(data.user);
-    await loadProfile(data.user);
-    await refreshUserData({ includeWidgets: true, showSkeleton: true });
-    setCurrentUser(data.user);
+    const profileCreated = await withBootTimeout(
+      ensureProfile(data.user),
+      DATA_REFRESH_TIMEOUT_MS,
+    );
+
+    if (profileCreated === undefined) {
+      console.warn("Profile creation timed out before app data loaded.");
+      showMessage(DATA_REFRESH_TIMEOUT_MESSAGE);
+    }
+
+    await loadSignedInApp(data.user);
   }
 
   showMessage("account created ♡");
   authPopup.classList.remove("open");
+}
+
+async function loadSignedInApp(user) {
+  currentUser = user;
+  setToolbarAuthState("checking");
+  authPopup.classList.remove("open");
+  renderAppSkeleton();
+
+  const results = await Promise.allSettled([
+    loadProfileForSession(user),
+    refreshUserData({ includeWidgets: true, showSkeleton: true }),
+  ]);
+  reportSettledTaskErrors(results);
+  setCurrentUser(user);
 }
 
 async function loginUser() {
@@ -13070,13 +13134,7 @@ async function loginUser() {
   }
 
   if (data.user) {
-    currentUser = data.user;
-    setToolbarAuthState("checking");
-    authPopup.classList.remove("open");
-    renderAppSkeleton();
-    await loadProfile(data.user);
-    await refreshUserData({ includeWidgets: true, showSkeleton: true });
-    setCurrentUser(data.user);
+    await loadSignedInApp(data.user);
   }
 
   showMessage("hi again hehe ♡");
@@ -13451,29 +13509,31 @@ async function loadPosts(options = {}) {
   if (postsError) {
     console.error(postsError);
     showMessage(postsError.message);
-    return;
   }
 
   if (commentsError) {
     console.error(commentsError);
     showMessage(commentsError.message);
-    return;
   }
 
   if (stickersError) {
     console.error(stickersError);
     showMessage(stickersError.message);
-    return;
   }
 
   if (profilesError) {
     console.error(profilesError);
     showMessage(profilesError.message);
-    return;
   }
 
-  await loadSharedProfileBios();
-  replaceKnownProfiles(profilesData || []);
+  const sharedBiosLoaded = await withBootTimeout(
+    loadSharedProfileBios(),
+    DATA_REFRESH_TIMEOUT_MS,
+  );
+  if (!sharedBiosLoaded) {
+    console.warn("Profile bios load timed out.");
+  }
+  replaceKnownProfiles(profilesError ? [] : profilesData || []);
 
   let { data: likesData, error: likesError } = likesResult;
 
@@ -13493,7 +13553,7 @@ async function loadPosts(options = {}) {
   if (likesError) {
     console.error(likesError);
     showMessage(likesError.message);
-    return;
+    likesData = [];
   }
 
   const likesByPostId = new Map();
@@ -13501,7 +13561,14 @@ async function loadPosts(options = {}) {
   const commentsByPostId = new Map();
   const repliesByParentId = new Map();
 
-  (likesData || []).forEach((like) => {
+  const safePostsData = postsError ? [] : postsData || [];
+  const safeCommentsData = commentsError ? [] : commentsData || [];
+  const safeStickersData = stickersError ? [] : stickersData || [];
+  const safeProfilesData = profilesError ? [] : profilesData || [];
+  const safeLikesData = likesData || [];
+  const activeUserId = currentProfile?.id || currentUser?.id || "";
+
+  safeLikesData.forEach((like) => {
     if (like.post_id) {
       const postLikes = likesByPostId.get(like.post_id) || [];
       postLikes.push(like);
@@ -13515,7 +13582,7 @@ async function loadPosts(options = {}) {
     }
   });
 
-  const normalizedComments = (commentsData || []).map((comment) => ({
+  const normalizedComments = safeCommentsData.map((comment) => ({
     id: comment.id,
     post_id: comment.post_id,
     userId: comment.user_id,
@@ -13526,7 +13593,7 @@ async function loadPosts(options = {}) {
       comment.profiles?.nickname || comment.profiles?.username || "memory",
     likesCount: (likesByCommentId.get(comment.id) || []).length,
     likedByMe: (likesByCommentId.get(comment.id) || []).some(
-      (like) => like.user_id === currentProfile?.id,
+      (like) => like.user_id === activeUserId,
     ),
   }));
 
@@ -13542,7 +13609,7 @@ async function loadPosts(options = {}) {
     }
   });
 
-  posts = (postsData || []).map((row) => {
+  posts = safePostsData.map((row) => {
     const postLikes = likesByPostId.get(row.id) || [];
     const allPostComments = commentsByPostId.get(row.id) || [];
 
@@ -13560,17 +13627,16 @@ async function loadPosts(options = {}) {
       text: row.content,
       created_at: row.created_at,
       isEdited: editedPostIds.has(row.id) || isPostEditedFromTimestamps(row),
-      author:
-        row.user_id === currentProfile?.id ? "posted by you" : "posted by them",
+      author: row.user_id === activeUserId ? "posted by you" : "posted by them",
       nickname: row.profiles?.nickname || row.profiles?.username || "memory",
       avatarUrl: row.profiles?.avatar_url || "",
       likesCount: postLikes.length,
-      likedByMe: postLikes.some((like) => like.user_id === currentProfile?.id),
+      likedByMe: postLikes.some((like) => like.user_id === activeUserId),
       comments: topLevelComments,
     };
   });
 
-  placedStickers = (stickersData || []).map((row) => {
+  placedStickers = safeStickersData.map((row) => {
     const savedPosition = getSavedPlacedStickerPosition(row.id);
 
     return {
@@ -13584,20 +13650,20 @@ async function loadPosts(options = {}) {
   });
 
   notificationSourceData = {
-    postsData: postsData || [],
-    commentsData: commentsData || [],
-    likesData: likesData || [],
-    stickersData: stickersData || [],
-    profilesData: profilesData || [],
+    postsData: safePostsData,
+    commentsData: safeCommentsData,
+    likesData: safeLikesData,
+    stickersData: safeStickersData,
+    profilesData: safeProfilesData,
   };
 
   buildNotifications({
-    postsData: postsData || [],
-    commentsData: commentsData || [],
-    likesData: likesData || [],
-    stickersData: stickersData || [],
+    postsData: safePostsData,
+    commentsData: safeCommentsData,
+    likesData: safeLikesData,
+    stickersData: safeStickersData,
     widgetsData: widgets,
-    profilesData: profilesData || [],
+    profilesData: safeProfilesData,
     render,
   });
 
@@ -13608,6 +13674,8 @@ async function loadPosts(options = {}) {
   if (render) {
     renderTimeline();
   }
+
+  return !(postsError || commentsError || stickersError || profilesError || likesError);
 }
 
 async function saveEntry() {
@@ -14513,13 +14581,7 @@ async function checkSession() {
   } = await supabaseClient.auth.getSession();
 
   if (session?.user) {
-    currentUser = session.user;
-    setToolbarAuthState("checking");
-    authPopup.classList.remove("open");
-    renderAppSkeleton();
-    await loadProfile(session.user);
-    await refreshUserData({ includeWidgets: true, showSkeleton: true });
-    setCurrentUser(session.user);
+    await loadSignedInApp(session.user);
   } else {
     currentProfile = null;
     knownProfiles = [];
@@ -14693,7 +14755,7 @@ async function initApp() {
       BOOT_SESSION_TIMEOUT_MS,
     );
 
-    if (!sessionCheckCompleted) {
+    if (!sessionCheckCompleted && !currentUser) {
       renderBootFallbackShell();
     }
 
