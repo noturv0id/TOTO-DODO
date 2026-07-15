@@ -17,6 +17,8 @@ const WEATHER_WIDGET_LOCATIONS = [
 const PROFILE_ACTIVE_WINDOW_MS = 5 * 60 * 1000;
 const PROFILE_PRESENCE_HEARTBEAT_MS = 60 * 1000;
 const MISS_YOU_NOTIFICATION_GROUP_MS = 5 * 60 * 1000;
+const BOOT_SESSION_TIMEOUT_MS = 7000;
+const BOOT_RECOVERY_MESSAGE = "loading got stuck - please log in again ♡";
 
 function getAnniversaryWrapperUrl() {
   return `./anniversary-wrapper.html?v=${ANNIVERSARY_WRAPPER_VERSION}`;
@@ -11448,7 +11450,7 @@ function withBootTimeout(promise, timeoutMs = 9000) {
   ]);
 }
 
-function renderBootFallbackShell() {
+function renderBootFallbackShell(message = BOOT_RECOVERY_MESSAGE) {
   console.warn("App boot timed out before user data finished loading.");
   currentProfile = null;
   knownProfiles = [];
@@ -11460,6 +11462,9 @@ function renderBootFallbackShell() {
   closeNotificationsPanel();
   authPopup?.classList.add("open");
   renderSignedOutShell();
+  if (message) {
+    showMessage(message);
+  }
 }
 
 function waitForImageLoad(image) {
@@ -14685,10 +14690,10 @@ async function initApp() {
   try {
     const sessionCheckCompleted = await withBootTimeout(
       checkSession().then(() => true),
-      7000,
+      BOOT_SESSION_TIMEOUT_MS,
     );
 
-    if (!sessionCheckCompleted && !currentUser) {
+    if (!sessionCheckCompleted) {
       renderBootFallbackShell();
     }
 
