@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,33 +7,23 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Our memories diary." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-title"
-      content="˗ˏˋ ⁺ ‧ ₊ ˚ ཐི ⋆ TOTO&DODO ⋆ ཋྀ ˚ ₊ ‧ ⁺ ˎˊ˗"
-    />
+    <meta name="apple-mobile-web-app-title" content="TOTO &amp; DODO" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#fffdfd" id="themeColorMeta" />
-    <link rel="icon" type="image/png" sizes="853x853" href="./icon.png" />
-    <link rel="shortcut icon" href="./icon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./icon.png" />
-    <script>
-      if (/^https?:$/.test(window.location.protocol)) {
-        const manifestLink = document.createElement("link");
-        manifestLink.rel = "manifest";
-        manifestLink.href = "./site.webmanifest";
-        document.head.append(manifestLink);
-      }
-    </script>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+    <link rel="manifest" href="./site.webmanifest" />
     <link rel="preconnect" href="https://ytrbsxknhlsfqkqphlms.supabase.co" crossorigin />
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <link rel="dns-prefetch" href="https://ytrbsxknhlsfqkqphlms.supabase.co" />
     <link
       rel="preload"
       as="image"
-      href="./launching.jpeg"
-      imagesrcset="./launching.jpeg 720w, ./launching-pc.jpeg 1440w"
+      type="image/webp"
+      imagesrcset="./launching.webp 940w, ./launching-pc.webp 1671w"
       imagesizes="100vw"
       fetchpriority="high"
     />
@@ -52,7 +42,7 @@
             ?.setAttribute(
               "content",
               document.documentElement.dataset.theme === "dark"
-                ? "#2a1a2a"
+                ? "#192a2b"
                 : "#fffdfd",
             );
         } catch {
@@ -65,20 +55,26 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- UI fonts (needed for first paint) -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Fredoka:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Batak&family=Noto+Sans+Symbols+2&family=Nunito:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&display=swap"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Batak&family=Noto+Sans+Symbols+2&family=Quicksand:wght@400;500;600;700&display=swap"
     />
+    <!-- Entry editor fonts: loaded without blocking the first paint -->
     <link
-      href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css"
       rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Merriweather:wght@400;700&family=Nunito:wght@400;700&family=Playfair+Display:wght@400;700&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260530-entry-image-gap-25" />
+    <link rel="stylesheet" href="./assets/main-EV3SZIWN.css" />
   </head>
   <body class="app-booting">
     <div class="launch-splash" id="launchSplash" aria-hidden="true">
       <picture>
+        <source media="(min-width: 721px)" type="image/webp" srcset="./launching-pc.webp" />
         <source media="(min-width: 721px)" srcset="./launching-pc.jpeg" />
+        <source type="image/webp" srcset="./launching.webp" />
         <img
           class="launch-splash-image"
           src="./launching.jpeg"
@@ -94,12 +90,12 @@
       <header class="toolbar" id="appToolbar" data-auth-state="checking">
         <div class="toolbar-inner toolbar-live">
           <div class="brand">
-            <div class="site-title">
-              ˗ˏˋ ⁺ ‧ ₊ ˚ ཐི ⋆ TOTO&DODO ⋆ ཋྀ ˚ ₊ ‧ ⁺ ˎˊ˗
-            </div>
+            <h1 class="site-title">
+              <span aria-hidden="true">˗ˏˋ ⁺ ‧ ₊ ˚ ཐི ⋆ </span>TOTO&amp;DODO<span aria-hidden="true"> ⋆ ཋྀ ˚ ₊ ‧ ⁺ ˎˊ˗</span>
+            </h1>
           </div>
 
-          <div class="quote-pill">⊹˚₊ forever and always ₊˚⊹</div>
+          <div class="quote-pill"><span aria-hidden="true">⊹˚₊ </span>forever and always<span aria-hidden="true"> ₊˚⊹</span></div>
 
           <div class="toolbar-actions">
             <div class="notifications-menu" id="notificationsMenu">
@@ -123,7 +119,7 @@
               </button>
               <div class="notifications-panel" id="notificationsPanel" hidden>
                 <div class="notifications-panel-header">
-                  <h3 class="notifications-title">inbox ♡</h3>
+                  <h3 class="notifications-title">inbox <span aria-hidden="true">♡</span></h3>
                   <div class="notifications-panel-actions">
                     <button
                       class="notifications-mark-btn"
@@ -213,9 +209,9 @@
         class="floating-entry-btn"
         type="button"
         id="newEntryBtn"
-        aria-label="create new entry"
+        title="create new entry"
       >
-        <span class="floating-entry-icon" aria-hidden="true">˚₊‧ ⠀ new entry ⠀ ‧₊˚</span>
+        <span class="floating-entry-icon"><span aria-hidden="true">˚₊‧ ⠀ </span>new entry<span aria-hidden="true"> ⠀ ‧₊˚</span></span>
       </button>
 
       <div class="mobile-view-switcher" id="mobileViewSwitcher" hidden>
@@ -262,16 +258,16 @@
       </main>
     </div>
 
-    <div class="message" id="messageBox"></div>
+    <div class="message" id="messageBox" role="status" aria-live="polite"></div>
 
-    <div class="tinted-corner-badge" aria-label="TotoAndDodoTogetherForever">
+    <div class="tinted-corner-badge" aria-hidden="true">
       #TotoAndDodoTogetherForever
     </div>
 
-    <div class="popup" id="profilePopup">
+    <div class="popup" id="profilePopup" role="dialog" aria-modal="true" aria-labelledby="profilePopupTitle">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">my profile ♡</h3>
+          <h3 class="popup-title" id="profilePopupTitle">my profile <span aria-hidden="true">♡</span></h3>
           <button class="soft-btn" id="closeProfilePopup" type="button">
             close
           </button>
@@ -371,6 +367,9 @@
             >
               cancel
             </button>
+            <button class="soft-btn" id="exportEntriesBtn" type="button">
+              export PDF
+            </button>
             <button class="soft-btn" id="logoutBtn" type="button">
               sign out
             </button>
@@ -387,10 +386,10 @@
       </div>
     </div>
 
-    <div class="popup" id="entryPopup">
+    <div class="popup" id="entryPopup" role="dialog" aria-modal="true" aria-labelledby="entryPopupTitle">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">new entry ✎</h3>
+          <h3 class="popup-title" id="entryPopupTitle">new entry <span aria-hidden="true">✎</span></h3>
           <div class="popup-header-actions">
             <button class="soft-btn" id="saveEntryBtn" type="button">
               post
@@ -401,14 +400,15 @@
           </div>
         </div>
         <div class="popup-body">
-          <label class="popup-label">write something ♡</label>
+          <label class="popup-label" id="entryEditorLabel">write something <span aria-hidden="true">♡</span></label>
           <div class="entry-editor" id="entryEditor"></div>
           <textarea
             class="popup-input entry-fallback"
             id="entryContentFallback"
             rows="6"
-            style="resize: vertical; min-height: 140px"
+            aria-labelledby="entryEditorLabel"
           ></textarea>
+          <div class="entry-draft-status" id="entryDraftStatus" aria-live="polite" hidden></div>
           <div class="entry-attachment-fields">
             <label class="popup-label" for="entryImageInput"
               >attach image</label
@@ -440,10 +440,10 @@
       </div>
     </div>
 
-    <div class="popup" id="commentsPopup">
+    <div class="popup" id="commentsPopup" role="dialog" aria-modal="true" aria-labelledby="commentsPopupTitle">
       <div class="popup-card entry-comments-popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">comments ♡</h3>
+          <h3 class="popup-title" id="commentsPopupTitle">comments <span aria-hidden="true">♡</span></h3>
           <button class="soft-btn" id="closeCommentsPopup" type="button">
             close
           </button>
@@ -492,7 +492,7 @@
       </div>
     </div>
 
-    <div class="popup" id="deleteEntryPopup">
+    <div class="popup" id="deleteEntryPopup" role="dialog" aria-modal="true" aria-labelledby="confirmPopupTitle">
       <div class="popup-card confirm-popup-card">
         <div class="popup-header">
           <h3 class="popup-title" id="confirmPopupTitle">delete entry?</h3>
@@ -517,7 +517,7 @@
       </div>
     </div>
 
-    <div class="popup" id="widgetPopup">
+    <div class="popup" id="widgetPopup" role="dialog" aria-modal="true" aria-labelledby="widgetPopupTitle">
       <div class="popup-card">
         <div class="popup-header">
           <h3 class="popup-title" id="widgetPopupTitle">edit widget</h3>
@@ -553,11 +553,11 @@
       </div>
     </div>
 
-    <div class="popup" id="widgetCommentsPopup">
+    <div class="popup" id="widgetCommentsPopup" role="dialog" aria-modal="true" aria-labelledby="widgetCommentsPopupTitle">
       <div class="popup-card widget-comments-popup-card">
         <div class="popup-header">
           <h3 class="popup-title" id="widgetCommentsPopupTitle">
-            comments ♡
+            comments <span aria-hidden="true">♡</span>
           </h3>
           <button
             class="soft-btn"
@@ -573,10 +573,10 @@
       </div>
     </div>
 
-    <div class="popup" id="entryPreviewPopup">
+    <div class="popup" id="entryPreviewPopup" role="dialog" aria-modal="true" aria-labelledby="entryPreviewTitle">
       <div class="popup-card entry-preview-popup-card">
         <div class="popup-header">
-          <h3 class="popup-title" id="entryPreviewTitle">entry preview ♡</h3>
+          <h3 class="popup-title" id="entryPreviewTitle">entry preview <span aria-hidden="true">♡</span></h3>
           <div class="popup-header-actions">
             <button
               class="soft-btn entry-preview-icon-btn"
@@ -617,10 +617,10 @@
       </div>
     </div>
 
-    <div class="popup" id="stickerPopup">
+    <div class="popup" id="stickerPopup" role="dialog" aria-modal="true" aria-labelledby="stickerPopupTitle">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">✦ sticker box ♡</h3>
+          <h3 class="popup-title" id="stickerPopupTitle"><span aria-hidden="true">✦</span> sticker box <span aria-hidden="true">♡</span></h3>
           <div class="popup-header-actions">
             <button class="soft-btn" id="closeStickerPopup" type="button">
               close
@@ -707,12 +707,22 @@
       </div>
     </div>
 
-    <div class="popup" id="authPopup">
+    <div class="popup lightbox-popup" id="imageLightbox" role="dialog" aria-modal="true" aria-label="photo">
+      <div class="popup-card lightbox-card">
+        <button class="soft-btn lightbox-close" id="closeImageLightbox" type="button" aria-label="close photo">close</button>
+        <button class="lightbox-nav lightbox-prev" id="lightboxPrevBtn" type="button" aria-label="previous photo" hidden>‹</button>
+        <img class="lightbox-image" id="lightboxImage" alt="" />
+        <button class="lightbox-nav lightbox-next" id="lightboxNextBtn" type="button" aria-label="next photo" hidden>›</button>
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+      </div>
+    </div>
+
+    <div class="popup" id="authPopup" role="dialog" aria-modal="true" aria-labelledby="authPopupTitle">
       <div class="popup-card">
         <div class="popup-header">
-          <h3 class="popup-title">welcome back ♡</h3>
+          <h3 class="popup-title" id="authPopupTitle">welcome back <span aria-hidden="true">♡</span></h3>
         </div>
-        <div class="popup-body">
+        <form class="popup-body auth-form" id="authForm" novalidate>
           <label class="popup-label" for="emailInput">email</label>
           <input
             class="popup-input"
@@ -720,6 +730,7 @@
             name="email"
             type="email"
             autocomplete="username"
+            required
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
@@ -739,6 +750,7 @@
               name="password"
               type="password"
               autocomplete="current-password"
+              required
             />
             <button
               class="password-toggle-btn"
@@ -751,17 +763,15 @@
             </button>
           </div>
 
+          <p class="auth-note" id="authNote" role="alert" hidden></p>
           <div class="popup-actions">
-            <button class="soft-btn" id="loginBtn">login</button>
+            <button class="soft-btn" id="loginBtn" type="submit">login</button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-    <script defer src="./script.js?v=20260530-entry-image-gap-26"></script>
+    <script type="module" src="./assets/main-UCKSVFFE.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
