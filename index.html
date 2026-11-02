@@ -34,7 +34,7 @@
       (() => {
         try {
           const savedTheme = localStorage.getItem("ourMemoriesTheme");
-          const knownTheme = ["plum", "dark", "light", "rose", "lavender", "sky"].includes(savedTheme)
+          const knownTheme = ["plum", "dark", "rose", "light", "lavender", "emo"].includes(savedTheme)
             ? savedTheme
             : "plum";
           document.documentElement.dataset.theme = knownTheme;
@@ -42,7 +42,7 @@
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
               "content",
-              ({ plum: "#17101c", dark: "#0f1c1d", light: "#fefdf9", rose: "#fff8fb", lavender: "#fbf8ff", sky: "#f8fcff" })[knownTheme] || "#17101c",
+              ({ plum: "#17101c", dark: "#0f1c1d", light: "#fefdf9", rose: "#fff8fb", lavender: "#fbf8ff", emo: "#070607" })[knownTheme] || "#17101c",
             );
         } catch {
           document.documentElement.dataset.theme = "plum";
@@ -63,10 +63,10 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-HEH3JCDD.css" />
-    <link rel="modulepreload" href="./assets/main-HBAYQZY3.js" />
+    <link rel="stylesheet" href="./assets/main-XZ35KN22.css" />
+    <link rel="modulepreload" href="./assets/main-Y5MO5OKW.js" />
     <script>
-      window.__THEME_CSS__ = {"lavender":"./assets/theme-lavender-6AC25F68.css","plum":"./assets/theme-plum-793DF050.css","rose":"./assets/theme-rose-326F713E.css","sky":"./assets/theme-sky-2F5ACC8E.css"};
+      window.__THEME_CSS__ = {"emo":"./assets/theme-emo-6A5DB446.css","lavender":"./assets/theme-lavender-6AC25F68.css","plum":"./assets/theme-plum-793DF050.css","rose":"./assets/theme-rose-326F713E.css"};
       (function () {
         var href = window.__THEME_CSS__[document.documentElement.dataset.theme];
         if (href) document.write('<link rel="stylesheet" id="themeStylesheet" href="' + href + '" />');
@@ -202,16 +202,16 @@
                   <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span>dark green
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="rose" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span>rose
+                  <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span>light pink
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>mint
+                  <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>light green
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="lavender" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-lavender" aria-hidden="true"></span>lavender
+                  <span class="theme-swatch theme-swatch-lavender" aria-hidden="true"></span>light purple
                 </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="sky" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-sky" aria-hidden="true"></span>sky
+                <button class="theme-option" type="button" role="radio" data-theme-option="emo" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-emo" aria-hidden="true"></span>emo
                 </button>
               </div>
             </div>
@@ -805,7 +805,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-HBAYQZY3.js"></script>
+    <script type="module" src="./assets/main-Y5MO5OKW.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
