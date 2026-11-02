@@ -35,7 +35,7 @@
           const prefersDark = window.matchMedia?.(
             "(prefers-color-scheme: dark)",
           ).matches;
-          const knownTheme = ["light", "dark", "rose"].includes(savedTheme)
+          const knownTheme = ["light", "dark", "rose", "plum", "lavender", "peach", "sky"].includes(savedTheme)
             ? savedTheme
             : "";
           document.documentElement.dataset.theme =
@@ -44,9 +44,9 @@
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
               "content",
-              document.documentElement.dataset.theme === "dark"
-                ? "#192a2b"
-                : "#fffdfd",
+              ({ dark: "#192a2b", plum: "#2a1a2a", lavender: "#fdfcff", peach: "#fffdfb", sky: "#fcfeff" })[
+                document.documentElement.dataset.theme
+              ] || "#fffdfd",
             );
         } catch {
           document.documentElement.dataset.theme = "light";
@@ -58,19 +58,24 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- UI fonts (needed for first paint) -->
+    <!-- Fonts never block the first paint: the splash covers the swap.
+         UI: Quicksand + Fredoka (+ symbol fonts for the decorations).
+         Entry editor: Lora, Caveat, Dancing Script. -->
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Batak&family=Noto+Sans+Symbols+2&family=Quicksand:wght@400;500;600;700&display=swap"
-    />
-    <!-- Entry editor fonts: loaded without blocking the first paint -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Merriweather:wght@400;700&family=Nunito:wght@400;700&family=Playfair+Display:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Fredoka:wght@400;500;600&family=Lora:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Batak&family=Noto+Sans+Symbols+2&family=Quicksand:wght@400;500;600;700&display=swap"
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-VXHQAPW3.css" />
+    <link rel="stylesheet" href="./assets/main-KNSIM3WL.css" />
+    <link rel="modulepreload" href="./assets/main-5E5HU3CH.js" />
+    <script>
+      window.__THEME_CSS__ = {"lavender":"./assets/theme-lavender-6AC25F68.css","peach":"./assets/theme-peach-BD59E1F0.css","plum":"./assets/theme-plum-793DF050.css","rose":"./assets/theme-rose-326F713E.css","sky":"./assets/theme-sky-2F5ACC8E.css"};
+      (function () {
+        var href = window.__THEME_CSS__[document.documentElement.dataset.theme];
+        if (href) document.write('<link rel="stylesheet" id="themeStylesheet" href="' + href + '" />');
+      })();
+    </script>
   </head>
   <body class="app-booting">
     <div class="launch-splash" id="launchSplash" aria-hidden="true">
@@ -202,6 +207,18 @@
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="rose" aria-checked="false">
                   <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span>rose
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="plum" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-plum" aria-hidden="true"></span>plum night
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="lavender" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-lavender" aria-hidden="true"></span>lavender
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="peach" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-peach" aria-hidden="true"></span>peach
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="sky" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-sky" aria-hidden="true"></span>sky
                 </button>
               </div>
             </div>
@@ -795,7 +812,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-QMHA4NWM.js"></script>
+    <script type="module" src="./assets/main-5E5HU3CH.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
