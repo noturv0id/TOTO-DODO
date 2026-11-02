@@ -35,8 +35,11 @@
           const prefersDark = window.matchMedia?.(
             "(prefers-color-scheme: dark)",
           ).matches;
+          const knownTheme = ["light", "dark", "rose"].includes(savedTheme)
+            ? savedTheme
+            : "";
           document.documentElement.dataset.theme =
-            savedTheme || (prefersDark ? "dark" : "light");
+            knownTheme || (prefersDark ? "dark" : "light");
           document
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
@@ -67,7 +70,7 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-EV3SZIWN.css" />
+    <link rel="stylesheet" href="./assets/main-VXHQAPW3.css" />
   </head>
   <body class="app-booting">
     <div class="launch-splash" id="launchSplash" aria-hidden="true">
@@ -170,19 +173,38 @@
                 +
               </button>
             </div>
-            <button
-              class="theme-toggle"
-              type="button"
-              id="themeToggle"
-              aria-label="switch to dark mode"
-              aria-pressed="false"
-            >
-              <span class="theme-toggle-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a7 7 0 1 0 11 11Z" />
-                </svg>
-              </span>
-            </button>
+            <div class="theme-menu-wrap" id="themeMenuWrap">
+              <button
+                class="theme-toggle"
+                type="button"
+                id="themeToggle"
+                aria-label="choose theme"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="themeMenu"
+                title="choose theme"
+              >
+                <span class="theme-toggle-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.7 1.7-1.7h2A4.5 4.5 0 0 0 21 10.7C21 6.4 17 3 12 3Z" />
+                    <circle cx="7.5" cy="11" r="1.2" />
+                    <circle cx="10.5" cy="7.2" r="1.2" />
+                    <circle cx="15" cy="7.4" r="1.2" />
+                  </svg>
+                </span>
+              </button>
+              <div class="theme-menu" id="themeMenu" role="radiogroup" aria-label="theme" hidden>
+                <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>mint
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="dark" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span>night
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="rose" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span>rose
+                </button>
+              </div>
+            </div>
             <button
               class="soft-btn profile-icon-btn"
               type="button"
@@ -268,9 +290,14 @@
       <div class="popup-card">
         <div class="popup-header">
           <h3 class="popup-title" id="profilePopupTitle">my profile <span aria-hidden="true">♡</span></h3>
-          <button class="soft-btn" id="closeProfilePopup" type="button">
-            close
-          </button>
+          <div class="popup-header-actions">
+            <button class="soft-btn" id="exportEntriesBtn" type="button" title="save every entry as a PDF">
+              export PDF
+            </button>
+            <button class="soft-btn" id="closeProfilePopup" type="button">
+              close
+            </button>
+          </div>
         </div>
         <div class="popup-body">
           <section class="profile-sheet" id="profileSheet">
@@ -366,9 +393,6 @@
               hidden
             >
               cancel
-            </button>
-            <button class="soft-btn" id="exportEntriesBtn" type="button">
-              export PDF
             </button>
             <button class="soft-btn" id="logoutBtn" type="button">
               sign out
@@ -771,7 +795,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-UCKSVFFE.js"></script>
+    <script type="module" src="./assets/main-QMHA4NWM.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
