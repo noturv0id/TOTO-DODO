@@ -63,10 +63,10 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-3AUHES36.css" />
-    <link rel="modulepreload" href="./assets/main-7ODTO5BV.js" />
+    <link rel="stylesheet" href="./assets/main-CSX6CWKH.css" />
+    <link rel="modulepreload" href="./assets/main-YMAVZUIB.js" />
     <script>
-      window.__THEME_CSS__ = {"emo":"./assets/theme-emo-C0761D38.css","lavender":"./assets/theme-lavender-6AC25F68.css","plum":"./assets/theme-plum-1CAEB744.css","rose":"./assets/theme-rose-326F713E.css"};
+      window.__THEME_CSS__ = {"emo":"./assets/theme-emo-6747AF6E.css","lavender":"./assets/theme-lavender-6AC25F68.css","plum":"./assets/theme-plum-1CAEB744.css","rose":"./assets/theme-rose-326F713E.css"};
       (function () {
         var href = window.__THEME_CSS__[document.documentElement.dataset.theme];
         if (href) document.write('<link rel="stylesheet" id="themeStylesheet" href="' + href + '" />');
@@ -133,6 +133,13 @@
                       clear notifications
                     </button>
                     <button
+                      class="notifications-mark-btn"
+                      id="openPushSettingsBtn"
+                      type="button"
+                    >
+                      settings
+                    </button>
+                    <button
                       class="notifications-mark-btn notifications-close-btn"
                       id="closeNotificationsBtn"
                       type="button"
@@ -142,9 +149,27 @@
                     </button>
                   </div>
                 </div>
+                <button class="push-cta" id="pushCtaBtn" type="button" hidden>
+                  get these on your phone ♡
+                </button>
                 <div class="notifications-list" id="notificationsList"></div>
               </div>
             </div>
+            <button
+              class="soft-btn profile-icon-btn search-toggle-btn"
+              type="button"
+              id="searchToggleBtn"
+              aria-label="search entries"
+              aria-expanded="false"
+              title="search entries"
+            >
+              <span class="profile-btn-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <circle cx="10.5" cy="10.5" r="7.5" />
+                  <path d="m21 21-5.2-5.2" />
+                </svg>
+              </span>
+            </button>
             <div class="app-zoom-control" aria-label="app zoom controls">
               <button
                 class="app-zoom-btn"
@@ -416,6 +441,59 @@
               save changes
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup" id="pushSettingsPopup" role="dialog" aria-modal="true" aria-labelledby="pushSettingsTitle">
+      <div class="popup-card">
+        <div class="popup-header">
+          <h3 class="popup-title" id="pushSettingsTitle">notifications</h3>
+          <div class="popup-header-actions">
+            <button class="soft-btn" id="closePushSettingsPopup" type="button">
+              close
+            </button>
+          </div>
+        </div>
+        <div class="popup-body push-settings">
+          <section class="push-card">
+            <div class="push-section-label">this device</div>
+            <p class="push-status" id="pushStatus">checking…</p>
+            <div class="push-device-actions">
+              <button class="soft-btn" id="pushEnableBtn" type="button" hidden>
+                turn on
+              </button>
+              <button class="soft-btn" id="pushTestBtn" type="button" hidden>
+                send a test
+              </button>
+            </div>
+          </section>
+
+          <section class="push-card">
+            <div class="push-section-label">notify me about</div>
+            <div class="push-type-list" id="pushTypeList"></div>
+            <p class="push-note">these choices apply to all your devices</p>
+          </section>
+
+          <section class="push-card">
+            <label class="push-toggle-row">
+              <span class="push-toggle-text">
+                <span class="push-toggle-title">quiet hours</span>
+                <span class="push-toggle-hint">no notifications during this time</span>
+              </span>
+              <input class="push-switch" id="pushQuietToggle" type="checkbox" />
+            </label>
+            <div class="push-quiet-times" id="pushQuietTimes">
+              <label class="push-time-field">
+                <span>from</span>
+                <input class="popup-input" id="pushQuietStart" type="time" value="23:00" />
+              </label>
+              <label class="push-time-field">
+                <span>to</span>
+                <input class="popup-input" id="pushQuietEnd" type="time" value="08:00" />
+              </label>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -805,7 +883,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-7ODTO5BV.js"></script>
+    <script type="module" src="./assets/main-YMAVZUIB.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");

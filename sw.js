@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "f8d2606c80eb";
+const CACHE_VERSION = "3c5aac26d7dd";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -13,15 +13,16 @@ const PRECACHE_URLS = [
   "./assets/chunk-3AXF6NWG.js",
   "./assets/chunk-CH3H7QIY.js",
   "./assets/cursor-RP7TFDIH.cur",
-  "./assets/main-3AUHES36.css",
-  "./assets/main-7ODTO5BV.js",
+  "./assets/main-CSX6CWKH.css",
+  "./assets/main-YMAVZUIB.js",
   "./assets/quill-LVBG64M3.js",
-  "./assets/theme-emo-C0761D38.css",
+  "./assets/theme-emo-6747AF6E.css",
   "./assets/theme-lavender-6AC25F68.css",
   "./assets/theme-plum-1CAEB744.css",
   "./assets/theme-rose-326F713E.css",
   "./cursors/emo.cur",
   "./icons/apple-touch-icon.png",
+  "./icons/badge-96.png",
   "./icons/favicon-48.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -106,4 +107,73 @@ self.addEventListener("fetch", (event) => {
   if (RUNTIME_HOSTS.has(url.hostname)) {
     event.respondWith(cacheFirst(request, RUNTIME_CACHE));
   }
+});
+
+// ---------------------------------------------------------------------------
+// Push notifications (sent by the send-push Supabase function)
+// ---------------------------------------------------------------------------
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : "" };
+  }
+
+  const title = payload.title || "TOTO & DODO";
+  const options = {
+    body: payload.body || "",
+    icon: "./icons/icon-192.png",
+    badge: "./icons/badge-96.png",
+    tag: payload.tag || undefined,
+    renotify: Boolean(payload.tag),
+    timestamp: Date.now(),
+    data: {
+      type: payload.type || "",
+      postId: payload.postId || "",
+      widgetId: payload.widgetId || "",
+      openComments: Boolean(payload.openComments),
+    },
+  };
+
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      // a dot on the app icon until the diary is opened again
+      self.navigator.setAppBadge ? self.navigator.setAppBadge().catch(() => {}) : null,
+    ]),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = event.notification.data || {};
+
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const client = windows.find((item) => new URL(item.url).origin === self.location.origin);
+      if (client) {
+        await client.focus();
+        client.postMessage({ type: "push-open", ...target });
+        return;
+      }
+
+      const url = new URL("./", self.registration.scope);
+      if (target.postId) url.searchParams.set("push_post", target.postId);
+      if (target.widgetId) url.searchParams.set("push_widget", target.widgetId);
+      if (target.openComments) url.searchParams.set("push_comments", "1");
+      await self.clients.openWindow(url.href);
+    })(),
+  );
+});
+
+// The browser rotated this device's push keys: tell the open app to re-register.
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    self.clients.matchAll({ type: "window" }).then((windows) => {
+      windows.forEach((client) => client.postMessage({ type: "push-resubscribe" }));
+    }),
+  );
 });
