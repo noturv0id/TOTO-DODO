@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../node_modules/@supabase/node-fetch/browser.js"],
+  "sourcesContent": ["\"use strict\";\n\n// ref: https://github.com/tc39/proposal-global\nvar getGlobal = function() {\n    // the only reliable means to get the global object is\n    // `Function('return this')()`\n    // However, this causes CSP violations in Chrome apps.\n    if (typeof self !== 'undefined') { return self; }\n    if (typeof window !== 'undefined') { return window; }\n    if (typeof global !== 'undefined') { return global; }\n    throw new Error('unable to locate global object');\n}\n\nvar globalObject = getGlobal();\n\nexport const fetch = globalObject.fetch;\n\nexport default globalObject.fetch.bind(globalObject);\n\nexport const Headers = globalObject.Headers;\nexport const Request = globalObject.Request;\nexport const Response = globalObject.Response;\n"],
+  "mappings": "+CAAA,IAAAA,EAAA,GAAAC,EAAAD,EAAA,aAAAE,EAAA,YAAAC,EAAA,aAAAC,EAAA,YAAAC,EAAA,UAAAC,IAAA,IAGIC,EAUAC,EAESF,EAEND,EAEMH,EACAC,EACAC,EArBbK,EAAAC,EAAA,KAGIH,EAAY,UAAW,CAIvB,GAAI,OAAO,KAAS,IAAe,OAAO,KAC1C,GAAI,OAAO,OAAW,IAAe,OAAO,OAC5C,GAAI,OAAO,OAAW,IAAe,OAAO,OAC5C,MAAM,IAAI,MAAM,gCAAgC,CACpD,EAEIC,EAAeD,EAAU,EAEhBD,EAAQE,EAAa,MAE3BH,EAAQG,EAAa,MAAM,KAAKA,CAAY,EAEtCN,EAAUM,EAAa,QACvBL,EAAUK,EAAa,QACvBJ,EAAWI,EAAa",
+  "names": ["browser_exports", "__export", "Headers", "Request", "Response", "browser_default", "fetch", "getGlobal", "globalObject", "init_browser", "__esmMin"]
+}
