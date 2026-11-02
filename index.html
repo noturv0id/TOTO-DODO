@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="TOTO &amp; DODO" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#fffdfd" id="themeColorMeta" />
+    <meta name="theme-color" content="#2a1a2a" id="themeColorMeta" />
     <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
@@ -32,27 +32,21 @@
       (() => {
         try {
           const savedTheme = localStorage.getItem("ourMemoriesTheme");
-          const prefersDark = window.matchMedia?.(
-            "(prefers-color-scheme: dark)",
-          ).matches;
-          const knownTheme = ["light", "dark", "rose", "plum", "lavender", "peach", "sky"].includes(savedTheme)
+          const knownTheme = ["plum", "dark", "light", "rose", "lavender", "sky"].includes(savedTheme)
             ? savedTheme
-            : "";
-          document.documentElement.dataset.theme =
-            knownTheme || (prefersDark ? "dark" : "light");
+            : "plum";
+          document.documentElement.dataset.theme = knownTheme;
           document
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
               "content",
-              ({ dark: "#192a2b", plum: "#2a1a2a", lavender: "#fdfcff", peach: "#fffdfb", sky: "#fcfeff" })[
-                document.documentElement.dataset.theme
-              ] || "#fffdfd",
+              ({ dark: "#192a2b", plum: "#2a1a2a", lavender: "#fdfcff", sky: "#fcfeff" })[knownTheme] || "#fffdfd",
             );
         } catch {
-          document.documentElement.dataset.theme = "light";
+          document.documentElement.dataset.theme = "plum";
           document
             .querySelector('meta[name="theme-color"]')
-            ?.setAttribute("content", "#fffdfd");
+            ?.setAttribute("content", "#2a1a2a");
         }
       })();
     </script>
@@ -67,10 +61,10 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-KNSIM3WL.css" />
-    <link rel="modulepreload" href="./assets/main-5E5HU3CH.js" />
+    <link rel="stylesheet" href="./assets/main-S2W73MGX.css" />
+    <link rel="modulepreload" href="./assets/main-7KZ6SLHX.js" />
     <script>
-      window.__THEME_CSS__ = {"lavender":"./assets/theme-lavender-6AC25F68.css","peach":"./assets/theme-peach-BD59E1F0.css","plum":"./assets/theme-plum-793DF050.css","rose":"./assets/theme-rose-326F713E.css","sky":"./assets/theme-sky-2F5ACC8E.css"};
+      window.__THEME_CSS__ = {"lavender":"./assets/theme-lavender-6AC25F68.css","plum":"./assets/theme-plum-793DF050.css","rose":"./assets/theme-rose-326F713E.css","sky":"./assets/theme-sky-2F5ACC8E.css"};
       (function () {
         var href = window.__THEME_CSS__[document.documentElement.dataset.theme];
         if (href) document.write('<link rel="stylesheet" id="themeStylesheet" href="' + href + '" />');
@@ -199,23 +193,20 @@
                 </span>
               </button>
               <div class="theme-menu" id="themeMenu" role="radiogroup" aria-label="theme" hidden>
-                <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>mint
+                <button class="theme-option" type="button" role="radio" data-theme-option="plum" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-plum" aria-hidden="true"></span>dark purple
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="dark" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span>night
+                  <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span>dark green
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>mint
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="rose" aria-checked="false">
                   <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span>rose
                 </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="plum" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-plum" aria-hidden="true"></span>plum night
-                </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="lavender" aria-checked="false">
                   <span class="theme-swatch theme-swatch-lavender" aria-hidden="true"></span>lavender
-                </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="peach" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-peach" aria-hidden="true"></span>peach
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="sky" aria-checked="false">
                   <span class="theme-swatch theme-swatch-sky" aria-hidden="true"></span>sky
@@ -812,7 +803,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-5E5HU3CH.js"></script>
+    <script type="module" src="./assets/main-7KZ6SLHX.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
