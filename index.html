@@ -10,9 +10,11 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="description" content="Our memories diary." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- installed app on iPhone: the page runs underneath the status bar -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TOTO &amp; DODO" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#2a1a2a" id="themeColorMeta" />
+    <meta name="theme-color" content="#17101c" id="themeColorMeta" />
     <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
@@ -40,13 +42,13 @@
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
               "content",
-              ({ dark: "#192a2b", plum: "#2a1a2a", lavender: "#fdfcff", sky: "#fcfeff" })[knownTheme] || "#fffdfd",
+              ({ plum: "#17101c", dark: "#0f1c1d", light: "#fefdf9", rose: "#fff8fb", lavender: "#fbf8ff", sky: "#f8fcff" })[knownTheme] || "#17101c",
             );
         } catch {
           document.documentElement.dataset.theme = "plum";
           document
             .querySelector('meta[name="theme-color"]')
-            ?.setAttribute("content", "#2a1a2a");
+            ?.setAttribute("content", "#17101c");
         }
       })();
     </script>
@@ -61,8 +63,8 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-RS4UCBGV.css" />
-    <link rel="modulepreload" href="./assets/main-2AR5GW5K.js" />
+    <link rel="stylesheet" href="./assets/main-HEH3JCDD.css" />
+    <link rel="modulepreload" href="./assets/main-HBAYQZY3.js" />
     <script>
       window.__THEME_CSS__ = {"lavender":"./assets/theme-lavender-6AC25F68.css","plum":"./assets/theme-plum-793DF050.css","rose":"./assets/theme-rose-326F713E.css","sky":"./assets/theme-sky-2F5ACC8E.css"};
       (function () {
@@ -803,7 +805,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-2AR5GW5K.js"></script>
+    <script type="module" src="./assets/main-HBAYQZY3.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
