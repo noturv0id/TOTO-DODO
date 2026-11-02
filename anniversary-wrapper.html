@@ -229,6 +229,7 @@
       <button class="retry-btn" id="retryBtn" type="button" hidden>
         try again
       </button>
+      <p><a href="./" style="color: inherit">← back to our diary</a></p>
     </main>
     <script>
       const params = new URLSearchParams(location.search);
@@ -401,6 +402,21 @@
         );
       }
 
+      // Floating "back to our diary" button, added to every gift page so there
+      // is always a way home (phones/installed app have no browser back).
+      function injectBackButton(html) {
+        const diaryUrl = new URL("./", wrapperUrl).href;
+        const button = `
+<a href="${diaryUrl}" id="__diaryBackBtn" aria-label="back to our diary"
+  onclick="event.preventDefault();try{if(window.opener!==null||history.length<=1){window.close();}}catch(e){}setTimeout(function(){location.href='${diaryUrl}';},120);"
+  style="position:fixed;z-index:2147483647;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border-radius:999px;background:rgba(30,18,32,.78);color:#fff;font:600 14px/1 Quicksand,system-ui,sans-serif;text-decoration:none;box-shadow:0 6px 18px rgba(0,0,0,.28);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);">
+  <span aria-hidden="true">←</span> back to us ♡
+</a>`;
+        return /<\/body>/i.test(html)
+          ? html.replace(/<\/body>/i, `${button}</body>`)
+          : `${html}${button}`;
+      }
+
       async function prepareHtml(html, url) {
         let preparedHtml = html.replace(/^\uFEFF/, "");
         preparedHtml = addBaseHref(preparedHtml, url);
@@ -408,6 +424,7 @@
         preparedHtml = patchInlineNavigation(preparedHtml);
         preparedHtml = await inlineStylesheets(preparedHtml, url);
         preparedHtml = await inlinePatchedScripts(preparedHtml, url);
+        preparedHtml = injectBackButton(preparedHtml);
         return preparedHtml;
       }
 
