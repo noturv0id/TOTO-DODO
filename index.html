@@ -33,7 +33,7 @@
             const cookie = document.cookie.match(/(?:^|; )ourMemoriesTheme=([^;]+)/);
             savedTheme = cookie ? decodeURIComponent(cookie[1]) : null;
           }
-          const knownTheme = ["plum", "dark", "rose", "light", "lavender", "emo", "glass", "glass-dark"].includes(savedTheme)
+          const knownTheme = ["plum", "dark", "rose", "emo", "glass-dark"].includes(savedTheme)
             ? savedTheme
             : "plum";
           document.documentElement.dataset.theme = knownTheme;
@@ -77,12 +77,12 @@
          Entry editor: Lora, Caveat, Dancing Script. -->
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Fredoka:wght@400;500;600&family=Lora:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Batak&family=Noto+Sans+Symbols+2&family=Quicksand:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Dancing+Script:wght@400;700&family=Fredoka:wght@400;500;600&family=Lora:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Batak&family=Noto+Sans+Symbols+2&family=Quicksand:wght@400;500;600;700&family=Special+Elite&display=swap"
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-QKC2LB2C.css" />
-    <link rel="modulepreload" href="./assets/main-PKUYNM6Z.js" />
+    <link rel="stylesheet" href="./assets/main-BNCDCS4C.css" />
+    <link rel="modulepreload" href="./assets/main-ZZ2OQL5K.js" />
     <script>
       window.__THEME_CSS__ = {"emo":"./assets/theme-emo-7DE1ACB1.css","glass-dark":"./assets/theme-glass-dark-99DC28E3.css","glass":"./assets/theme-glass-669B0DCA.css","lavender":"./assets/theme-lavender-661B6B6D.css","plum":"./assets/theme-plum-72F71389.css","rose":"./assets/theme-rose-43216C01.css"};
       (function () {
@@ -241,28 +241,19 @@
               </button>
               <div class="theme-menu" id="themeMenu" role="radiogroup" aria-label="theme" hidden>
                 <button class="theme-option" type="button" role="radio" data-theme-option="emo" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-emo" aria-hidden="true"></span>emo
-                </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="glass-dark" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-glass-dark" aria-hidden="true"></span>dark glass
+                  <span class="theme-swatch theme-swatch-emo" aria-hidden="true"></span><span class="theme-option-name">dark red</span>
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="plum" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-plum" aria-hidden="true"></span>dark purple
+                  <span class="theme-swatch theme-swatch-plum" aria-hidden="true"></span><span class="theme-option-name">dark purple</span>
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="dark" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span>dark green
+                  <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span><span class="theme-option-name">dark green</span>
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="glass-dark" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-glass-dark" aria-hidden="true"></span><span class="theme-option-name">dark glass</span>
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="rose" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span>light pink
-                </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="glass" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-glass" aria-hidden="true"></span>light glass
-                </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-light" aria-hidden="true"></span>light green
-                </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="lavender" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-lavender" aria-hidden="true"></span>light purple
+                  <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span><span class="theme-option-name">light pink</span>
                 </button>
               </div>
             </div>
@@ -876,7 +867,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-PKUYNM6Z.js"></script>
+    <script type="module" src="./assets/main-ZZ2OQL5K.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
