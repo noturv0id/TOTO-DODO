@@ -33,8 +33,15 @@
     <script>
       (() => {
         try {
-          const savedTheme = localStorage.getItem("ourMemoriesTheme");
-          const knownTheme = ["plum", "dark", "rose", "light", "lavender", "emo"].includes(savedTheme)
+          let savedTheme = null;
+          try {
+            savedTheme = localStorage.getItem("ourMemoriesTheme");
+          } catch {}
+          if (!savedTheme) {
+            const cookie = document.cookie.match(/(?:^|; )ourMemoriesTheme=([^;]+)/);
+            savedTheme = cookie ? decodeURIComponent(cookie[1]) : null;
+          }
+          const knownTheme = ["plum", "dark", "rose", "light", "lavender", "emo", "glass"].includes(savedTheme)
             ? savedTheme
             : "plum";
           document.documentElement.dataset.theme = knownTheme;
@@ -42,7 +49,7 @@
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
               "content",
-              ({ plum: "#17101c", dark: "#0f1c1d", light: "#fefdf9", rose: "#fff8fb", lavender: "#fbf8ff", emo: "#070607" })[knownTheme] || "#17101c",
+              ({ plum: "#17101c", dark: "#0f1c1d", light: "#fefdf9", rose: "#fff8fb", lavender: "#fbf8ff", emo: "#070607", glass: "#e9e6ff" })[knownTheme] || "#17101c",
             );
         } catch {
           document.documentElement.dataset.theme = "plum";
@@ -63,10 +70,10 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-IIHE4FBP.css" />
-    <link rel="modulepreload" href="./assets/main-EU5JZQ4G.js" />
+    <link rel="stylesheet" href="./assets/main-F23M5OYS.css" />
+    <link rel="modulepreload" href="./assets/main-KG5IGXAN.js" />
     <script>
-      window.__THEME_CSS__ = {"emo":"./assets/theme-emo-7DE1ACB1.css","lavender":"./assets/theme-lavender-661B6B6D.css","plum":"./assets/theme-plum-72F71389.css","rose":"./assets/theme-rose-43216C01.css"};
+      window.__THEME_CSS__ = {"emo":"./assets/theme-emo-7DE1ACB1.css","glass":"./assets/theme-glass-1E671BC8.css","lavender":"./assets/theme-lavender-661B6B6D.css","plum":"./assets/theme-plum-72F71389.css","rose":"./assets/theme-rose-43216C01.css"};
       (function () {
         var href = window.__THEME_CSS__[document.documentElement.dataset.theme];
         if (href) document.write('<link rel="stylesheet" id="themeStylesheet" href="' + href + '" />');
@@ -237,6 +244,9 @@
                 </button>
                 <button class="theme-option" type="button" role="radio" data-theme-option="lavender" aria-checked="false">
                   <span class="theme-swatch theme-swatch-lavender" aria-hidden="true"></span>light purple
+                </button>
+                <button class="theme-option" type="button" role="radio" data-theme-option="glass" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-glass" aria-hidden="true"></span>glass
                 </button>
               </div>
             </div>
@@ -863,7 +873,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-EU5JZQ4G.js"></script>
+    <script type="module" src="./assets/main-KG5IGXAN.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
