@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "0b0703154aca";
+const CACHE_VERSION = "bebeae76ee77";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -18,8 +18,8 @@ const PRECACHE_URLS = [
   "./assets/index.es-JZSSGXFA.js",
   "./assets/jspdf.es.min-EXCKTWIO.js",
   "./assets/lib-G5RUG5FD.js",
-  "./assets/main-A74M2OJB.css",
-  "./assets/main-GI5XRL32.js",
+  "./assets/main-LBYT22KO.js",
+  "./assets/main-W6BYFMQL.css",
   "./assets/purify-YOBFRZ4P.js",
   "./assets/quill-LVBG64M3.js",
   "./assets/theme-emo-7DE1ACB1.css",
@@ -141,6 +141,7 @@ self.addEventListener("push", (event) => {
       type: payload.type || "",
       postId: payload.postId || "",
       widgetId: payload.widgetId || "",
+      commentId: payload.commentId || "",
       openComments: Boolean(payload.openComments),
     },
   };
@@ -172,6 +173,7 @@ self.addEventListener("notificationclick", (event) => {
       if (target.postId) url.searchParams.set("push_post", target.postId);
       if (target.widgetId) url.searchParams.set("push_widget", target.widgetId);
       if (target.openComments) url.searchParams.set("push_comments", "1");
+      if (target.commentId) url.searchParams.set("push_comment", target.commentId);
       await self.clients.openWindow(url.href);
     })(),
   );
