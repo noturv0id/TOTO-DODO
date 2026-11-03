@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "1e4dc9087086";
+const CACHE_VERSION = "3070befbcafe";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -37,42 +37,7 @@ const PRECACHE_URLS = [
   "./index.html",
   "./launching-pc.webp",
   "./launching.webp",
-  "./site.webmanifest",
-  "./themes/dark/apple-touch-icon.png",
-  "./themes/dark/favicon-48.png",
-  "./themes/dark/icon-192.png",
-  "./themes/dark/launching-pc.webp",
-  "./themes/dark/launching.webp",
-  "./themes/emo/apple-touch-icon.png",
-  "./themes/emo/favicon-48.png",
-  "./themes/emo/icon-192.png",
-  "./themes/emo/launching-pc.webp",
-  "./themes/emo/launching.webp",
-  "./themes/glass-dark/apple-touch-icon.png",
-  "./themes/glass-dark/favicon-48.png",
-  "./themes/glass-dark/icon-192.png",
-  "./themes/glass-dark/launching-pc.webp",
-  "./themes/glass-dark/launching.webp",
-  "./themes/glass/apple-touch-icon.png",
-  "./themes/glass/favicon-48.png",
-  "./themes/glass/icon-192.png",
-  "./themes/glass/launching-pc.webp",
-  "./themes/glass/launching.webp",
-  "./themes/lavender/apple-touch-icon.png",
-  "./themes/lavender/favicon-48.png",
-  "./themes/lavender/icon-192.png",
-  "./themes/lavender/launching-pc.webp",
-  "./themes/lavender/launching.webp",
-  "./themes/light/apple-touch-icon.png",
-  "./themes/light/favicon-48.png",
-  "./themes/light/icon-192.png",
-  "./themes/light/launching-pc.webp",
-  "./themes/light/launching.webp",
-  "./themes/rose/apple-touch-icon.png",
-  "./themes/rose/favicon-48.png",
-  "./themes/rose/icon-192.png",
-  "./themes/rose/launching-pc.webp",
-  "./themes/rose/launching.webp"
+  "./site.webmanifest"
 ];
 const RUNTIME_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 
