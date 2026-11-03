@@ -15,20 +15,12 @@
     <meta name="apple-mobile-web-app-title" content="TOTO &amp; DODO" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#17101c" id="themeColorMeta" />
-    <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png" data-theme-icon="favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" data-theme-icon="icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" data-theme-icon="apple-touch-icon.png" />
     <link rel="manifest" href="./site.webmanifest" />
     <link rel="preconnect" href="https://ytrbsxknhlsfqkqphlms.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://ytrbsxknhlsfqkqphlms.supabase.co" />
-    <link
-      rel="preload"
-      as="image"
-      type="image/webp"
-      imagesrcset="./launching.webp 940w, ./launching-pc.webp 1671w"
-      imagesizes="100vw"
-      fetchpriority="high"
-    />
     <title>TOTO & DODO</title>
     <script>
       (() => {
@@ -45,12 +37,31 @@
             ? savedTheme
             : "plum";
           document.documentElement.dataset.theme = knownTheme;
+          // each theme has its own launch picture and tab icon (dark purple
+          // uses the original files)
+          const art = knownTheme === "plum" ? "./" : "./themes/" + knownTheme + "/";
+          window.__THEME_ART__ = art;
+          document.querySelectorAll("link[data-theme-icon]").forEach((link) => {
+            link.href = (knownTheme === "plum" ? "./icons/" : art) + link.dataset.themeIcon;
+          });
+          const preload = document.createElement("link");
+          preload.rel = "preload";
+          preload.as = "image";
+          preload.type = "image/webp";
+          preload.setAttribute("imagesrcset", art + "launching.webp 940w, " + art + "launching-pc.webp 1671w");
+          preload.setAttribute("imagesizes", "100vw");
+          preload.setAttribute("fetchpriority", "high");
+          document.head.appendChild(preload);
           document
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
               "content",
               ({ plum: "#17101c", dark: "#0f1c1d", light: "#fefdf9", rose: "#fff8fb", lavender: "#fbf8ff", emo: "#070607", glass: "#e9e6ff", "glass-dark": "#0d0b1c" })[knownTheme] || "#17101c",
             );
+          document.documentElement.style.setProperty(
+            "--launch-bg",
+            ({ plum: "#1a1020", dark: "#0f1c1d", light: "#fbfaf3", rose: "#fff3f8", lavender: "#f8f2ff", emo: "#070607", glass: "#e6defc", "glass-dark": "#110d24" })[knownTheme] || "#1a1020",
+          );
         } catch {
           document.documentElement.dataset.theme = "plum";
           document
@@ -70,8 +81,8 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-5AEMW767.css" />
-    <link rel="modulepreload" href="./assets/main-52S2C5VC.js" />
+    <link rel="stylesheet" href="./assets/main-QKC2LB2C.css" />
+    <link rel="modulepreload" href="./assets/main-PKUYNM6Z.js" />
     <script>
       window.__THEME_CSS__ = {"emo":"./assets/theme-emo-7DE1ACB1.css","glass-dark":"./assets/theme-glass-dark-99DC28E3.css","glass":"./assets/theme-glass-669B0DCA.css","lavender":"./assets/theme-lavender-661B6B6D.css","plum":"./assets/theme-plum-72F71389.css","rose":"./assets/theme-rose-43216C01.css"};
       (function () {
@@ -82,18 +93,20 @@
   </head>
   <body class="app-booting">
     <div class="launch-splash" id="launchSplash" aria-hidden="true">
-      <picture>
-        <source media="(min-width: 721px)" type="image/webp" srcset="./launching-pc.webp" />
-        <source media="(min-width: 721px)" srcset="./launching-pc.jpeg" />
-        <source type="image/webp" srcset="./launching.webp" />
-        <img
-          class="launch-splash-image"
-          src="./launching.jpeg"
-          alt=""
-          fetchpriority="high"
-          decoding="async"
-        />
-      </picture>
+      <script>
+        // the launch picture for the saved theme (set up in <head>)
+        (() => {
+          const art = window.__THEME_ART__ || "./";
+          document.write(
+            '<picture>' +
+              '<source media="(min-width: 721px)" type="image/webp" srcset="' + art + 'launching-pc.webp" />' +
+              '<source media="(min-width: 721px)" srcset="' + art + 'launching-pc.jpeg" />' +
+              '<source type="image/webp" srcset="' + art + 'launching.webp" />' +
+              '<img class="launch-splash-image" src="' + art + 'launching.jpeg" alt="" fetchpriority="high" decoding="async" />' +
+            '</picture>',
+          );
+        })();
+      </script>
     </div>
     <div class="page" data-mobile-view="timeline">
       <div class="floating-decor" id="floatingDecor"></div>
@@ -863,7 +876,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-52S2C5VC.js"></script>
+    <script type="module" src="./assets/main-PKUYNM6Z.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
