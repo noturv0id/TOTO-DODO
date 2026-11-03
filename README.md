@@ -4,7 +4,7 @@
 
 # ˚₊‧ TOTO & DODO ‧₊˚
 
-**our very own little social media ♡**
+**our very own little social media app ♡**
 a safe place for us to love, share, and have fun.
 
 <a href="https://noturv0id.github.io/TOTO-DODO/"><img src="https://img.shields.io/badge/open%20the%20diary-♡-e2557f?style=for-the-badge&labelColor=17101c" alt="open the diary" /></a>
@@ -65,7 +65,7 @@ a safe place for us to love, share, and have fun.
 
 ## 🗂️ what's in this repo
 
-This repo is the **live website** that GitHub Pages serves. The files here are built automatically, so they're never edited by hand.
+This repo is the **live website** that GitHub Pages serves.
 
 ```
 TOTO-DODO/
