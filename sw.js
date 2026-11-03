@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "3afd744a786a";
+const CACHE_VERSION = "f63423b2abf6";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -18,13 +18,13 @@ const PRECACHE_URLS = [
   "./assets/index.es-JZSSGXFA.js",
   "./assets/jspdf.es.min-EXCKTWIO.js",
   "./assets/lib-G5RUG5FD.js",
-  "./assets/main-FJHULW4J.js",
-  "./assets/main-TS2ZMNLJ.css",
+  "./assets/main-A74M2OJB.css",
+  "./assets/main-EE4KJDBJ.js",
   "./assets/purify-YOBFRZ4P.js",
   "./assets/quill-LVBG64M3.js",
   "./assets/theme-emo-7DE1ACB1.css",
-  "./assets/theme-glass-4D5CD02A.css",
-  "./assets/theme-glass-dark-8906DA93.css",
+  "./assets/theme-glass-DAB30AFD.css",
+  "./assets/theme-glass-dark-55265D44.css",
   "./assets/theme-lavender-661B6B6D.css",
   "./assets/theme-plum-72F71389.css",
   "./assets/theme-rose-43216C01.css",
