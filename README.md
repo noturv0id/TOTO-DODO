@@ -44,15 +44,15 @@ a safe place for us to love, share, and have fun.
 
 **dark red · dark purple · dark green · dark glass · light pink**
 
-<img src="readme/themes-phone.jpg" alt="launch screens for every theme" width="100%" />
+<img src="readme/themes-phone-5.jpg" alt="launch screens for every theme" width="100%" />
 
 <br /><br />
 
-<img src="readme/themes-desktop.jpg" alt="desktop launch screens for every theme" width="100%" />
+<img src="readme/themes-desktop-5.jpg" alt="desktop launch screens for every theme" width="100%" />
 
 <br /><br />
 
-<img src="readme/icons.jpg" alt="icons for every theme" width="80%" />
+<img src="readme/icons-5.jpg" alt="icons for every theme" width="80%" />
 
 </div>
 
