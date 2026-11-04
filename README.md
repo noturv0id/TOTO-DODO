@@ -89,7 +89,7 @@ TOTO-DODO/
 
 ### made with love by
 
-**[noturv0id](https://github.com/noturv0id)** · coder / stylist
+**[noturv0id](https://github.com/noturv0id)** · coder / stylist / funder
 &nbsp;&nbsp;♡&nbsp;&nbsp;
 **[7xb7](https://github.com/7xb7)** · coder / thinker box
 
