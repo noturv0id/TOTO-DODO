@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "61496c92d865";
+const CACHE_VERSION = "a4fdeae6858c";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -18,16 +18,14 @@ const PRECACHE_URLS = [
   "./assets/index.es-JZSSGXFA.js",
   "./assets/jspdf.es.min-EXCKTWIO.js",
   "./assets/lib-G5RUG5FD.js",
-  "./assets/main-O67DE37Q.css",
-  "./assets/main-Z3BHYTVL.js",
+  "./assets/main-SC6E26HW.css",
+  "./assets/main-YPMPYKZQ.js",
   "./assets/purify-YOBFRZ4P.js",
   "./assets/quill-LVBG64M3.js",
-  "./assets/theme-emo-7DE1ACB1.css",
-  "./assets/theme-glass-669B0DCA.css",
-  "./assets/theme-glass-dark-99DC28E3.css",
-  "./assets/theme-lavender-661B6B6D.css",
-  "./assets/theme-plum-72F71389.css",
-  "./assets/theme-rose-43216C01.css",
+  "./assets/theme-emo-2C22CE30.css",
+  "./assets/theme-glass-dark-F424E8CC.css",
+  "./assets/theme-plum-54351BCC.css",
+  "./assets/theme-rose-35547C55.css",
   "./cursors/emo.cur",
   "./icons/apple-touch-icon.png",
   "./icons/badge-96.png",

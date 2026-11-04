@@ -28,7 +28,7 @@ a safe place for us to love, share, and have fun.
 | 📖 **entries** | our diary: words, photos, songs and stickers, with likes and comments |
 | 💬 **comments & replies** | threads like tiktok / instagram, with likes, @mentions and *view replies* |
 | 📌 **widgets** | pin it photos, now playing, smol note, important dates, wishlist, weather, poems |
-| 🖼️ **photo editor** | pin it has its own editor: crop, rotate, flip, straighten, light & colour, filters, drawing, and words in four fonts you can drag anywhere |
+| 🖼️ **photo editor** | pin it has its own editor: crop, rotate, flip, straighten, filters, drawing, and words in four fonts you can drag anywhere |
 | 🥺 **i miss you** | one tap to tell the other person, with a counter that keeps score |
 | 💞 **together for** | how many days we've had (and counting) |
 | 🔔 **notifications** | on our phones for entries, comments, replies, likes, stickers and more |
