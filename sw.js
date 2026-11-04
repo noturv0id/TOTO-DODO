@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "18996eb2837e";
+const CACHE_VERSION = "83517554ead6";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -18,8 +18,8 @@ const PRECACHE_URLS = [
   "./assets/index.es-JZSSGXFA.js",
   "./assets/jspdf.es.min-EXCKTWIO.js",
   "./assets/lib-G5RUG5FD.js",
-  "./assets/main-7Y5OD63D.css",
-  "./assets/main-GGEESXSY.js",
+  "./assets/main-R35QV3HC.css",
+  "./assets/main-SKZOYXFE.js",
   "./assets/purify-YOBFRZ4P.js",
   "./assets/quill-LVBG64M3.js",
   "./assets/theme-emo-7DE1ACB1.css",
@@ -40,6 +40,9 @@ const PRECACHE_URLS = [
   "./site.webmanifest"
 ];
 const RUNTIME_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
+const PHOTO_CACHE = "photos-v1";
+const PHOTO_CACHE_LIMIT = 60;
+const WIDGET_PHOTO_PATH = /^\/storage\/v1\/object\/public\/[^/]+\/[^/]+\/widget-photos\//;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -91,6 +94,25 @@ async function cacheFirst(request, cacheName) {
   return response;
 }
 
+// A pinned photo's address never changes (every upload gets a new one), so a
+// copy kept on the device is always right and opens instantly.
+async function cachedWidgetPhoto(request) {
+  const cache = await caches.open(PHOTO_CACHE);
+  const cached = await cache.match(request.url);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request.url, { mode: "cors", credentials: "omit" });
+    if (response.ok) {
+      await cache.put(request.url, response.clone());
+      const keys = await cache.keys();
+      await Promise.all(keys.slice(0, -PHOTO_CACHE_LIMIT).map((key) => cache.delete(key)));
+    }
+    return response;
+  } catch {
+    return fetch(request);
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -107,6 +129,11 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin === self.location.origin) {
     event.respondWith(cacheFirst(request, SHELL_CACHE));
+    return;
+  }
+
+  if (WIDGET_PHOTO_PATH.test(url.pathname)) {
+    event.respondWith(cachedWidgetPhoto(request));
     return;
   }
 

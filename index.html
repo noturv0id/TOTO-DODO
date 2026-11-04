@@ -52,6 +52,17 @@
           preload.setAttribute("imagesizes", "100vw");
           preload.setAttribute("fetchpriority", "high");
           document.head.appendChild(preload);
+          // the pinned photos from last visit start loading right away
+          try {
+            JSON.parse(localStorage.getItem("bootWidgetPhotos") || "[]").forEach((href) => {
+              const photo = document.createElement("link");
+              photo.rel = "preload";
+              photo.as = "image";
+              photo.href = href;
+              photo.setAttribute("fetchpriority", "high");
+              document.head.appendChild(photo);
+            });
+          } catch {}
           document
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
@@ -81,8 +92,8 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-7Y5OD63D.css" />
-    <link rel="modulepreload" href="./assets/main-GGEESXSY.js" />
+    <link rel="stylesheet" href="./assets/main-R35QV3HC.css" />
+    <link rel="modulepreload" href="./assets/main-SKZOYXFE.js" />
     <script>
       window.__THEME_CSS__ = {"emo":"./assets/theme-emo-7DE1ACB1.css","glass-dark":"./assets/theme-glass-dark-99DC28E3.css","glass":"./assets/theme-glass-669B0DCA.css","lavender":"./assets/theme-lavender-661B6B6D.css","plum":"./assets/theme-plum-72F71389.css","rose":"./assets/theme-rose-43216C01.css"};
       (function () {
@@ -867,7 +878,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-GGEESXSY.js"></script>
+    <script type="module" src="./assets/main-SKZOYXFE.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");
