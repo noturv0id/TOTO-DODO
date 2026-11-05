@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "1b6a2d772717";
+const CACHE_VERSION = "474b9de55bea";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -18,14 +18,14 @@ const PRECACHE_URLS = [
   "./assets/index.es-JZSSGXFA.js",
   "./assets/jspdf.es.min-EXCKTWIO.js",
   "./assets/lib-G5RUG5FD.js",
-  "./assets/main-SELRQE7W.css",
-  "./assets/main-SVICVQFX.js",
+  "./assets/main-DHO7NE7F.js",
+  "./assets/main-V4EPNIAY.css",
   "./assets/purify-YOBFRZ4P.js",
   "./assets/quill-LVBG64M3.js",
-  "./assets/theme-emo-2C22CE30.css",
-  "./assets/theme-glass-dark-37D16E00.css",
-  "./assets/theme-plum-54351BCC.css",
-  "./assets/theme-rose-35547C55.css",
+  "./assets/theme-emo-B5F230DB.css",
+  "./assets/theme-glass-dark-078215CF.css",
+  "./assets/theme-plum-48FF8711.css",
+  "./assets/theme-rose-FC497CDA.css",
   "./cursors/emo.cur",
   "./discord-wide.png",
   "./icons/apple-touch-icon.png",
@@ -189,10 +189,15 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     (async () => {
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      const client = windows.find((item) => new URL(item.url).origin === self.location.origin);
+      // only the diary itself listens for "push-open", not the gift page
+      const scope = self.registration.scope;
+      const client = windows.find((item) => {
+        const page = item.url.split(/[?#]/)[0];
+        return page === scope || page === `${scope}index.html`;
+      });
       if (client) {
         await client.focus();
-        client.postMessage({ type: "push-open", ...target });
+        client.postMessage({ ...target, type: "push-open" });
         return;
       }
 

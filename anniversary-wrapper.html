@@ -346,24 +346,24 @@
           .join("/");
       }
 
-      function buildPublicUrl(config) {
-        const base = String(config.supabaseUrl || "").replace(/\/+$/, "");
-        if (!base || !config.bucket || !config.path) return "";
-        return `${base}/storage/v1/object/public/${encodeURIComponent(config.bucket)}/${encodePath(config.path)}`;
-      }
+      const pagesBaseUrl = `${defaultConfig.supabaseUrl}/storage/v1/object/public/${defaultConfig.bucket}/`;
 
       function getConfig() {
         return {
-          supabaseUrl: params.get("supabaseUrl") || defaultConfig.supabaseUrl,
-          bucket: params.get("bucket") || defaultConfig.bucket,
           path: params.get("path") || defaultConfig.path,
           url: params.get("url") || "",
         };
       }
 
+      // This page writes what it fetches into the diary's own origin, so it may
+      // only ever load pages from the anniversary bucket.
       function resolveUrl(config) {
-        if (config.url && /^https?:\/\//i.test(config.url)) return config.url;
-        return buildPublicUrl(config);
+        try {
+          const { href } = new URL(config.url || encodePath(config.path), pagesBaseUrl);
+          return href.startsWith(pagesBaseUrl) ? href : "";
+        } catch {
+          return "";
+        }
       }
 
       function getAssetBaseUrl(url) {
