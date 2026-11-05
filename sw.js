@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "2bbc28b4c685";
+const CACHE_VERSION = "7d9ae96bb411";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -18,14 +18,14 @@ const PRECACHE_URLS = [
   "./assets/index.es-JZSSGXFA.js",
   "./assets/jspdf.es.min-EXCKTWIO.js",
   "./assets/lib-G5RUG5FD.js",
-  "./assets/main-5O5JHGEP.css",
-  "./assets/main-ZMWYZICD.js",
+  "./assets/main-F3GSJ7YI.css",
+  "./assets/main-VAC54JMV.js",
   "./assets/purify-YOBFRZ4P.js",
   "./assets/quill-LVBG64M3.js",
-  "./assets/theme-emo-B5F230DB.css",
-  "./assets/theme-glass-dark-078215CF.css",
-  "./assets/theme-plum-48FF8711.css",
-  "./assets/theme-rose-FC497CDA.css",
+  "./assets/theme-emo-8579E0D4.css",
+  "./assets/theme-glass-dark-8882DA2D.css",
+  "./assets/theme-plum-A59CC414.css",
+  "./assets/theme-rose-15ACAF3D.css",
   "./cursors/emo.cur",
   "./discord-wide.png",
   "./icons/apple-touch-icon.png",
