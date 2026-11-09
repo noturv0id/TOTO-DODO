@@ -43,7 +43,7 @@ a safe place for us to love, share, and have fun.
 
 <div align="center">
 
-**dark red · dark purple · dark green · dark glass · light pink**
+**dark glass (the main one) · dark red · dark purple · dark green · light pink**
 
 <img src="readme/themes-phone-5.jpg" alt="launch screens for every theme" width="100%" />
 
@@ -95,10 +95,9 @@ This repo is the **live website** that GitHub Pages serves.
 TOTO-DODO/
 ├── index.html            the diary
 ├── assets/               the app's code, styles and themes (hashed so updates show up right away)
-├── themes/               launch screens + icons for each theme
+├── themes/               launch screens + icons for each theme (glass is the main one)
 ├── icons/                app icons
 ├── cursors/              custom cursors
-├── launching*.jpeg/webp  the dark purple launch screen
 ├── anniversary-wrapper.html  a little gift page
 ├── site.webmanifest      makes it installable
 ├── sw.js                 lets it work offline + shows notifications

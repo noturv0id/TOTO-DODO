@@ -14,10 +14,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TOTO &amp; DODO" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#17101c" id="themeColorMeta" />
-    <link rel="icon" type="image/png" sizes="48x48" href="./icons/favicon-48.png" data-theme-icon="favicon-48.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" data-theme-icon="icon-192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" data-theme-icon="apple-touch-icon.png" />
+    <meta name="theme-color" content="#0d0b1c" id="themeColorMeta" />
+    <link rel="icon" type="image/png" sizes="48x48" href="./themes/glass/favicon-48.png" data-theme-icon="favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./themes/glass/icon-192.png" data-theme-icon="icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./themes/glass/apple-touch-icon.png" data-theme-icon="apple-touch-icon.png" />
     <link rel="manifest" href="./site.webmanifest" />
     <link rel="preconnect" href="https://ytrbsxknhlsfqkqphlms.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://ytrbsxknhlsfqkqphlms.supabase.co" />
@@ -33,16 +33,17 @@
             const cookie = document.cookie.match(/(?:^|; )ourMemoriesTheme=([^;]+)/);
             savedTheme = cookie ? decodeURIComponent(cookie[1]) : null;
           }
-          const knownTheme = ["plum", "dark", "rose", "emo", "glass-dark"].includes(savedTheme)
+          // themes were renamed to the colours they show; older saves still work
+          savedTheme = ({ plum: "purple", dark: "green", emo: "red", "glass-dark": "glass", rose: "pink" })[savedTheme] || savedTheme;
+          const knownTheme = ["purple", "green", "pink", "red", "glass"].includes(savedTheme)
             ? savedTheme
-            : "plum";
+            : "glass";
           document.documentElement.dataset.theme = knownTheme;
-          // each theme has its own launch picture and tab icon (dark purple
-          // uses the original files)
-          const art = knownTheme === "plum" ? "./" : "./themes/" + knownTheme + "/";
+          // each theme has its own launch picture and tab icon in themes/<name>/
+          const art = "./themes/" + knownTheme + "/";
           window.__THEME_ART__ = art;
           document.querySelectorAll("link[data-theme-icon]").forEach((link) => {
-            link.href = (knownTheme === "plum" ? "./icons/" : art) + link.dataset.themeIcon;
+            link.href = art + link.dataset.themeIcon;
           });
           const preload = document.createElement("link");
           preload.rel = "preload";
@@ -67,17 +68,17 @@
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
               "content",
-              ({ plum: "#17101c", dark: "#0f1c1d", rose: "#fff8fb", emo: "#070607", "glass-dark": "#0d0b1c" })[knownTheme] || "#17101c",
+              ({ purple: "#17101c", green: "#0f1c1d", pink: "#fff8fb", red: "#070607", glass: "#0d0b1c" })[knownTheme] || "#0d0b1c",
             );
           document.documentElement.style.setProperty(
             "--launch-bg",
-            ({ plum: "#1a1020", dark: "#0f1c1d", rose: "#fff3f8", emo: "#070607", "glass-dark": "#1e1b3c" })[knownTheme] || "#1a1020",
+            ({ purple: "#1a1020", green: "#0f1c1d", pink: "#fff3f8", red: "#070607", glass: "#1e1b3c" })[knownTheme] || "#1e1b3c",
           );
         } catch {
-          document.documentElement.dataset.theme = "plum";
+          document.documentElement.dataset.theme = "glass";
           document
             .querySelector('meta[name="theme-color"]')
-            ?.setAttribute("content", "#17101c");
+            ?.setAttribute("content", "#0d0b1c");
         }
       })();
     </script>
@@ -94,10 +95,10 @@
       media="print"
       onload="this.media='all'"
     />
-    <link rel="stylesheet" href="./assets/main-JSHJWMEP.css" />
-    <link rel="modulepreload" href="./assets/main-EDCNT7SR.js" />
+    <link rel="stylesheet" href="./assets/main-BVGDJGDG.css" />
+    <link rel="modulepreload" href="./assets/main-XSOXUZMB.js" />
     <script>
-      window.__THEME_CSS__ = {"emo":"./assets/theme-emo-8579E0D4.css","glass-dark":"./assets/theme-glass-dark-8882DA2D.css","plum":"./assets/theme-plum-A59CC414.css","rose":"./assets/theme-rose-15ACAF3D.css"};
+      window.__THEME_CSS__ = {"glass":"./assets/theme-glass-71B131CB.css","pink":"./assets/theme-pink-F7288814.css","purple":"./assets/theme-purple-23AEB002.css","red":"./assets/theme-red-E08C8FA3.css"};
       (function () {
         var href = window.__THEME_CSS__[document.documentElement.dataset.theme];
         if (href) document.write('<link rel="stylesheet" id="themeStylesheet" href="' + href + '" />');
@@ -109,7 +110,7 @@
       <script>
         // the launch picture for the saved theme (set up in <head>)
         (() => {
-          const art = window.__THEME_ART__ || "./";
+          const art = window.__THEME_ART__ || "./themes/glass/";
           document.write(
             '<picture>' +
               '<source media="(min-width: 721px)" type="image/webp" srcset="' + art + 'launching-pc.webp" />' +
@@ -267,20 +268,20 @@
                 </span>
               </button>
               <div class="theme-menu" id="themeMenu" role="radiogroup" aria-label="theme" hidden>
-                <button class="theme-option" type="button" role="radio" data-theme-option="plum" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-plum" aria-hidden="true"></span><span>dark purple</span>
+                <button class="theme-option" type="button" role="radio" data-theme-option="glass" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-glass" aria-hidden="true"></span><span>dark glass</span>
                 </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="dark" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-dark" aria-hidden="true"></span><span>dark green</span>
+                <button class="theme-option" type="button" role="radio" data-theme-option="purple" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-purple" aria-hidden="true"></span><span>dark purple</span>
                 </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="glass-dark" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-glass-dark" aria-hidden="true"></span><span>dark glass</span>
+                <button class="theme-option" type="button" role="radio" data-theme-option="green" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-green" aria-hidden="true"></span><span>dark green</span>
                 </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="rose" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-rose" aria-hidden="true"></span><span>light pink</span>
+                <button class="theme-option" type="button" role="radio" data-theme-option="pink" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-pink" aria-hidden="true"></span><span>light pink</span>
                 </button>
-                <button class="theme-option" type="button" role="radio" data-theme-option="emo" aria-checked="false">
-                  <span class="theme-swatch theme-swatch-emo" aria-hidden="true"></span><span>dark red</span>
+                <button class="theme-option" type="button" role="radio" data-theme-option="red" aria-checked="false">
+                  <span class="theme-swatch theme-swatch-red" aria-hidden="true"></span><span>dark red</span>
                 </button>
               </div>
             </div>
@@ -895,7 +896,7 @@
       </div>
     </div>
 
-    <script type="module" src="./assets/main-EDCNT7SR.js"></script>
+    <script type="module" src="./assets/main-XSOXUZMB.js"></script>
     <script>
       window.setTimeout(() => {
         const splash = document.getElementById("launchSplash");

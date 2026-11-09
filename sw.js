@@ -2,41 +2,38 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "307367f01b2c";
+const CACHE_VERSION = "a46e3654c54b";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
   "./",
   "./anniversary-wrapper.html",
-  "./assets/browser-AEHXE3KZ.js",
-  "./assets/chunk-3AXF6NWG.js",
-  "./assets/chunk-CH3H7QIY.js",
+  "./assets/browser-AKIEL4OY.js",
+  "./assets/chunk-35U5YR53.js",
   "./assets/chunk-DUBGXUAY.js",
-  "./assets/chunk-KJDCOYMG.js",
+  "./assets/chunk-HLDC4GTP.js",
+  "./assets/chunk-NFJDKPW2.js",
+  "./assets/chunk-SVIDGI4S.js",
   "./assets/cursor-RP7TFDIH.cur",
-  "./assets/game-RWAKSUDZ.js",
-  "./assets/html2canvas-PSI5U373.js",
-  "./assets/index.es-JZSSGXFA.js",
-  "./assets/jspdf.es.min-EXCKTWIO.js",
-  "./assets/lib-G5RUG5FD.js",
-  "./assets/main-EDCNT7SR.js",
-  "./assets/main-JSHJWMEP.css",
-  "./assets/purify-YOBFRZ4P.js",
-  "./assets/quill-LVBG64M3.js",
-  "./assets/theme-emo-8579E0D4.css",
-  "./assets/theme-glass-dark-8882DA2D.css",
-  "./assets/theme-plum-A59CC414.css",
-  "./assets/theme-rose-15ACAF3D.css",
-  "./cursors/emo.cur",
+  "./assets/html2canvas-O7APVNR3.js",
+  "./assets/index.es-D4YYFG3B.js",
+  "./assets/island-PNOKRK4F.js",
+  "./assets/jspdf.es.min-OCSPEP4B.js",
+  "./assets/lib-GQC6TMCM.js",
+  "./assets/main-BVGDJGDG.css",
+  "./assets/main-XSOXUZMB.js",
+  "./assets/purify.es-TUQRS6UW.js",
+  "./assets/quill-IGYLABQZ.js",
+  "./assets/theme-glass-71B131CB.css",
+  "./assets/theme-pink-F7288814.css",
+  "./assets/theme-purple-23AEB002.css",
+  "./assets/theme-red-E08C8FA3.css",
+  "./cursors/red.cur",
   "./discord-wide.png",
-  "./icons/apple-touch-icon.png",
   "./icons/badge-96.png",
-  "./icons/favicon-48.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./index.html",
-  "./launching-pc.webp",
-  "./launching.webp",
   "./site.webmanifest"
 ];
 const RUNTIME_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
