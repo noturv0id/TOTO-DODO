@@ -2,26 +2,25 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "c5635bd1b8f7";
+const CACHE_VERSION = "307367f01b2c";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
   "./",
   "./anniversary-wrapper.html",
   "./assets/browser-AEHXE3KZ.js",
-  "./assets/browser-GFQCFTFD.js",
   "./assets/chunk-3AXF6NWG.js",
-  "./assets/chunk-3FXWEWVW.js",
   "./assets/chunk-CH3H7QIY.js",
   "./assets/chunk-DUBGXUAY.js",
+  "./assets/chunk-KJDCOYMG.js",
   "./assets/cursor-RP7TFDIH.cur",
-  "./assets/game-KGMUFKU7.js",
+  "./assets/game-RWAKSUDZ.js",
   "./assets/html2canvas-PSI5U373.js",
   "./assets/index.es-JZSSGXFA.js",
   "./assets/jspdf.es.min-EXCKTWIO.js",
   "./assets/lib-G5RUG5FD.js",
-  "./assets/main-2SJSCMM4.js",
-  "./assets/main-ASVBH46H.css",
+  "./assets/main-EDCNT7SR.js",
+  "./assets/main-JSHJWMEP.css",
   "./assets/purify-YOBFRZ4P.js",
   "./assets/quill-LVBG64M3.js",
   "./assets/theme-emo-8579E0D4.css",

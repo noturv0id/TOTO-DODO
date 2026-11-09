@@ -35,6 +35,7 @@ a safe place for us to love, share, and have fun.
 | 🎨 **themes** | five looks, each with its own launch screen and icon |
 | ☁️ **everywhere** | everything is saved online: entries, widgets, the theme, drafts, what you've already seen, recent gifs, so every phone and computer opens the same |
 | 📱 **an app** | add it to your home screen and it opens like a real app, even offline |
+| 🏝️ **our island** | the whole diary as a little 3D world: walk, ride the scooter, pet the kitties, paint, take photos together, watch things together, and see each other when you’re both online |
 
 <br />
 
@@ -58,10 +59,31 @@ a safe place for us to love, share, and have fun.
 
 <br />
 
+## 🏝️ the 3D island
+
+The diary opens as a little 3D island by default; the **2D** button in the header goes back to the classic site (and **3D** comes back). On a phone held upright the header folds into the ☰ button.
+
+| | |
+|---|---|
+| 🚶 **walking around** | phone: left thumb to walk, drag to look, pinch to zoom · computer: WASD / arrows, mouse to look |
+| ✦ **opening things** | walk up to anything that sparkles; on a phone the round button shows what you’re next to (📸, 🛵, 🐾…) |
+| 🗺️ **map** | tap the map to jump to any place |
+| ⋯ **the menu** | camera, scooter, pet, chat, voice, invites, music, day / night and how to play, all in one list |
+| 👗 **your look** | build your avatar in tabs: style, face, hair, outfit and extras, with any colour you like |
+| 🐾 **your pet** | a kitty, a bunny or both: name them, pick a size, colours and a hat |
+| 🎮 **games** | bonk-a-mole, catch the bunnies, the ball, floating hearts and the sky trail |
+| 📷 **photos & album** | poses, a timer for photos together, and a wall to keep them |
+| 🎨 **painting** | canvases on the island, saved for both of us |
+| 💌 **visitors** | a time-limited link so a friend can look around (they can’t open or change anything); an ended link never opens |
+| ☁️ **same everywhere** | your look, pet, paintings, album, scores, music and day / night are saved online, so phone and computer match |
+
+<br />
+
 ## 📲 add it to your phone
 
 - **iphone:** open the diary in safari → share → *add to home screen*, then open it from there and turn on notifications under 🔔 → settings
 - **android:** open it in chrome → ⋮ → *install app* (or *add to home screen*)
+- the island works sideways too, laid out like the computer so nothing overlaps
 
 <br />
 
