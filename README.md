@@ -68,9 +68,11 @@ The diary opens on the classic site; the **3D** button in the header opens the i
 | 🚶 **walking around** | phone: left thumb to walk, drag to look, pinch to zoom · computer: WASD / arrows, mouse to look |
 | ✦ **opening things** | walk up to anything that sparkles; on a phone the round button shows what you’re next to (📸, 🛵, 🐾…) |
 | 🗺️ **map** | tap the map to jump to any place |
-| 🏠 **the places** | every room is dressed as what it keeps (a book-roofed diary, a gift box, a camera, a music box, a pencil, a clock tower, an ink bottle, a tent, a paint pot), with matching wallpaper, ceilings and furniture inside |
-| 🧁 **dodo’s bakery** | a big pink, black and neon-green bakery with cat ears on the roof: bake cinnamon rolls, cookies or pie in a five-step game (gather, mix, shape, bake, decorate), fill the display case, serve the little cat and bunny customers for coins, and redesign the whole place on the design board; all saved for both of us |
-| 🦄 **riding** | the scooter, or a unicorn you can summon and ride together (your person hops on behind); you lean into the turns |
+| 🏠 **the places** | every room is dressed as what it keeps (a book-roofed diary, a gift box, a camera, a music box, a pencil, a clock tower, an ink bottle, a tent, a paint pot), with matching wallpaper, ceilings and furniture inside, and every room has its own floor (piano keys, notebook paper, wrapping paper, a calendar grid…) and a rug shaped for it (a record, a heart, a clock, a bow…) |
+| 🧁 **dodo’s bakery** | a big pink, black and neon-green bakery with cat ears on the roof: bake cinnamon rolls, cookies or pie in a five-step game (gather, mix, shape, bake, decorate), fill the display case, serve the little cat and bunny customers for coins, redesign the whole place on the design board, and write your own menu on the chalk sign outside; all saved for both of us |
+| 🎢 **sky coaster** | a pastel rollercoaster on the island’s edge: a chain lift, a huge drop off the island, a loop, a climbing helix. It waits in the station until someone hops in, then you ride it together; switch between your seat, behind the train and from the side |
+| 🔥 **cosy spots** | a wishing well, a movie night cinema with a fur carpet, a campfire with toasting marshmallows, and a proper football pitch |
+| 🦄 **riding** | the scooter, or a unicorn you can summon and ride together (your person hops on behind); you lean into the turns, and a parked scooter puts itself away after a little while |
 | ⋯ **the menu** | camera, scooter, unicorn, pet, chat, voice, invites, music, day / night and how to play, all in one list |
 | 👗 **your look** | build your avatar in tabs: style, face, hair, outfit and extras, with any colour you like |
 | 🐾 **your pet** | a kitty, a bunny or both: name them, pick a size, colours and a hat |
