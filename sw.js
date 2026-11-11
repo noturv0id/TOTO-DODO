@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "2616cc8213da";
+const CACHE_VERSION = "621dfc41ac49";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -11,17 +11,17 @@ const PRECACHE_URLS = [
   "./assets/browser-AKIEL4OY.js",
   "./assets/chunk-35U5YR53.js",
   "./assets/chunk-DUBGXUAY.js",
-  "./assets/chunk-EUIA7FLS.js",
   "./assets/chunk-HLDC4GTP.js",
+  "./assets/chunk-IXT5VL2V.js",
   "./assets/chunk-SVIDGI4S.js",
   "./assets/cursor-RP7TFDIH.cur",
   "./assets/html2canvas-O7APVNR3.js",
   "./assets/index.es-D4YYFG3B.js",
-  "./assets/island-6COBNC5K.js",
+  "./assets/island-LNRN32W6.js",
   "./assets/jspdf.es.min-OCSPEP4B.js",
   "./assets/lib-GQC6TMCM.js",
-  "./assets/main-JGILSOKB.css",
-  "./assets/main-SWQOZUC6.js",
+  "./assets/main-OP6FLUQC.css",
+  "./assets/main-YBYN7LWH.js",
   "./assets/purify.es-TUQRS6UW.js",
   "./assets/quill-IGYLABQZ.js",
   "./assets/theme-glass-71B131CB.css",
