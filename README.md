@@ -75,18 +75,18 @@ The diary opens on the classic site; the **3D** button in the header opens the i
 | 🎢 **sky coaster** | a pastel rollercoaster on the island’s edge: a chain lift, a huge drop off the island, a loop, a climbing helix. It waits in the station until someone hops in, then you ride it together; switch between your seat, behind the train and from the side |
 | 🍿 **our watchlist** | a sign by the cinema with what we post in our now-showing Discord channel (posters and overviews), live |
 | 🔥 **cosy spots** | a wishing well, a movie night cinema with a fur carpet and a loveseat to cuddle on, a campfire with toasting marshmallows, a picnic blanket in the meadow to sit or lie on together, and a proper football pitch |
-| 🌻 **our garden & mini forest** | behind the bakery: plant each pot on its own, water once and it grows all the way, golden wheat for flour and orchard fruit for the bakery, a fountain to fill the can, tall meadow grass with fireflies, and a forest of trees we plant ourselves; picked flowers become a bouquet to give your person or leave in a vase somewhere on the island |
+| 🌻 **our garden & mini forest** | behind the bakery: plant each pot on its own, water once and it grows all the way, golden wheat for flour and orchard fruit for the bakery, a fountain to fill the can, tall meadow grass with fireflies, and a forest of trees we plant ourselves; picked flowers ask what to do with them: give them to your person, put them in our table vase, or carry them to any vase on the island (swap or take the flowers in a vase too) |
 | 🐄 **our little farm** | a pastel barn with cows and goats to milk, sheep to pet, hens laying eggs and a butter churn, all filling the bakery’s pantry |
-| 🦆 **duck lake** | a lake with a jetty, reeds, lily pads and a family of ducks paddling about (feed them!) |
+| 🦆 **duck lake** | a lake with a jetty, reeds and lily pads you can wade into, and ducks paddling about, each with a line of ducklings (feed them!) |
 | 🌙 **day & night** | cobbled walkways lined with lanterns that light the paths at night, a fountain lit from inside, fireflies, and grass, willow and blossom petals moving in the breeze |
-| 🦄 **riding** | the scooter (🛵 / R) or a unicorn (🦄 / U) you can summon and ride together, one tap away on the side buttons (your person hops on behind); you lean into the turns, and a parked scooter puts itself away after a little while |
+| 🦄 **riding** | the scooter (🛵 / R) or a unicorn (🦄 / U, S backs it up) you can summon and ride together, one tap away on the side buttons (your person hops on behind); you lean into the turns, and a parked scooter puts itself away after a little while |
 | ⋯ **the menu** | camera, pet, chat, voice, invites, music, day / night and how to play, all in one list |
 | 👗 **your look** | build your avatar in tabs: style, face, hair, outfit and extras, with any colour you like |
 | 🐾 **your pet** | a kitty, a bunny or both: name them, pick a size, colours and a hat |
 | 🎮 **games** | bonk-a-mole, catch the bunnies, the ball, the sky race, floating hearts, the sky trail and the baking game |
 | 📷 **photos & album** | poses, a timer for photos together, and a wall to keep them |
 | 🎨 **painting** | canvases on the island, saved for both of us |
-| 💌 **visitors** | a time-limited link so a friend can look around (they can’t open or change anything); an ended link never opens |
+| 💌 **visitors** | a time-limited link so a friend can look around and see our paintings, gallery wall and photo wall (they can’t open or change anything); an ended link never opens |
 | ☁️ **same everywhere** | your look, pet, paintings, album, the bakery, scores, music and day / night are saved online, so phone and computer match |
 
 <br />
