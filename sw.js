@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "ec9cd3bfede5";
+const CACHE_VERSION = "87f60ebb5480";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -17,17 +17,17 @@ const PRECACHE_URLS = [
   "./assets/cursor-RP7TFDIH.cur",
   "./assets/html2canvas-O7APVNR3.js",
   "./assets/index.es-D4YYFG3B.js",
-  "./assets/island-XHI4Y6NJ.js",
+  "./assets/island-UQVSYTXN.js",
   "./assets/jspdf.es.min-OCSPEP4B.js",
   "./assets/lib-GQC6TMCM.js",
-  "./assets/main-NBJCSLR2.css",
-  "./assets/main-T2LBYXJW.js",
+  "./assets/main-5YZFP4LZ.js",
+  "./assets/main-J7UQ63XP.css",
   "./assets/purify.es-TUQRS6UW.js",
   "./assets/quill-IGYLABQZ.js",
-  "./assets/theme-glass-71B131CB.css",
+  "./assets/theme-glass-8D92DC19.css",
   "./assets/theme-pink-F7288814.css",
   "./assets/theme-purple-23AEB002.css",
-  "./assets/theme-red-E08C8FA3.css",
+  "./assets/theme-red-7FE89D55.css",
   "./cursors/red.cur",
   "./discord-wide.png",
   "./icons/badge-96.png",
