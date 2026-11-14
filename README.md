@@ -38,7 +38,7 @@ a safe place for us to love, share, and have fun.
 
 Tap **3D** in the header to go to the island, and **2D** to come back.
 
-Walk around with our pets, ride the scooter or a unicorn, bake at dodo's bakery, grow our garden and forest, make bouquets for the bunnies at the flower stall, look after the farm, feed the ducks, play mini games, race in the sky, ride the sky coaster and the balloon, decorate our willow, watch things together in the cinema, and take photos together at the photo wall. We can change the weather and the time of day too. Everything we make is saved for both of us, and we can see each other when we're both online.
+Walk around with our pets, ride the scooter or a unicorn, bake at dodo's bakery, grow our garden and forest, make bouquets for the bunnies at the flower stall, look after the farm, feed the ducks, play mini games, race in the sky, ride the sky coaster and the balloon, decorate our willow, watch things together in the cinema, and take photos together at the photo wall. We can dress ourselves and our pets up too, with lots of haircuts and outfits for a boy or a girl, and pick the island's theme, day or night and the weather from the 🎨 menu. Everything we make is saved for both of us, and we can see each other when we're both online.
 
 - **phone:** left thumb to walk, drag to look
 - **computer:** WASD to walk, mouse to look, E to open things
