@@ -2,7 +2,7 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "078419691dff";
+const CACHE_VERSION = "24ea416d2485";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
@@ -10,18 +10,18 @@ const PRECACHE_URLS = [
   "./anniversary-wrapper.html",
   "./assets/browser-AKIEL4OY.js",
   "./assets/chunk-35U5YR53.js",
+  "./assets/chunk-BLQIXI2H.js",
   "./assets/chunk-DUBGXUAY.js",
   "./assets/chunk-HLDC4GTP.js",
-  "./assets/chunk-J6AJKJQZ.js",
   "./assets/chunk-SVIDGI4S.js",
   "./assets/cursor-RP7TFDIH.cur",
   "./assets/html2canvas-O7APVNR3.js",
   "./assets/index.es-D4YYFG3B.js",
-  "./assets/island-2KA4LZ7D.js",
+  "./assets/island-A2ZIPB3A.js",
   "./assets/jspdf.es.min-OCSPEP4B.js",
   "./assets/lib-GQC6TMCM.js",
-  "./assets/main-46F4QD5S.js",
-  "./assets/main-YMO3NU7C.css",
+  "./assets/main-FMFSC2OC.css",
+  "./assets/main-T6PCLWLM.js",
   "./assets/purify.es-TUQRS6UW.js",
   "./assets/quill-IGYLABQZ.js",
   "./assets/theme-glass-8D92DC19.css",
@@ -66,6 +66,14 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// only shown if the diary was never opened on this device before going offline
+const OFFLINE_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TOTO & DODO</title><style>
+html,body{height:100%;margin:0}body{display:grid;place-items:center;background:radial-gradient(circle at 50% 30%,#2a2f5a,#0d1020 70%);color:#e9e6ff;font:600 16px/1.5 "Quicksand",system-ui,sans-serif;text-align:center}
+main{padding:28px 32px;border:1px solid rgba(190,200,255,.22);border-radius:22px;background:rgba(255,255,255,.06);backdrop-filter:blur(12px)}
+h1{margin:0 0 6px;font-size:1.15rem;letter-spacing:.04em}p{margin:0 0 16px;opacity:.75;font-weight:500}
+button{font:inherit;color:inherit;padding:9px 18px;border-radius:999px;border:1px solid rgba(190,200,255,.35);background:rgba(255,255,255,.08);cursor:pointer}
+</style></head><body><main><h1>˚₊‧ TOTO &amp; DODO ‧₊˚</h1><p>no internet right now ♡</p><button onclick="location.reload()">try again</button></main></body></html>`;
+
 async function networkFirstPage(request) {
   const cache = await caches.open(SHELL_CACHE);
   try {
@@ -76,7 +84,7 @@ async function networkFirstPage(request) {
     return (
       (await cache.match("./")) ||
       (await cache.match("./index.html")) ||
-      new Response("offline ♡", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } })
+      new Response(OFFLINE_PAGE, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } })
     );
   }
 }
@@ -114,6 +122,8 @@ async function cachedWidgetPhoto(request) {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+  // live streams (the dev server's reload channel) never finish: never hold them
+  if ((request.headers.get("accept") || "").includes("text/event-stream")) return;
 
   const url = new URL(request.url);
 
