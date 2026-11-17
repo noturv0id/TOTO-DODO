@@ -2,28 +2,28 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "2e66a30c4b80";
+const CACHE_VERSION = "b6f641ef40eb";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
   "./",
   "./anniversary-wrapper.html",
-  "./assets/browser-KGZ766M5.js",
+  "./assets/browser-AKIEL4OY.js",
+  "./assets/chunk-35U5YR53.js",
   "./assets/chunk-BLQIXI2H.js",
+  "./assets/chunk-DUBGXUAY.js",
   "./assets/chunk-HLDC4GTP.js",
-  "./assets/chunk-HQMR3OKM.js",
-  "./assets/chunk-TT3DKUIS.js",
-  "./assets/chunk-WJI7LU3V.js",
+  "./assets/chunk-SVIDGI4S.js",
   "./assets/cursor-RP7TFDIH.cur",
-  "./assets/html2canvas-FFPBKNXW.js",
-  "./assets/index.es-WUPQYQBK.js",
-  "./assets/island-XFWJZRGQ.js",
-  "./assets/jspdf.es.min-I2C75S5C.js",
-  "./assets/lib-YJVHP4GC.js",
-  "./assets/main-MOKT6OVJ.js",
-  "./assets/main-RZWE3GHB.css",
-  "./assets/purify.es-G6J7PSTB.js",
-  "./assets/quill-RUFEQXE5.js",
+  "./assets/html2canvas-O7APVNR3.js",
+  "./assets/index.es-D4YYFG3B.js",
+  "./assets/island-I7YYK62G.js",
+  "./assets/jspdf.es.min-OCSPEP4B.js",
+  "./assets/lib-GQC6TMCM.js",
+  "./assets/main-UN73GA7Y.css",
+  "./assets/main-VISI3Q5F.js",
+  "./assets/purify.es-TUQRS6UW.js",
+  "./assets/quill-IGYLABQZ.js",
   "./assets/theme-glass-8D92DC19.css",
   "./assets/theme-pink-F7288814.css",
   "./assets/theme-purple-23AEB002.css",
