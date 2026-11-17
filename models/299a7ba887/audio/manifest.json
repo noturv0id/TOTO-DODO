@@ -1,0 +1,3419 @@
+{
+ "version": 1,
+ "sampleRate": 48000,
+ "formats": [
+  "ogg",
+  "m4a"
+ ],
+ "sounds": {
+  "step_grass": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep on grass / meadow",
+   "pick": "random",
+   "files": [
+    "step_grass-0",
+    "step_grass-1",
+    "step_grass-2",
+    "step_grass-3",
+    "step_grass-4"
+   ],
+   "dur": 0.346
+  },
+  "step_cobble": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep on cobbles / stone (plaza, paths)",
+   "pick": "random",
+   "files": [
+    "step_cobble-0",
+    "step_cobble-1",
+    "step_cobble-2",
+    "step_cobble-3",
+    "step_cobble-4"
+   ],
+   "dur": 0.346
+  },
+  "step_wood": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep on wood (jetty, deck, stairs, bridge, floors)",
+   "pick": "random",
+   "files": [
+    "step_wood-0",
+    "step_wood-1",
+    "step_wood-2",
+    "step_wood-3",
+    "step_wood-4"
+   ],
+   "dur": 0.346
+  },
+  "step_rug": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep on rugs / carpet / bed indoors",
+   "pick": "random",
+   "files": [
+    "step_rug-0",
+    "step_rug-1",
+    "step_rug-2",
+    "step_rug-3",
+    "step_rug-4"
+   ],
+   "dur": 0.346
+  },
+  "step_water": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep wading in shallow water (lake)",
+   "pick": "random",
+   "files": [
+    "step_water-0",
+    "step_water-1",
+    "step_water-2",
+    "step_water-3",
+    "step_water-4"
+   ],
+   "dur": 0.496
+  },
+  "step_snow": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep crunching in snow (snow/blizzard weather, christmas)",
+   "pick": "random",
+   "files": [
+    "step_snow-0",
+    "step_snow-1",
+    "step_snow-2",
+    "step_snow-3",
+    "step_snow-4"
+   ],
+   "dur": 0.346
+  },
+  "step_leaves": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep in crunchy leaves (autumn weather, forest)",
+   "pick": "random",
+   "files": [
+    "step_leaves-0",
+    "step_leaves-1",
+    "step_leaves-2",
+    "step_leaves-3",
+    "step_leaves-4"
+   ],
+   "dur": 0.346
+  },
+  "step_cloud": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep on a cloud pad (sky trail, cloud islets) - puffy and cute",
+   "pick": "random",
+   "files": [
+    "step_cloud-0",
+    "step_cloud-1",
+    "step_cloud-2",
+    "step_cloud-3",
+    "step_cloud-4"
+   ],
+   "dur": 0.346
+  },
+  "step_road": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "footstep on the candy race road / bridge planks (rubbery)",
+   "pick": "random",
+   "files": [
+    "step_road-0",
+    "step_road-1",
+    "step_road-2",
+    "step_road-3",
+    "step_road-4"
+   ],
+   "dur": 0.346
+  },
+  "land_soft": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "landing from a jump on grass, rugs, snow, clouds",
+   "pick": "random",
+   "files": [
+    "land_soft-0",
+    "land_soft-1",
+    "land_soft-2"
+   ],
+   "dur": 0.496
+  },
+  "land_hard": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "landing on wood or stone",
+   "pick": "random",
+   "files": [
+    "land_hard-0",
+    "land_hard-1",
+    "land_hard-2"
+   ],
+   "dur": 0.496
+  },
+  "land_water": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "landing in water (lake, falling into the lake)",
+   "pick": "random",
+   "files": [
+    "land_water-0",
+    "land_water-1"
+   ],
+   "dur": 0.896
+  },
+  "paw_cat": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "pet/wild cat paw pads (very soft)",
+   "pick": "random",
+   "files": [
+    "paw_cat-0",
+    "paw_cat-1",
+    "paw_cat-2",
+    "paw_cat-3"
+   ],
+   "dur": 0.247
+  },
+  "hop_bunny": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "bunny hop landing thump",
+   "pick": "random",
+   "files": [
+    "hop_bunny-0",
+    "hop_bunny-1",
+    "hop_bunny-2"
+   ],
+   "dur": 0.247
+  },
+  "hoof_soft": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "deer / cow / goat / sheep hoof on grass",
+   "pick": "random",
+   "files": [
+    "hoof_soft-0",
+    "hoof_soft-1",
+    "hoof_soft-2",
+    "hoof_soft-3"
+   ],
+   "dur": 0.247
+  },
+  "hoof_unicorn": {
+   "bus": "foley",
+   "cat": "footsteps",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "unicorn gallop clip-clop with a tiny sparkle",
+   "pick": "random",
+   "files": [
+    "hoof_unicorn-0",
+    "hoof_unicorn-1",
+    "hoof_unicorn-2",
+    "hoof_unicorn-3"
+   ],
+   "dur": 0.497
+  },
+  "v_hup": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "jump 'hup!'",
+   "pick": "random",
+   "files": [
+    "v_hup-0",
+    "v_hup-1",
+    "v_hup-2",
+    "v_hup-3"
+   ],
+   "dur": 0.4
+  },
+  "v_hi": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "wave emote 'hii!'",
+   "pick": "random",
+   "files": [
+    "v_hi-0",
+    "v_hi-1",
+    "v_hi-2"
+   ],
+   "dur": 0.791
+  },
+  "v_ow": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "being bonked / hit 'ow!'",
+   "pick": "random",
+   "files": [
+    "v_ow-0",
+    "v_ow-1",
+    "v_ow-2"
+   ],
+   "dur": 0.791
+  },
+  "v_giggle": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "giggle 'hehe' (happy reactions, tickles)",
+   "pick": "random",
+   "files": [
+    "v_giggle-0",
+    "v_giggle-1",
+    "v_giggle-2"
+   ],
+   "dur": 0.791
+  },
+  "v_yay": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "cheer 'yay!' (wins, records)",
+   "pick": "random",
+   "files": [
+    "v_yay-0",
+    "v_yay-1",
+    "v_yay-2"
+   ],
+   "dur": 0.791
+  },
+  "v_whee": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "'wheee!' at the coaster crest / slides",
+   "pick": "random",
+   "files": [
+    "v_whee-0",
+    "v_whee-1"
+   ],
+   "dur": 1.391
+  },
+  "v_oops": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "'whoops' (falling off, respawn)",
+   "pick": "random",
+   "files": [
+    "v_oops-0",
+    "v_oops-1"
+   ],
+   "dur": 0.791
+  },
+  "v_aww": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "contented 'mmm~' (cuddle, hug, lying down together)",
+   "pick": "random",
+   "files": [
+    "v_aww-0",
+    "v_aww-1"
+   ],
+   "dur": 1.18
+  },
+  "v_yawn": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "sleepy yawn (lie down on bed)",
+   "pick": "random",
+   "files": [
+    "v_yawn"
+   ],
+   "dur": 1.58
+  },
+  "v_strain": {
+   "bus": "voice",
+   "cat": "avatar voice",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "dookie squat 'nnngh' (comic)",
+   "pick": "random",
+   "files": [
+    "v_strain"
+   ],
+   "dur": 1.18
+  },
+  "kiss": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "kiss 'mwah' + two heart chimes (kiss emote, give flowers, receive)",
+   "pick": "random",
+   "files": [
+    "kiss-0",
+    "kiss-1",
+    "kiss-2"
+   ],
+   "dur": 0.991
+  },
+  "hug": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "hug / cuddle: fabric squish, soft 'mm', rising hearts",
+   "pick": "random",
+   "files": [
+    "hug-0",
+    "hug-1",
+    "hug-2"
+   ],
+   "dur": 1.2
+  },
+  "cat_meow": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "cat meow (wild cats, pet kitty, bakery cats, cat customers)",
+   "pick": "index",
+   "files": [
+    "cat_meow-0",
+    "cat_meow-1",
+    "cat_meow-2",
+    "cat_meow-3"
+   ],
+   "dur": 0.891
+  },
+  "cat_trill": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "cat chirrup / trill (greeting, pet comes when called)",
+   "pick": "random",
+   "files": [
+    "cat_trill-0",
+    "cat_trill-1"
+   ],
+   "dur": 0.591
+  },
+  "loop_purr": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": true,
+   "ch": 1,
+   "desc": "purr loop (petting a cat, cat on your lap); periodic",
+   "pick": "random",
+   "files": [
+    "loop_purr"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 3.0,
+   "samples": 120000,
+   "dur": 2.5
+  },
+  "bunny_squeak": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "bunny squeak (petting, bunny customers, catch-the-bunnies)",
+   "pick": "random",
+   "files": [
+    "bunny_squeak-0",
+    "bunny_squeak-1",
+    "bunny_squeak-2"
+   ],
+   "dur": 0.391
+  },
+  "bunny_thump": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "bunny foot-thump warning (fleeing bunnies)",
+   "pick": "random",
+   "files": [
+    "bunny_thump-0",
+    "bunny_thump-1"
+   ],
+   "dur": 0.396
+  },
+  "bunny_sniff": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "bunny / hedgehog sniff-sniff (idle near you)",
+   "pick": "random",
+   "files": [
+    "bunny_sniff-0",
+    "bunny_sniff-1"
+   ],
+   "dur": 0.491
+  },
+  "deer_bleat": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "deer bleat (wild deer, petting)",
+   "pick": "random",
+   "files": [
+    "deer_bleat-0",
+    "deer_bleat-1",
+    "deer_bleat-2"
+   ],
+   "dur": 0.891
+  },
+  "deer_snort": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "deer startled snort (deer flee when you run)",
+   "pick": "random",
+   "files": [
+    "deer_snort"
+   ],
+   "dur": 0.396
+  },
+  "cow_moo": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "cow moo (farm idle, milking, petting) - soft and cute",
+   "pick": "random",
+   "files": [
+    "cow_moo-0",
+    "cow_moo-1",
+    "cow_moo-2"
+   ],
+   "dur": 1.78
+  },
+  "cow_bell": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "cow bell clonk (cow grazing, positional)",
+   "pick": "random",
+   "files": [
+    "cow_bell-0",
+    "cow_bell-1",
+    "cow_bell-2"
+   ],
+   "dur": 0.597
+  },
+  "goat_bleat": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "goat 'meh-eh-eh' (farm, milking the goat)",
+   "pick": "random",
+   "files": [
+    "goat_bleat-0",
+    "goat_bleat-1",
+    "goat_bleat-2"
+   ],
+   "dur": 0.891
+  },
+  "sheep_baa": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "sheep baa (petting sheep)",
+   "pick": "random",
+   "files": [
+    "sheep_baa-0",
+    "sheep_baa-1",
+    "sheep_baa-2"
+   ],
+   "dur": 0.991
+  },
+  "hen_cluck": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "hen clucks (hen run, collecting eggs, petting)",
+   "pick": "random",
+   "files": [
+    "hen_cluck-0",
+    "hen_cluck-1",
+    "hen_cluck-2",
+    "hen_cluck-3"
+   ],
+   "dur": 0.591
+  },
+  "rooster_crow": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "rooster crow (farm, at sunrise / day flip)",
+   "pick": "random",
+   "files": [
+    "rooster_crow"
+   ],
+   "dur": 1.769
+  },
+  "chick_peep": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "chick peep (farm chicks)",
+   "pick": "random",
+   "files": [
+    "chick_peep-0",
+    "chick_peep-1",
+    "chick_peep-2"
+   ],
+   "dur": 0.391
+  },
+  "duck_quack": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "duck quack (lake ducks, feeding)",
+   "pick": "random",
+   "files": [
+    "duck_quack-0",
+    "duck_quack-1",
+    "duck_quack-2",
+    "duck_quack-3"
+   ],
+   "dur": 0.691
+  },
+  "duckling_peep": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "duckling peeps (ducklings in line)",
+   "pick": "random",
+   "files": [
+    "duckling_peep-0",
+    "duckling_peep-1",
+    "duckling_peep-2"
+   ],
+   "dur": 0.391
+  },
+  "bird_chirp": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "songbird chirps (daytime meadow, garden, bathing bird)",
+   "pick": "random",
+   "files": [
+    "bird_chirp-0",
+    "bird_chirp-1",
+    "bird_chirp-2",
+    "bird_chirp-3",
+    "bird_chirp-4"
+   ],
+   "dur": 0.791
+  },
+  "bird_song": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "longer songbird phrase (sunny days, day flip)",
+   "pick": "random",
+   "files": [
+    "bird_song-0",
+    "bird_song-1"
+   ],
+   "dur": 1.693
+  },
+  "bird_flap": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "wing flaps (bird takes off, ducks splashing)",
+   "pick": "random",
+   "files": [
+    "bird_flap-0",
+    "bird_flap-1"
+   ],
+   "dur": 0.591
+  },
+  "owl_hoot": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "owl hoot (night, halloween)",
+   "pick": "random",
+   "files": [
+    "owl_hoot-0",
+    "owl_hoot-1"
+   ],
+   "dur": 1.39
+  },
+  "frog_ribbit": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "frog ribbit (garden pond, lake at night)",
+   "pick": "random",
+   "files": [
+    "frog_ribbit-0",
+    "frog_ribbit-1",
+    "frog_ribbit-2"
+   ],
+   "dur": 0.791
+  },
+  "loop_bee": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "garden",
+   "loop": true,
+   "ch": 1,
+   "desc": "bee buzz loop (garden flowers, positional)",
+   "pick": "random",
+   "files": [
+    "loop_bee"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 2.5,
+   "samples": 96000,
+   "dur": 2.0
+  },
+  "loop_flies": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": true,
+   "ch": 1,
+   "desc": "fly buzz loop (dookie flies, farm yard)",
+   "pick": "random",
+   "files": [
+    "loop_flies"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 3.5,
+   "samples": 144000,
+   "dur": 3.0
+  },
+  "cricket_chirp": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "cricket chirp (night one-shots, garden at dusk)",
+   "pick": "random",
+   "files": [
+    "cricket_chirp-0",
+    "cricket_chirp-1",
+    "cricket_chirp-2"
+   ],
+   "dur": 0.391
+  },
+  "puppy_woof": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "puppy woof / yip (puppy pets)",
+   "pick": "random",
+   "files": [
+    "puppy_woof-0",
+    "puppy_woof-1",
+    "puppy_woof-2"
+   ],
+   "dur": 0.591
+  },
+  "hedgehog_snuffle": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "hedgehog snuffle (garden hedgehog)",
+   "pick": "random",
+   "files": [
+    "hedgehog_snuffle-0",
+    "hedgehog_snuffle-1"
+   ],
+   "dur": 0.642
+  },
+  "mole_pop": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "bonk-a-mole: a mole pops up out of the dirt",
+   "pick": "random",
+   "files": [
+    "mole_pop-0",
+    "mole_pop-1",
+    "mole_pop-2",
+    "mole_pop-3"
+   ],
+   "dur": 0.496
+  },
+  "bat_squeak": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "bat squeaks (halloween bats overhead)",
+   "pick": "random",
+   "files": [
+    "bat_squeak-0",
+    "bat_squeak-1"
+   ],
+   "dur": 0.391
+  },
+  "firefly_twinkle": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "firefly twinkle (willow fireflies, garden at dusk)",
+   "pick": "random",
+   "files": [
+    "firefly_twinkle-0",
+    "firefly_twinkle-1",
+    "firefly_twinkle-2"
+   ],
+   "dur": 0.991
+  },
+  "fish_plop": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "lake",
+   "loop": false,
+   "ch": 1,
+   "desc": "fish jumping / plop in the lake",
+   "pick": "random",
+   "files": [
+    "fish_plop-0",
+    "fish_plop-1"
+   ],
+   "dur": 0.685
+  },
+  "unicorn_neigh": {
+   "bus": "creature",
+   "cat": "animals",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "unicorn whinny (summon, mount) with sparkles",
+   "pick": "random",
+   "files": [
+    "unicorn_neigh-0",
+    "unicorn_neigh-1"
+   ],
+   "dur": 1.39
+  },
+  "gnome_hm": {
+   "bus": "voice",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "garden gnome 'hm-hmm?' (wish bubble, granting a wish)",
+   "pick": "random",
+   "files": [
+    "gnome_hm-0",
+    "gnome_hm-1"
+   ],
+   "dur": 0.891
+  },
+  "fairy_shimmer": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "fairy ring shimmer / fairy glow",
+   "pick": "random",
+   "files": [
+    "fairy_shimmer-0",
+    "fairy_shimmer-1"
+   ],
+   "dur": 1.491
+  },
+  "sit_soft": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "sit on a sofa / loveseat / bean bag",
+   "pick": "random",
+   "files": [
+    "sit_soft-0",
+    "sit_soft-1",
+    "sit_soft-2"
+   ],
+   "dur": 0.6
+  },
+  "sit_wood": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "sit on a bench / log / stool / jetty",
+   "pick": "random",
+   "files": [
+    "sit_wood-0",
+    "sit_wood-1",
+    "sit_wood-2"
+   ],
+   "dur": 0.596
+  },
+  "lie_bed": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "lie down on the bed / picnic blanket",
+   "pick": "random",
+   "files": [
+    "lie_bed-0",
+    "lie_bed-1"
+   ],
+   "dur": 0.876
+  },
+  "swing_creak": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "swing rope/chain creak at the top of each arc",
+   "pick": "random",
+   "files": [
+    "swing_creak-0",
+    "swing_creak-1",
+    "swing_creak-2"
+   ],
+   "dur": 0.791
+  },
+  "swing_whoosh": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "air whoosh through the bottom of the swing arc",
+   "pick": "random",
+   "files": [
+    "swing_whoosh-0",
+    "swing_whoosh-1",
+    "swing_whoosh-2"
+   ],
+   "dur": 0.891
+  },
+  "emote_heart": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "heart emote: soft pop + heart chimes",
+   "pick": "random",
+   "files": [
+    "emote_heart-0",
+    "emote_heart-1"
+   ],
+   "dur": 0.991
+  },
+  "emote_dance": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "dance emote: a tiny marimba-and-shaker jingle",
+   "pick": "random",
+   "files": [
+    "emote_dance"
+   ],
+   "dur": 2.094
+  },
+  "fart": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "dookie fart (comic, cute)",
+   "pick": "random",
+   "files": [
+    "fart-0",
+    "fart-1",
+    "fart-2"
+   ],
+   "dur": 1.191
+  },
+  "poop_plop": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "dookie lands (squishy plop) - and a little sparkle",
+   "pick": "random",
+   "files": [
+    "poop_plop"
+   ],
+   "dur": 0.591
+  },
+  "bonk": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "cartoon wooden bonk (bonk-a-mole hit, bumping heads)",
+   "pick": "random",
+   "files": [
+    "bonk-0",
+    "bonk-1",
+    "bonk-2",
+    "bonk-3"
+   ],
+   "dur": 0.597
+  },
+  "whiff": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "a miss (bonk-a-mole hole empty, swing and miss)",
+   "pick": "random",
+   "files": [
+    "whiff-0",
+    "whiff-1"
+   ],
+   "dur": 0.4
+  },
+  "boing": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "bouncy boing (mushroom bounce, sky trail pads, jumping on beds)",
+   "pick": "random",
+   "files": [
+    "boing-0",
+    "boing-1",
+    "boing-2"
+   ],
+   "dur": 0.796
+  },
+  "kick_ball": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "goal kick: foot hits the rubber ball",
+   "pick": "random",
+   "files": [
+    "kick_ball-0",
+    "kick_ball-1",
+    "kick_ball-2",
+    "kick_ball-3"
+   ],
+   "dur": 0.497
+  },
+  "ball_bounce": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "ball bouncing on grass / off walls (play by impact speed)",
+   "pick": "random",
+   "files": [
+    "ball_bounce-0",
+    "ball_bounce-1",
+    "ball_bounce-2",
+    "ball_bounce-3"
+   ],
+   "dur": 0.397
+  },
+  "net_swish": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "ball into the goal net",
+   "pick": "random",
+   "files": [
+    "net_swish"
+   ],
+   "dur": 0.797
+  },
+  "post_clang": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "ball hits the goal post / fence",
+   "pick": "random",
+   "files": [
+    "post_clang"
+   ],
+   "dur": 0.846
+  },
+  "confetti": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "confetti popper (arrival, goals, records)",
+   "pick": "random",
+   "files": [
+    "confetti-0",
+    "confetti-1"
+   ],
+   "dur": 0.745
+  },
+  "jar_pick": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "take an ingredient jar (glass clink + lid)",
+   "pick": "random",
+   "files": [
+    "jar_pick-0",
+    "jar_pick-1",
+    "jar_pick-2"
+   ],
+   "dur": 0.696
+  },
+  "into_bowl": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "ingredient drops into the mixing bowl (soft thud + puff of flour)",
+   "pick": "random",
+   "files": [
+    "into_bowl-0",
+    "into_bowl-1",
+    "into_bowl-2"
+   ],
+   "dur": 0.69
+  },
+  "whisk": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "mixing: whisk strokes in the bowl",
+   "pick": "random",
+   "files": [
+    "whisk-0",
+    "whisk-1",
+    "whisk-2"
+   ],
+   "dur": 0.791
+  },
+  "dough_squish": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "shaping / kneading the dough (soft squish)",
+   "pick": "random",
+   "files": [
+    "dough_squish-0",
+    "dough_squish-1",
+    "dough_squish-2"
+   ],
+   "dur": 0.496
+  },
+  "oven_door": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "oven door open (v0) / close (v1)",
+   "pick": "index",
+   "files": [
+    "oven_door-0",
+    "oven_door-1"
+   ],
+   "dur": 0.989
+  },
+  "oven_dial": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "oven heat dial click (one per notch)",
+   "pick": "random",
+   "files": [
+    "oven_dial-0",
+    "oven_dial-1",
+    "oven_dial-2"
+   ],
+   "dur": 0.247
+  },
+  "loop_oven": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": true,
+   "ch": 1,
+   "desc": "oven hum + gentle sizzle loop (while baking)",
+   "pick": "random",
+   "files": [
+    "loop_oven"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 4.5,
+   "samples": 192000,
+   "dur": 4.0
+  },
+  "oven_ding": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "oven timer bell: treat is ready (good bake)",
+   "pick": "random",
+   "files": [
+    "oven_ding"
+   ],
+   "dur": 1.689
+  },
+  "bake_burnt": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "burnt / poor bake: sad little descending boops + puff of smoke",
+   "pick": "random",
+   "files": [
+    "bake_burnt"
+   ],
+   "dur": 1.227
+  },
+  "frosting": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "piping frosting (squelchy squirt)",
+   "pick": "random",
+   "files": [
+    "frosting-0",
+    "frosting-1",
+    "frosting-2"
+   ],
+   "dur": 0.596
+  },
+  "sprinkles": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "sprinkles / toppings scattered on a treat",
+   "pick": "random",
+   "files": [
+    "sprinkles-0",
+    "sprinkles-1",
+    "sprinkles-2"
+   ],
+   "dur": 0.692
+  },
+  "plate_clink": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "treat set in the display case / on a plate (ceramic clink)",
+   "pick": "random",
+   "files": [
+    "plate_clink-0",
+    "plate_clink-1",
+    "plate_clink-2"
+   ],
+   "dur": 0.784
+  },
+  "till": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "cash till 'cha-ching' (serve customer, stall sale, tip)",
+   "pick": "random",
+   "files": [
+    "till"
+   ],
+   "dur": 1.191
+  },
+  "shop_bell": {
+   "bus": "sfx",
+   "cat": "bakery",
+   "pack": "bakery",
+   "loop": false,
+   "ch": 1,
+   "desc": "shop door bell (customer arrives at the bakery)",
+   "pick": "random",
+   "files": [
+    "shop_bell"
+   ],
+   "dur": 1.04
+  },
+  "chomp": {
+   "bus": "sfx",
+   "cat": "interactions",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "bite of a treat (crunch + 'nom'), also the garden fruit bite",
+   "pick": "random",
+   "files": [
+    "chomp-0",
+    "chomp-1",
+    "chomp-2",
+    "chomp-3"
+   ],
+   "dur": 0.495
+  },
+  "milk_squirt": {
+   "bus": "sfx",
+   "cat": "farm",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "milking: squirt into a metal pail",
+   "pick": "random",
+   "files": [
+    "milk_squirt-0",
+    "milk_squirt-1",
+    "milk_squirt-2",
+    "milk_squirt-3"
+   ],
+   "dur": 0.396
+  },
+  "egg_pick": {
+   "bus": "sfx",
+   "cat": "farm",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "collect an egg (gentle tok into the basket)",
+   "pick": "random",
+   "files": [
+    "egg_pick-0",
+    "egg_pick-1",
+    "egg_pick-2"
+   ],
+   "dur": 0.397
+  },
+  "churn": {
+   "bus": "sfx",
+   "cat": "farm",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "butter churn: wet slosh + wooden plunge",
+   "pick": "random",
+   "files": [
+    "churn-0",
+    "churn-1",
+    "churn-2"
+   ],
+   "dur": 0.896
+  },
+  "hay_rustle": {
+   "bus": "sfx",
+   "cat": "farm",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "hay / straw rustle (barn, nest, animals settling)",
+   "pick": "random",
+   "files": [
+    "hay_rustle-0",
+    "hay_rustle-1",
+    "hay_rustle-2"
+   ],
+   "dur": 0.688
+  },
+  "gate_creak": {
+   "bus": "sfx",
+   "cat": "farm",
+   "pack": "farm",
+   "loop": false,
+   "ch": 1,
+   "desc": "wooden gate creak (farm log gate, garden gate)",
+   "pick": "random",
+   "files": [
+    "gate_creak-0",
+    "gate_creak-1"
+   ],
+   "dur": 0.989
+  },
+  "soil_pat": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "plant a seed / tree (pat the soil)",
+   "pick": "random",
+   "files": [
+    "soil_pat-0",
+    "soil_pat-1",
+    "soil_pat-2"
+   ],
+   "dur": 0.491
+  },
+  "water_pour": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "watering can pours over a bed",
+   "pick": "random",
+   "files": [
+    "water_pour-0",
+    "water_pour-1",
+    "water_pour-2"
+   ],
+   "dur": 1.391
+  },
+  "can_refill": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "refill the watering can (fountain / well / pond): rising gurgle",
+   "pick": "random",
+   "files": [
+    "can_refill-0",
+    "can_refill-1"
+   ],
+   "dur": 1.39
+  },
+  "sprout": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "a plant grows a stage (magic rising pling)",
+   "pick": "random",
+   "files": [
+    "sprout-0",
+    "sprout-1",
+    "sprout-2"
+   ],
+   "dur": 0.991
+  },
+  "bloom": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "a flower blooms (soft pop + chime)",
+   "pick": "random",
+   "files": [
+    "bloom-0",
+    "bloom-1",
+    "bloom-2"
+   ],
+   "dur": 0.996
+  },
+  "golden_bloom": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "a golden bloom! (rare, bigger shimmer)",
+   "pick": "random",
+   "files": [
+    "golden_bloom"
+   ],
+   "dur": 1.582
+  },
+  "weed_pull": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "pull a weed (rip + root snap)",
+   "pick": "random",
+   "files": [
+    "weed_pull-0",
+    "weed_pull-1",
+    "weed_pull-2"
+   ],
+   "dur": 0.596
+  },
+  "compost": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "weeds into the compost (squishy plop)",
+   "pick": "random",
+   "files": [
+    "compost-0",
+    "compost-1"
+   ],
+   "dur": 0.691
+  },
+  "fertilise": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "sprinkle fertiliser (sparkly dust)",
+   "pick": "random",
+   "files": [
+    "fertilise-0",
+    "fertilise-1"
+   ],
+   "dur": 1.098
+  },
+  "pick_flowers": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "pick the blooms (stem snaps + leaf rustle)",
+   "pick": "random",
+   "files": [
+    "pick_flowers-0",
+    "pick_flowers-1",
+    "pick_flowers-2"
+   ],
+   "dur": 0.791
+  },
+  "fruit_drop": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "fruit drops from a tree into the basket",
+   "pick": "random",
+   "files": [
+    "fruit_drop-0",
+    "fruit_drop-1",
+    "fruit_drop-2"
+   ],
+   "dur": 0.595
+  },
+  "dig": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "dig up a plant / clear a plot (spade into soil)",
+   "pick": "random",
+   "files": [
+    "dig-0",
+    "dig-1",
+    "dig-2"
+   ],
+   "dur": 0.596
+  },
+  "page_flip": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "book / garden book / diary page flip",
+   "pick": "random",
+   "files": [
+    "page_flip-0",
+    "page_flip-1",
+    "page_flip-2"
+   ],
+   "dur": 0.496
+  },
+  "loop_fountain": {
+   "bus": "sfx",
+   "cat": "garden",
+   "pack": "garden",
+   "loop": true,
+   "ch": 1,
+   "desc": "garden fountain splashing loop (positional)",
+   "pick": "random",
+   "files": [
+    "loop_fountain"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 5.5,
+   "samples": 240000,
+   "dur": 5.0
+  },
+  "wrap_paper": {
+   "bus": "sfx",
+   "cat": "bouquets",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "wrap a bouquet (paper crinkle)",
+   "pick": "random",
+   "files": [
+    "wrap_paper-0",
+    "wrap_paper-1",
+    "wrap_paper-2"
+   ],
+   "dur": 0.79
+  },
+  "ribbon": {
+   "bus": "sfx",
+   "cat": "bouquets",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "tie the ribbon (zip)",
+   "pick": "random",
+   "files": [
+    "ribbon"
+   ],
+   "dur": 0.591
+  },
+  "vase_place": {
+   "bus": "sfx",
+   "cat": "bouquets",
+   "pack": "garden",
+   "loop": false,
+   "ch": 1,
+   "desc": "bouquet into a vase (ceramic + water slosh)",
+   "pick": "random",
+   "files": [
+    "vase_place-0",
+    "vase_place-1",
+    "vase_place-2"
+   ],
+   "dur": 0.806
+  },
+  "bread_toss": {
+   "bus": "sfx",
+   "cat": "lake",
+   "pack": "lake",
+   "loop": false,
+   "ch": 1,
+   "desc": "feed the ducks: crumbs tossed onto the water",
+   "pick": "random",
+   "files": [
+    "bread_toss-0",
+    "bread_toss-1"
+   ],
+   "dur": 1.2
+  },
+  "splash_small": {
+   "bus": "sfx",
+   "cat": "lake",
+   "pack": "lake",
+   "loop": false,
+   "ch": 1,
+   "desc": "small splash (ducks diving, things into water, bucket)",
+   "pick": "random",
+   "files": [
+    "splash_small-0",
+    "splash_small-1",
+    "splash_small-2"
+   ],
+   "dur": 0.796
+  },
+  "loop_wade": {
+   "bus": "sfx",
+   "cat": "lake",
+   "pack": "lake",
+   "loop": true,
+   "ch": 1,
+   "desc": "wading-through-water slosh loop (gain by speed)",
+   "pick": "random",
+   "files": [
+    "loop_wade"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 3.5,
+   "samples": 144000,
+   "dur": 3.0
+  },
+  "coin_plunk": {
+   "bus": "sfx",
+   "cat": "places",
+   "pack": "places",
+   "loop": false,
+   "ch": 1,
+   "desc": "wishing well: coin flicked in, spins, plunks far below",
+   "pick": "random",
+   "files": [
+    "coin_plunk-0",
+    "coin_plunk-1",
+    "coin_plunk-2"
+   ],
+   "dur": 1.791
+  },
+  "well_crank": {
+   "bus": "sfx",
+   "cat": "places",
+   "pack": "places",
+   "loop": false,
+   "ch": 1,
+   "desc": "wishing well crank turns, bucket rises",
+   "pick": "random",
+   "files": [
+    "well_crank-0",
+    "well_crank-1"
+   ],
+   "dur": 1.191
+  },
+  "decor_place": {
+   "bus": "sfx",
+   "cat": "willow",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "hang a decoration on the willow (leaf rustle + chime + pop)",
+   "pick": "random",
+   "files": [
+    "decor_place-0",
+    "decor_place-1",
+    "decor_place-2",
+    "decor_place-3"
+   ],
+   "dur": 1.2
+  },
+  "decor_undo": {
+   "bus": "sfx",
+   "cat": "willow",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "undo my last decoration (reverse pop)",
+   "pick": "random",
+   "files": [
+    "decor_undo"
+   ],
+   "dur": 0.757
+  },
+  "willow_grow": {
+   "bus": "sfx",
+   "cat": "willow",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "the willow grows another day (midnight tick-over)",
+   "pick": "random",
+   "files": [
+    "willow_grow"
+   ],
+   "dur": 2.326
+  },
+  "fire_pop": {
+   "bus": "sfx",
+   "cat": "places",
+   "pack": "places",
+   "loop": false,
+   "ch": 1,
+   "desc": "campfire log pop / spark burst",
+   "pick": "random",
+   "files": [
+    "fire_pop-0",
+    "fire_pop-1",
+    "fire_pop-2",
+    "fire_pop-3"
+   ],
+   "dur": 0.497
+  },
+  "guitar_strum": {
+   "bus": "sfx",
+   "cat": "places",
+   "pack": "places",
+   "loop": false,
+   "ch": 1,
+   "desc": "campfire guitar strum (F, Dm, Bb chords)",
+   "pick": "index",
+   "files": [
+    "guitar_strum-0",
+    "guitar_strum-1",
+    "guitar_strum-2"
+   ],
+   "dur": 2.391
+  },
+  "marshmallow": {
+   "bus": "sfx",
+   "cat": "places",
+   "pack": "places",
+   "loop": false,
+   "ch": 1,
+   "desc": "toast a marshmallow (sizzle + soft pop)",
+   "pick": "random",
+   "files": [
+    "marshmallow"
+   ],
+   "dur": 0.899
+  },
+  "mail_flag": {
+   "bus": "sfx",
+   "cat": "places",
+   "pack": "places",
+   "loop": false,
+   "ch": 1,
+   "desc": "mailbox flag springs up (new notifications) + letter shimmer",
+   "pick": "random",
+   "files": [
+    "mail_flag"
+   ],
+   "dur": 0.977
+  },
+  "cam_open": {
+   "bus": "sfx",
+   "cat": "camera",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "camera mode on (lens whirr + click)",
+   "pick": "random",
+   "files": [
+    "cam_open"
+   ],
+   "dur": 0.591
+  },
+  "shutter": {
+   "bus": "sfx",
+   "cat": "camera",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "photo shutter (click-whir-click) - polaroid & tripod",
+   "pick": "random",
+   "files": [
+    "shutter-0",
+    "shutter-1",
+    "shutter-2"
+   ],
+   "dur": 0.585
+  },
+  "polaroid": {
+   "bus": "sfx",
+   "cat": "camera",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "polaroid print slides out (motor whirr)",
+   "pick": "random",
+   "files": [
+    "polaroid"
+   ],
+   "dur": 1.191
+  },
+  "tripod_place": {
+   "bus": "sfx",
+   "cat": "camera",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "set down the tripod (legs clack)",
+   "pick": "random",
+   "files": [
+    "tripod_place-0",
+    "tripod_place-1"
+   ],
+   "dur": 0.591
+  },
+  "pin_photo": {
+   "bus": "sfx",
+   "cat": "camera",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "pin a photo on the wall (pushpin thunk)",
+   "pick": "random",
+   "files": [
+    "pin_photo-0",
+    "pin_photo-1"
+   ],
+   "dur": 0.496
+  },
+  "brush": {
+   "bus": "sfx",
+   "cat": "art",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "paint brush stroke on canvas (throttled while drawing)",
+   "pick": "random",
+   "files": [
+    "brush-0",
+    "brush-1",
+    "brush-2"
+   ],
+   "dur": 0.591
+  },
+  "stamp": {
+   "bus": "sfx",
+   "cat": "art",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "stamp tool thunk",
+   "pick": "random",
+   "files": [
+    "stamp-0",
+    "stamp-1",
+    "stamp-2"
+   ],
+   "dur": 0.396
+  },
+  "paint_fill": {
+   "bus": "sfx",
+   "cat": "art",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "fill background (paint glug)",
+   "pick": "random",
+   "files": [
+    "paint_fill"
+   ],
+   "dur": 0.791
+  },
+  "canvas_clear": {
+   "bus": "sfx",
+   "cat": "art",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "clear the canvas (wipe whoosh)",
+   "pick": "random",
+   "files": [
+    "canvas_clear"
+   ],
+   "dur": 0.791
+  },
+  "hang_frame": {
+   "bus": "sfx",
+   "cat": "art",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "hang a painting / photo on the wall (tap-tap)",
+   "pick": "random",
+   "files": [
+    "hang_frame-0",
+    "hang_frame-1"
+   ],
+   "dur": 0.691
+  },
+  "rifle_equip": {
+   "bus": "sfx",
+   "cat": "rifle",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "rifle / scope out (toy clack-clack)",
+   "pick": "random",
+   "files": [
+    "rifle_equip-0",
+    "rifle_equip-1"
+   ],
+   "dur": 0.596
+  },
+  "scope_zoom": {
+   "bus": "sfx",
+   "cat": "rifle",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "scope zoom in (lens whirr)",
+   "pick": "random",
+   "files": [
+    "scope_zoom"
+   ],
+   "dur": 0.491
+  },
+  "shot": {
+   "bus": "sfx",
+   "cat": "rifle",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "toy rifle shot: cork 'pew' + soft boom tail (not harsh)",
+   "pick": "random",
+   "files": [
+    "shot-0",
+    "shot-1",
+    "shot-2"
+   ],
+   "dur": 1.198
+  },
+  "hit_board": {
+   "bus": "sfx",
+   "cat": "rifle",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "target board hit (bright ding; bullseye = v2)",
+   "pick": "index",
+   "files": [
+    "hit_board-0",
+    "hit_board-1",
+    "hit_board-2"
+   ],
+   "dur": 0.925
+  },
+  "hit_dummy": {
+   "bus": "sfx",
+   "cat": "rifle",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "training dummy hit (squishy thud + wobble)",
+   "pick": "random",
+   "files": [
+    "hit_dummy-0",
+    "hit_dummy-1",
+    "hit_dummy-2"
+   ],
+   "dur": 0.597
+  },
+  "splat": {
+   "bus": "sfx",
+   "cat": "rifle",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "cartoon paint splat",
+   "pick": "random",
+   "files": [
+    "splat-0",
+    "splat-1"
+   ],
+   "dur": 0.497
+  },
+  "curtain": {
+   "bus": "sfx",
+   "cat": "cinema",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "cinema curtains open / close (velvet swish)",
+   "pick": "random",
+   "files": [
+    "curtain"
+   ],
+   "dur": 1.466
+  },
+  "projector_start": {
+   "bus": "sfx",
+   "cat": "cinema",
+   "pack": "media",
+   "loop": false,
+   "ch": 1,
+   "desc": "projector clunks on and spins up (watch together)",
+   "pick": "random",
+   "files": [
+    "projector_start"
+   ],
+   "dur": 1.591
+  },
+  "loop_projector": {
+   "bus": "sfx",
+   "cat": "cinema",
+   "pack": "media",
+   "loop": true,
+   "ch": 1,
+   "desc": "film projector whirr loop (positional)",
+   "pick": "random",
+   "files": [
+    "loop_projector"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 3.5,
+   "samples": 144000,
+   "dur": 3.0
+  },
+  "telescope": {
+   "bus": "sfx",
+   "cat": "places",
+   "pack": "places",
+   "loop": false,
+   "ch": 1,
+   "desc": "lookout telescope: brass swivel + focus",
+   "pick": "random",
+   "files": [
+    "telescope"
+   ],
+   "dur": 0.79
+  },
+  "scooter_summon": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "scooter zooms over to you (R / \ud83d\udef5)",
+   "pick": "random",
+   "files": [
+    "scooter_summon"
+   ],
+   "dur": 1.54
+  },
+  "loop_scooter": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": true,
+   "ch": 1,
+   "desc": "scooter putt-putt engine loop (playbackRate 0.8 idle .. 1.8 full speed)",
+   "pick": "random",
+   "files": [
+    "loop_scooter"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 2.5,
+   "samples": 96000,
+   "dur": 2.0
+  },
+  "scooter_turbo": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "scooter turbo burst",
+   "pick": "random",
+   "files": [
+    "scooter_turbo-0",
+    "scooter_turbo-1"
+   ],
+   "dur": 0.999
+  },
+  "horn": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "cute horn 'meep-meep' (scooter, race GO)",
+   "pick": "random",
+   "files": [
+    "horn-0",
+    "horn-1"
+   ],
+   "dur": 0.691
+  },
+  "poof": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "poof! vehicle / unicorn vanishes (idle 10 s, dismount, respawn)",
+   "pick": "random",
+   "files": [
+    "poof-0",
+    "poof-1"
+   ],
+   "dur": 0.896
+  },
+  "skid": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "tyre skid on sharp turns / braking",
+   "pick": "random",
+   "files": [
+    "skid-0",
+    "skid-1"
+   ],
+   "dur": 0.591
+  },
+  "unicorn_summon": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "unicorn appears in a swirl of sparkles (U / \ud83e\udd84)",
+   "pick": "random",
+   "files": [
+    "unicorn_summon"
+   ],
+   "dur": 1.729
+  },
+  "loop_sparkle_trail": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": true,
+   "ch": 1,
+   "desc": "unicorn gallop sparkle shimmer loop (gain by speed)",
+   "pick": "random",
+   "files": [
+    "loop_sparkle_trail"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 4.5,
+   "samples": 192000,
+   "dur": 4.0
+  },
+  "countdown": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "countdown beep: v0 = 3/2/1 (and camera timer), v1 = GO!",
+   "pick": "index",
+   "files": [
+    "countdown-0",
+    "countdown-1"
+   ],
+   "dur": 0.591
+  },
+  "tick": {
+   "bus": "ui",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "clock tick (round timers, oven countdown, coaster countdown)",
+   "pick": "random",
+   "files": [
+    "tick-0",
+    "tick-1",
+    "tick-2"
+   ],
+   "dur": 0.247
+  },
+  "boost": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "race boost pad (zappy whoosh up)",
+   "pick": "random",
+   "files": [
+    "boost-0",
+    "boost-1",
+    "boost-2"
+   ],
+   "dur": 0.896
+  },
+  "bumper": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "candy bumper rebound (big rubbery boing)",
+   "pick": "random",
+   "files": [
+    "bumper-0",
+    "bumper-1",
+    "bumper-2"
+   ],
+   "dur": 0.896
+  },
+  "rainbow_arch": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "pass under a rainbow arch (shimmer sweep)",
+   "pick": "random",
+   "files": [
+    "rainbow_arch-0",
+    "rainbow_arch-1"
+   ],
+   "dur": 1.191
+  },
+  "lap": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "lap / checkpoint chime (v1 = final lap)",
+   "pick": "index",
+   "files": [
+    "lap-0",
+    "lap-1"
+   ],
+   "dur": 0.991
+  },
+  "fall_whistle": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "falling off the edge / the trail (slide whistle down)",
+   "pick": "random",
+   "files": [
+    "fall_whistle"
+   ],
+   "dur": 0.991
+  },
+  "respawn": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "respawn at checkpoint / back on the road (pop-in sparkle)",
+   "pick": "random",
+   "files": [
+    "respawn"
+   ],
+   "dur": 0.996
+  },
+  "chain_clack": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "coaster chain lift clack",
+   "pick": "random",
+   "files": [
+    "chain_clack-0",
+    "chain_clack-1",
+    "chain_clack-2",
+    "chain_clack-3"
+   ],
+   "dur": 0.297
+  },
+  "loop_coaster_roll": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": true,
+   "ch": 1,
+   "desc": "coaster wheels rumble on the track (gain/rate by speed)",
+   "pick": "random",
+   "files": [
+    "loop_coaster_roll"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 3.5,
+   "samples": 144000,
+   "dur": 3.0
+  },
+  "loop_wind_rush": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": true,
+   "ch": 2,
+   "desc": "speed wind rush (coaster drop, race, parachute, balloon) - gain by speed",
+   "pick": "random",
+   "files": [
+    "loop_wind_rush"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 4.5,
+   "samples": 192000,
+   "dur": 4.0
+  },
+  "loop_whoosh": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "coaster loop / helix whoosh (and the old 'whoosh')",
+   "pick": "random",
+   "files": [
+    "loop_whoosh-0",
+    "loop_whoosh-1"
+   ],
+   "dur": 1.315
+  },
+  "brakes": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "coaster brakes hiss + clunk at the station",
+   "pick": "random",
+   "files": [
+    "brakes"
+   ],
+   "dur": 1.191
+  },
+  "board_clunk": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "hop into a seat / lap bar clunk (coaster, balloon basket)",
+   "pick": "random",
+   "files": [
+    "board_clunk-0",
+    "board_clunk-1"
+   ],
+   "dur": 0.596
+  },
+  "burner": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "balloon burner roar (one blast)",
+   "pick": "random",
+   "files": [
+    "burner-0",
+    "burner-1"
+   ],
+   "dur": 1.8
+  },
+  "basket_creak": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "wicker basket creak (balloon sway)",
+   "pick": "random",
+   "files": [
+    "basket_creak-0",
+    "basket_creak-1",
+    "basket_creak-2"
+   ],
+   "dur": 0.791
+  },
+  "board_bell": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "balloon / coaster departure bell",
+   "pick": "random",
+   "files": [
+    "board_bell"
+   ],
+   "dur": 1.471
+  },
+  "chute_open": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": false,
+   "ch": 1,
+   "desc": "parachute pops open (fabric whump)",
+   "pick": "random",
+   "files": [
+    "chute_open"
+   ],
+   "dur": 0.778
+  },
+  "loop_chute": {
+   "bus": "sfx",
+   "cat": "rides",
+   "pack": "rides",
+   "loop": true,
+   "ch": 1,
+   "desc": "parachute canopy flutter loop",
+   "pick": "random",
+   "files": [
+    "loop_chute"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 3.5,
+   "samples": 144000,
+   "dur": 3.0
+  },
+  "heart_pickup": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "heart hunt: pick up a heart (pitch rises with the count at runtime)",
+   "pick": "index",
+   "files": [
+    "heart_pickup-0",
+    "heart_pickup-1",
+    "heart_pickup-2",
+    "heart_pickup-3"
+   ],
+   "dur": 0.896
+  },
+  "coin": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "coins / tip received / stall earnings",
+   "pick": "random",
+   "files": [
+    "coin-0",
+    "coin-1",
+    "coin-2"
+   ],
+   "dur": 0.796
+  },
+  "catch_bunny": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "catch a golden bunny (squeak + sparkle)",
+   "pick": "random",
+   "files": [
+    "catch_bunny-0",
+    "catch_bunny-1",
+    "catch_bunny-2"
+   ],
+   "dur": 0.891
+  },
+  "game_start": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "a round starts (moles, bunnies, hunt, trail timer)",
+   "pick": "index",
+   "files": [
+    "game_start-0",
+    "game_start-1"
+   ],
+   "dur": 1.191
+  },
+  "game_end": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "time's up (gentle descending)",
+   "pick": "random",
+   "files": [
+    "game_end"
+   ],
+   "dur": 1.231
+  },
+  "game_win": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "win / goal / finish star / all hearts found (fanfare + confetti)",
+   "pick": "index",
+   "files": [
+    "game_win-0",
+    "game_win-1"
+   ],
+   "dur": 2.327
+  },
+  "new_best": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "new best / record! (bigger fanfare)",
+   "pick": "random",
+   "files": [
+    "new_best"
+   ],
+   "dur": 2.591
+  },
+  "checkpoint": {
+   "bus": "sfx",
+   "cat": "games",
+   "pack": "games",
+   "loop": false,
+   "ch": 1,
+   "desc": "sky trail checkpoint flag",
+   "pick": "random",
+   "files": [
+    "checkpoint"
+   ],
+   "dur": 1.191
+  },
+  "ui_pop": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "generic soft pop (most taps: pick, place, choose, confirm)",
+   "pick": "random",
+   "files": [
+    "ui_pop-0",
+    "ui_pop-1",
+    "ui_pop-2",
+    "ui_pop-3",
+    "ui_pop-4"
+   ],
+   "dur": 0.497
+  },
+  "ui_open": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "panel / sheet / overlay opens",
+   "pick": "index",
+   "files": [
+    "ui_open-0",
+    "ui_open-1",
+    "ui_open-2"
+   ],
+   "dur": 0.7
+  },
+  "ui_close": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "panel / sheet / overlay closes",
+   "pick": "index",
+   "files": [
+    "ui_close-0",
+    "ui_close-1",
+    "ui_close-2"
+   ],
+   "dur": 0.6
+  },
+  "ui_tab": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "switch tab / menu tile / list item (wooden tick)",
+   "pick": "random",
+   "files": [
+    "ui_tab-0",
+    "ui_tab-1",
+    "ui_tab-2"
+   ],
+   "dur": 0.247
+  },
+  "ui_toggle": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "toggle: v0 = on (up), v1 = off (down)",
+   "pick": "index",
+   "files": [
+    "ui_toggle-0",
+    "ui_toggle-1"
+   ],
+   "dur": 0.397
+  },
+  "ui_slider": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "slider / zoom / size step tick (very light)",
+   "pick": "random",
+   "files": [
+    "ui_slider-0",
+    "ui_slider-1",
+    "ui_slider-2"
+   ],
+   "dur": 0.148
+  },
+  "ui_refuse": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "not allowed / oops / wrong jar (soft 'uh-uh' boop, never harsh)",
+   "pick": "random",
+   "files": [
+    "ui_refuse-0",
+    "ui_refuse-1"
+   ],
+   "dur": 0.591
+  },
+  "ui_toast": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "toast message appears (tiny glass ping)",
+   "pick": "index",
+   "files": [
+    "ui_toast-0",
+    "ui_toast-1",
+    "ui_toast-2"
+   ],
+   "dur": 0.769
+  },
+  "ui_notify": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "notification arrives / unread mail",
+   "pick": "random",
+   "files": [
+    "ui_notify"
+   ],
+   "dur": 1.196
+  },
+  "ui_teleport_out": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "map travel: whoosh away (fade out)",
+   "pick": "random",
+   "files": [
+    "ui_teleport_out"
+   ],
+   "dur": 0.99
+  },
+  "ui_teleport_in": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "map travel / meet-up: arrive (sparkle down + soft landing)",
+   "pick": "random",
+   "files": [
+    "ui_teleport_in"
+   ],
+   "dur": 1.191
+  },
+  "ui_map": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "big map opens (v0) / closes (v1): paper unfold + chime",
+   "pick": "index",
+   "files": [
+    "ui_map-0",
+    "ui_map-1"
+   ],
+   "dur": 0.798
+  },
+  "ui_daynight": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "day/night flip: v0 = to day (rising), v1 = to night (falling)",
+   "pick": "index",
+   "files": [
+    "ui_daynight-0",
+    "ui_daynight-1"
+   ],
+   "dur": 1.782
+  },
+  "ui_weather": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "weather changed (airy swirl)",
+   "pick": "random",
+   "files": [
+    "ui_weather"
+   ],
+   "dur": 1.19
+  },
+  "ui_theme": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "island theme changed (sparkle arpeggio)",
+   "pick": "random",
+   "files": [
+    "ui_theme"
+   ],
+   "dur": 1.584
+  },
+  "ui_music": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "music toggle: v0 = on, v1 = off",
+   "pick": "index",
+   "files": [
+    "ui_music-0",
+    "ui_music-1"
+   ],
+   "dur": 0.591
+  },
+  "ui_wardrobe": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "avatar editor: try a piece of clothing / hair (fabric rustle + pop)",
+   "pick": "random",
+   "files": [
+    "ui_wardrobe-0",
+    "ui_wardrobe-1",
+    "ui_wardrobe-2",
+    "ui_wardrobe-3"
+   ],
+   "dur": 0.6
+  },
+  "ui_surprise": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "avatar editor 'surprise' randomiser (dice roll + ta-da)",
+   "pick": "random",
+   "files": [
+    "ui_surprise"
+   ],
+   "dur": 1.191
+  },
+  "ui_colour": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "pick a colour / swatch (paint blip)",
+   "pick": "random",
+   "files": [
+    "ui_colour-0",
+    "ui_colour-1",
+    "ui_colour-2"
+   ],
+   "dur": 0.396
+  },
+  "ui_select": {
+   "bus": "ui",
+   "cat": "ui",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "focus / select something in the world (bright tap, 'it sparkles')",
+   "pick": "index",
+   "files": [
+    "ui_select-0",
+    "ui_select-1"
+   ],
+   "dur": 0.496
+  },
+  "mp_join": {
+   "bus": "ui",
+   "cat": "multiplayer",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "your person / a visitor arrives on the island",
+   "pick": "random",
+   "files": [
+    "mp_join"
+   ],
+   "dur": 1.391
+  },
+  "mp_leave": {
+   "bus": "ui",
+   "cat": "multiplayer",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "your person leaves (gentle, not sad)",
+   "pick": "random",
+   "files": [
+    "mp_leave"
+   ],
+   "dur": 1.191
+  },
+  "mp_invite": {
+   "bus": "ui",
+   "cat": "multiplayer",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "invite sent / received",
+   "pick": "random",
+   "files": [
+    "mp_invite"
+   ],
+   "dur": 1.391
+  },
+  "mp_chat_in": {
+   "bus": "ui",
+   "cat": "multiplayer",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "chat bubble from your person",
+   "pick": "random",
+   "files": [
+    "mp_chat_in-0",
+    "mp_chat_in-1",
+    "mp_chat_in-2"
+   ],
+   "dur": 0.596
+  },
+  "mp_chat_out": {
+   "bus": "ui",
+   "cat": "multiplayer",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "you send a chat message (soft whoosh-pop)",
+   "pick": "random",
+   "files": [
+    "mp_chat_out-0",
+    "mp_chat_out-1"
+   ],
+   "dur": 0.5
+  },
+  "mp_heart_ping": {
+   "bus": "ui",
+   "cat": "multiplayer",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "remote hug / kiss / emote from your person reaches you",
+   "pick": "random",
+   "files": [
+    "mp_heart_ping-0",
+    "mp_heart_ping-1"
+   ],
+   "dur": 0.991
+  },
+  "mp_mic": {
+   "bus": "ui",
+   "cat": "multiplayer",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "voice chat mic on (v0) / off (v1)",
+   "pick": "index",
+   "files": [
+    "mp_mic-0",
+    "mp_mic-1"
+   ],
+   "dur": 0.391
+  },
+  "amb_day": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "daytime meadow bed: breeze, grass hush, distant birds (whole island outdoors)",
+   "pick": "random",
+   "files": [
+    "amb_day"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 17.5,
+   "samples": 816000,
+   "dur": 17.0
+  },
+  "amb_night": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "night meadow bed: crickets, soft breeze (all night themes outdoors)",
+   "pick": "random",
+   "files": [
+    "amb_night"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "amb_plaza": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 1,
+   "desc": "welcome plaza: crystal heart hum + faint fairy-light chimes (positional at the heart)",
+   "pick": "random",
+   "files": [
+    "amb_plaza"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 11.5,
+   "samples": 528000,
+   "dur": 11.0
+  },
+  "amb_willow": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "under the willow: curtain-leaf rustle, firefly twinkles",
+   "pick": "random",
+   "files": [
+    "amb_willow"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "amb_lake": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "lake",
+   "loop": true,
+   "ch": 2,
+   "desc": "lake shore: gentle lapping, plips, reeds",
+   "pick": "random",
+   "files": [
+    "amb_lake"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 11.5,
+   "samples": 528000,
+   "dur": 11.0
+  },
+  "amb_forest": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "garden",
+   "loop": true,
+   "ch": 2,
+   "desc": "garden & forest: leaves, far bees, woodpecker taps",
+   "pick": "random",
+   "files": [
+    "amb_forest"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 17.5,
+   "samples": 816000,
+   "dur": 17.0
+  },
+  "amb_farm": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "farm",
+   "loop": true,
+   "ch": 2,
+   "desc": "farm yard: breeze, distant clucks, far flies, a barn creak",
+   "pick": "random",
+   "files": [
+    "amb_farm"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "amb_interior": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "indoor room tone: warm hush, faint house creaks (diary rooms, barn)",
+   "pick": "random",
+   "files": [
+    "amb_interior"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 11.5,
+   "samples": 528000,
+   "dur": 11.0
+  },
+  "amb_bakery": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "bakery",
+   "loop": true,
+   "ch": 2,
+   "desc": "bakery interior: oven warmth, soft clinks, a cat's tail-thump",
+   "pick": "random",
+   "files": [
+    "amb_bakery"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "amb_sky": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "rides",
+   "loop": true,
+   "ch": 2,
+   "desc": "up high: open wind (sky trail, race road, coaster top, lookout deck, balloon)",
+   "pick": "random",
+   "files": [
+    "amb_sky"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "amb_waterfall": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "distant waterfalls (mountain ring, beyond r150) - soft far rush",
+   "pick": "random",
+   "files": [
+    "amb_waterfall"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 11.5,
+   "samples": 528000,
+   "dur": 11.0
+  },
+  "amb_spooky": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "halloween night: soft wind howl, low drone, far creaks",
+   "pick": "random",
+   "files": [
+    "amb_spooky"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "amb_winter": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "christmas / snowy evening: hushed cold air, far wind chimes",
+   "pick": "random",
+   "files": [
+    "amb_winter"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 17.5,
+   "samples": 816000,
+   "dur": 17.0
+  },
+  "loop_fire": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "places",
+   "loop": true,
+   "ch": 1,
+   "desc": "campfire loop: roar, crackle, pops (positional at the campfire)",
+   "pick": "random",
+   "files": [
+    "loop_fire"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 7.5,
+   "samples": 336000,
+   "dur": 7.0
+  },
+  "loop_crystal": {
+   "bus": "amb",
+   "cat": "ambience",
+   "pack": "core",
+   "loop": true,
+   "ch": 1,
+   "desc": "crystal heart / glowing island-underside crystals hum (positional)",
+   "pick": "random",
+   "files": [
+    "loop_crystal"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 6.5,
+   "samples": 288000,
+   "dur": 6.0
+  },
+  "wx_rain": {
+   "bus": "weather",
+   "cat": "weather",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "rain outdoors: hiss + many soft drops (rain weather)",
+   "pick": "random",
+   "files": [
+    "wx_rain"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 11.5,
+   "samples": 528000,
+   "dur": 11.0
+  },
+  "wx_rain_roof": {
+   "bus": "weather",
+   "cat": "weather",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "rain heard indoors: pattering on the roof + eaves drips",
+   "pick": "random",
+   "files": [
+    "wx_rain_roof"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 11.5,
+   "samples": 528000,
+   "dur": 11.0
+  },
+  "wx_snow": {
+   "bus": "weather",
+   "cat": "weather",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "snow: soft muffled wind with slow swells",
+   "pick": "random",
+   "files": [
+    "wx_snow"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "wx_blizzard": {
+   "bus": "weather",
+   "cat": "weather",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "blizzard (christmas): strong gusty wind with whistles",
+   "pick": "random",
+   "files": [
+    "wx_blizzard"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 13.5,
+   "samples": 624000,
+   "dur": 13.0
+  },
+  "wx_autumn": {
+   "bus": "weather",
+   "cat": "weather",
+   "pack": "core",
+   "loop": true,
+   "ch": 2,
+   "desc": "autumn: breezy gusts with leaves skittering (currently silent in the game)",
+   "pick": "random",
+   "files": [
+    "wx_autumn"
+   ],
+   "loopStart": 0.5,
+   "loopEnd": 17.5,
+   "samples": 816000,
+   "dur": 17.0
+  },
+  "wx_thunder": {
+   "bus": "weather",
+   "cat": "weather",
+   "pack": "core",
+   "loop": false,
+   "ch": 2,
+   "desc": "distant thunder rumble (after lightning; replaces audio.thunder())",
+   "pick": "random",
+   "files": [
+    "wx_thunder-0",
+    "wx_thunder-1",
+    "wx_thunder-2"
+   ],
+   "dur": 4.49
+  },
+  "wx_drip": {
+   "bus": "weather",
+   "cat": "weather",
+   "pack": "core",
+   "loop": false,
+   "ch": 1,
+   "desc": "eaves drip (under roofs / trees after rain, one-shots)",
+   "pick": "random",
+   "files": [
+    "wx_drip-0",
+    "wx_drip-1",
+    "wx_drip-2"
+   ],
+   "dur": 0.491
+  }
+ }
+}
