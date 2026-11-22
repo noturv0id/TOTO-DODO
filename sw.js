@@ -2,28 +2,28 @@
 // App-shell service worker: the page itself is network-first (so new builds
 // show up right away) with the cached shell as the offline fallback; the
 // hashed js/css/images are immutable, so they are served cache-first.
-const CACHE_VERSION = "b6f641ef40eb";
+const CACHE_VERSION = "311526e63f93";
 const SHELL_CACHE = `shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = "runtime-v1";
 const PRECACHE_URLS = [
   "./",
   "./anniversary-wrapper.html",
-  "./assets/browser-AKIEL4OY.js",
-  "./assets/chunk-35U5YR53.js",
-  "./assets/chunk-BLQIXI2H.js",
-  "./assets/chunk-DUBGXUAY.js",
+  "./assets/browser-RSKWRP5R.js",
+  "./assets/chunk-745AQHZV.js",
+  "./assets/chunk-75YUILNZ.js",
   "./assets/chunk-HLDC4GTP.js",
-  "./assets/chunk-SVIDGI4S.js",
+  "./assets/chunk-JV5UAVU4.js",
+  "./assets/chunk-SCZE5VCH.js",
   "./assets/cursor-RP7TFDIH.cur",
-  "./assets/html2canvas-O7APVNR3.js",
-  "./assets/index.es-D4YYFG3B.js",
-  "./assets/island-I7YYK62G.js",
-  "./assets/jspdf.es.min-OCSPEP4B.js",
-  "./assets/lib-GQC6TMCM.js",
-  "./assets/main-UN73GA7Y.css",
-  "./assets/main-VISI3Q5F.js",
-  "./assets/purify.es-TUQRS6UW.js",
-  "./assets/quill-IGYLABQZ.js",
+  "./assets/html2canvas-3JXUNJD5.js",
+  "./assets/index.es-F5Z7ILHX.js",
+  "./assets/island-KDZM23J7.js",
+  "./assets/jspdf.es.min-H24PKJV6.js",
+  "./assets/lib-QQF7POCN.js",
+  "./assets/main-5EZAN4IN.css",
+  "./assets/main-J7SPLW3Z.js",
+  "./assets/purify.es-5VPWLSIE.js",
+  "./assets/quill-6EYAZANC.js",
   "./assets/theme-glass-8D92DC19.css",
   "./assets/theme-pink-F7288814.css",
   "./assets/theme-purple-23AEB002.css",
@@ -39,19 +39,33 @@ const PRECACHE_URLS = [
 const RUNTIME_HOSTS = new Set(["fonts.googleapis.com", "fonts.gstatic.com"]);
 const PHOTO_CACHE = "photos-v1";
 const PHOTO_CACHE_LIMIT = 60;
-// the 3D island's zone models (models/<pack hash>/...): never precached, kept once fetched; an old
-// pack's files go when the cache holds more than this (a new build has a new hash)
+// the 3D island's zone models, textures, clips and sounds (models/<pack hash>/...): never precached, kept
+// once fetched, every one of them (a visit asks for several hundred: the old 80-file cap threw most of
+// them out again on every visit, so each refresh downloaded the island anew). A new build has a new pack
+// hash: the files of any other pack go the first time one of the new pack's files is kept
 const MODELS_CACHE = "models-v1";
-const MODELS_CACHE_LIMIT = 80;
+const MODEL_PACK = /\/models\/([0-9a-f]{10})\//;
+let modelsPack = null;
 // never rewritten in place: a new picture gets a new address
 const WIDGET_PHOTO_PATH = /^\/storage\/v1\/object\/public\/(?:profile-pictures\/|[^/]+\/[^/]+\/widget-photos\/)/;
 
+// Every file is fetched on its own, past the browser's HTTP cache, and one that fails is simply left out (it is
+// fetched when first asked for): with addAll, one missing or half-written file failed the whole install, and the
+// old worker kept serving the old build's shell for good (2026-11-20, localhost showed a long-gone build).
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting()),
+    (async () => {
+      const cache = await caches.open(SHELL_CACHE);
+      await Promise.all(
+        PRECACHE_URLS.map(async (url) => {
+          try {
+            const response = await fetch(url, { cache: "reload" });
+            if (response.ok) await cache.put(url, response);
+          } catch {}
+        }),
+      );
+      await self.skipWaiting();
+    })(),
   );
 });
 
@@ -95,13 +109,17 @@ async function networkFirstPage(request) {
 
 async function cachedModel(request) {
   const cache = await caches.open(MODELS_CACHE);
-  const cached = await cache.match(request);
+  const cached = await cache.match(request, { ignoreVary: true });
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok) {
     await cache.put(request, response.clone());
-    const keys = await cache.keys();
-    await Promise.all(keys.slice(0, -MODELS_CACHE_LIMIT).map((key) => cache.delete(key)));
+    const pack = MODEL_PACK.exec(new URL(request.url).pathname)?.[1];
+    if (pack && pack !== modelsPack) {
+      modelsPack = pack;
+      const keys = await cache.keys();
+      await Promise.all(keys.filter((key) => MODEL_PACK.exec(new URL(key.url).pathname)?.[1] !== pack).map((key) => cache.delete(key)));
+    }
   }
   return response;
 }
